@@ -1,0 +1,201 @@
+import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:hey_work/main.dart';
+
+class JobCategoriesSection extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        // JOB CATEGORY GRID - First Row
+        JobCategoryGrid(
+          categories: [
+            JobCategory(
+              icon: Icons.cleaning_services_outlined,
+              title: 'Cleaning\nhelp',
+            ),
+            JobCategory(
+              icon: Icons.directions_car,
+              title: 'Driver',
+            ),
+            JobCategory(
+              icon: Icons.local_shipping_outlined,
+              title: 'Quick\nTransport',
+            ),
+            JobCategory(
+              icon: Icons.local_florist,
+              title: 'Gardener',
+            ),
+          ],
+        ),
+        
+        // JOB CATEGORY GRID - Second Row
+        SizedBox(height: 16.h),
+        JobCategoryGrid(
+          categories: [
+            JobCategory(
+              icon: Icons.pets,
+              title: 'Pet Care',
+            ),
+            JobCategory(
+              icon: Icons.laptop,
+              title: 'Laptop\nRepair',
+            ),
+            JobCategory(
+              icon: Icons.print,
+              title: 'Printing\nHelper',
+            ),
+            JobCategory(
+              icon: Icons.delivery_dining,
+              title: 'Delivery',
+            ),
+          ],
+        ),
+        
+        // JOB CATEGORY GRID - Third Row
+        SizedBox(height: 16.h),
+        JobCategoryGrid(
+          categories: [
+            JobCategory(
+              icon: Icons.warehouse,
+              title: 'Warehouse\nAssistant',
+            ),
+            JobCategory(
+              icon: Icons.build,
+              title: 'Mechanic',
+            ),
+            JobCategory(
+              icon: Icons.store,
+              title: 'Shop\nAssistant',
+            ),
+            JobCategory(
+              icon: Icons.bolt,
+              title: 'Electrician',
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+}
+// ==============================
+// JOB CATEGORY GRID COMPONENT
+// ==============================
+class JobCategoryGrid extends StatelessWidget {
+  final List<JobCategory> categories;
+
+  const JobCategoryGrid({
+    Key? key,
+    required this.categories,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    // Get screen width to calculate adaptive sizing
+    final screenWidth = MediaQuery.of(context).size.width;
+    
+    // Calculate item width based on screen width (minus padding and gaps)
+    final availableWidth = screenWidth - (32 + (3 * 12)); // horizontal padding + gaps
+    final itemWidth = availableWidth / 4; // 4 items per row
+    
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: categories.map((category) {
+            return JobCategoryCard(
+              icon: category.icon,
+              title: category.title,
+              width: itemWidth,
+            );
+          }).toList(),
+        );
+      },
+    );
+  }
+}
+
+// ==============================
+// JOB CATEGORY MODEL
+// ==============================
+class JobCategory {
+  final IconData icon;
+  final String title;
+
+  JobCategory({
+    required this.icon,
+    required this.title,
+  });
+}
+
+// ==============================
+// JOB CATEGORY CARD COMPONENT
+// ==============================
+class JobCategoryCard extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final double width;
+
+  const JobCategoryCard({
+    Key? key,
+    required this.icon,
+    required this.title,
+    required this.width,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    // Dynamically calculate best height for symmetry
+    final cardSize = width * 0.9; // Slightly smaller than width allocation
+    
+    return Column(
+      children: [
+        // Card container
+        Container(
+          width: cardSize,
+          height: cardSize, // Square container
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12.r),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.grey.withOpacity(0.2),
+                spreadRadius: 1,
+                blurRadius: 5,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Center(
+            child: Icon(
+              icon,
+              size: cardSize * 0.4, // Icon size proportional to card
+              color: Colors.black,
+            ),
+          ),
+        ),
+        SizedBox(height: 8.h),
+        // Text label with fixed height & ellipsis
+        SizedBox(
+          width: cardSize,
+          height: 32.h, // Fixed height for title
+          child: Text(
+            title,
+            textAlign: TextAlign.center,
+            overflow: TextOverflow.ellipsis,
+            maxLines: 2,
+            style: GoogleFonts.poppins(
+              fontSize: 12.sp,
+              fontWeight: FontWeight.w500,
+              height: 1.2, // Tight line height for better layout
+              letterSpacing: -0.2
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
