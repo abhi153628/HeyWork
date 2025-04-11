@@ -16,6 +16,24 @@ The application is built using Flutter with Firebase as the current backend solu
 
 Heywork follows Clean Architecture principles with a modular, feature-based structure. The architecture is divided into several layers:
 
+
+
+feat(auth): add phone authentication with Firebase
+
+fix(band-profile): correct image upload bug on profile page
+
+docs(readme): update installation steps
+
+style(home): apply consistent spacing and font size
+
+refactor(event): split event creation logic into separate service
+
+perf(app): lazy load feed images for better scroll performance
+
+test(auth): add unit tests for OTP verification
+
+chore: update Flutter version and fix lints
+
 ```
 /lib
   /core        - Core utilities, services, and widgets

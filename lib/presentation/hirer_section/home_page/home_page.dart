@@ -88,25 +88,7 @@ class HeyWorkHomePage extends StatelessWidget {
 }
 
 
-class CategoriesHeader extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          'Categories',
-          style: TextStyle(
-            fontSize: 20.sp,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        // Pagination dots
-       
-      ],
-    );
-  }
-}
+
 class SearchBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
