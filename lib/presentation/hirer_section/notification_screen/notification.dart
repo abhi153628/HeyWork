@@ -10,7 +10,7 @@ class NotificationPage extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          'Navigator',
+          'Notification',
           style: Theme.of(context).textTheme.displayLarge?.copyWith(
             color: Colors.black,
           ),

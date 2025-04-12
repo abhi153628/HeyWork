@@ -14,7 +14,7 @@ class AppRoutes {
     '/': (context) => const MainScreen(),
     '/navigator': (context) => const NotificationPage(),
     '/jobs': (context) => const JobsScreen(),
-    '/profile': (context) => const ProfileScreen(),
+    '/profile': (context) => const JobPostingScreen(),
   };
 }
 
@@ -36,7 +36,7 @@ class _MainScreenState extends State<MainScreen> {
     const HeyWorkHomePage(),
     const NotificationPage(),
     const JobsScreen(),
-    const ProfileScreen(),
+    const JobPostingScreen(),
   ];
   
   @override
