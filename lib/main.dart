@@ -1,44 +1,64 @@
+// lib/main.dart
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:hey_work/presentation/hirer_section/common/bottom_nav_bar.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:hey_work/data/data_sources/remote/firebase_auth_hirer.dart';
+import 'package:hey_work/firebase_options.dart';
+import 'package:hey_work/presentation/hirer_section/signup_screen/signup_screen.dart';
+import 'package:provider/provider.dart';
 
-
-// ==============================
-//! MAIN APP ENTRY POINT
-// ==============================
-void main() {
+void main() async {
+  // Ensure Flutter binding is initialized before Firebase
   WidgetsFlutterBinding.ensureInitialized();
-  SystemChrome.setPreferredOrientations([
-    DeviceOrientation.portraitUp,
-  ]);
+  
+  // Initialize Firebase
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+  
+  SystemChrome.setSystemUIOverlayStyle(
+    const SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      statusBarIconBrightness: Brightness.dark,
+    ),
+  );
+  
   runApp(const MyApp());
 }
 
-// ==============================
-//! APP CONFIGURATION
-// ==============================
 class MyApp extends StatelessWidget {
   const MyApp({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    return ScreenUtilInit(
+    // Create instances of services first
+    final authService = AuthService();
+    final firebaseService = FirebaseService();
+    final locationService = LocationService();
     
-      designSize: const Size(375, 812),
-      minTextAdapt: true,
-      splitScreenMode: true,
-
-      builder: (context, child) {
-        return MaterialApp(
-          debugShowCheckedModeBanner: false,
-          title: 'HeyWork App',
-          theme: AppTheme.lightTheme,
-          initialRoute: '/',
-          routes: AppRoutes.routes,
-        );
-      },
+    return MultiProvider(
+      providers: [
+        Provider<AuthService>.value(value: authService),
+        Provider<FirebaseService>.value(value: firebaseService),
+        Provider<LocationService>.value(value: locationService),
+      ],
+      child: MaterialApp(
+        debugShowCheckedModeBanner: false,
+        title: 'Hirer Sign Up',
+        theme: ThemeData(
+          primaryColor: const Color(0xFF2020F0),
+          scaffoldBackgroundColor: Colors.white,
+          fontFamily: 'Roboto',
+          colorScheme: ColorScheme.fromSeed(
+            seedColor: const Color(0xFF2020F0),
+            primary: const Color(0xFF2020F0),
+          ),
+        ),
+        
+        home: const SignupPage(),
+      ),
     );
   }
 }
@@ -60,7 +80,6 @@ class AppTheme {
     appBarTheme: const AppBarTheme(
       backgroundColor: Colors.white,
       elevation: 0,
- 
     ),
     textTheme: TextTheme(
       // Defined text styles for consistency
@@ -72,5 +91,3 @@ class AppTheme {
     ),
   );
 }
-
-

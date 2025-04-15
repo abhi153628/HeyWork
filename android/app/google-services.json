@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "193622782630",
+    "project_id": "heywork-e844a",
+    "storage_bucket": "heywork-e844a.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:193622782630:android:c64c96f2a8630b59e5fa67",
+        "android_client_info": {
+          "package_name": "com.example.hey_work"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDAgoMzuyNyStOxglT2ov-SpnjTOd21TYQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
