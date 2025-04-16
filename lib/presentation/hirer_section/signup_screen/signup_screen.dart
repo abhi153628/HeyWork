@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:hey_work/presentation/hirer_section/common/bottom_nav_bar.dart';
 import 'package:hey_work/presentation/hirer_section/home_page/home_page.dart';
 
 import 'package:hey_work/presentation/hirer_section/signup_screen/widgets/responsive_utils.dart';
@@ -694,10 +695,10 @@ Future<void> _verifyOTP() async {
       smsCode: _otpController.text.trim(),
     );
 
-    // Sign in with the credential and get UserCredential directly
+    // Sign in with the credential
     UserCredential userCredential = await FirebaseAuth.instance.signInWithCredential(credential);
     
-    // Use the user from userCredential directly
+    // Get the user from the result
     User? user = userCredential.user;
     
     if (user == null) {
@@ -706,7 +707,7 @@ Future<void> _verifyOTP() async {
     
     print('Successfully authenticated user: ${user.uid}');
     
-    // Process form data with the verified user
+    // Process the user data directly after successful authentication
     await _processUserData(user);
     
   } catch (e) {
@@ -718,39 +719,36 @@ Future<void> _verifyOTP() async {
       _showSnackBar('Invalid OTP or verification failed. Please try again.', isError: true);
     }
   }
-}// Update this method to handle all possible null values
-// Replace your _processUserData with this simplified version for debugging
+}// Replace your _processUserData with this simplified version for debugging
+// Fix 1: Process User Data Method
 Future<void> _processUserData(User user) async {
   try {
-    if (!_formKey.currentState!.validate() || !_acceptedTerms) {
-      setState(() {
-        _isLoading = false;
-      });
-      _showSnackBar('Please fill all required fields and accept terms', isError: true);
-      return;
-    }
-    
+    // Don't validate the form again, it was already validated before reaching this point
     print('Processing data for user: ${user.uid}');
     
-    // Create a minimal user data map to start
+    // Create a comprehensive user data map with null checks
     Map<String, dynamic> userData = {
       'id': user.uid,
       'name': _nameController.text.isNotEmpty ? _nameController.text.trim() : "User",
+      'businessName': _businessNameController.text.isNotEmpty ? _businessNameController.text.trim() : "",
+      'location': _selectedLocation != null ? _selectedLocation!['placeName'] : 
+                  _locationController.text.isNotEmpty ? _locationController.text.trim() : "",
+      'phoneNumber': _phoneController.text.isNotEmpty ? "+91${_phoneController.text.trim()}" : "",
       'userType': 'hirer',
       'createdAt': FieldValue.serverTimestamp(),
     };
     
-    print('Saving minimal user data: $userData');
+    print('Saving user data: $userData');
     
-    // Save directly to Firestore
+    // Save to Firestore with better error handling
     await FirebaseFirestore.instance
-        .collection('users')
+        .collection('hirers')
         .doc(user.uid)
-        .set(userData);
+        .set(userData, SetOptions(merge: true));
     
     print('User data saved successfully');
     
-    // Update UI state
+    // Update UI state - ensure we check if component is still mounted
     if (mounted) {
       setState(() {
         _isLoading = false;
@@ -759,10 +757,9 @@ Future<void> _processUserData(User user) async {
       // Show success message
       _showSnackBar('Account created successfully!');
     
-      // Navigate to next screen
+      // Navigate to home page
       print('Navigating to home page');
       
-      // Navigate immediately instead of using a delay
       if (mounted) {
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(builder: (_) => HeyWorkHomePage())
@@ -771,7 +768,6 @@ Future<void> _processUserData(User user) async {
     }
   } catch (e) {
     print('Error processing user data: $e');
-    // Add stack trace for better debugging
     print(StackTrace.current);
     
     if (mounted) {
@@ -781,8 +777,7 @@ Future<void> _processUserData(User user) async {
       _showSnackBar('Error saving user data: $e', isError: true);
     }
   }
-}
-  // Form submission
+}  // Form submission
  Future<void> _submitForm() async {
   if (!_formKey.currentState!.validate() || !_acceptedTerms) {
     setState(() {
@@ -804,7 +799,7 @@ Future<void> _processUserData(User user) async {
     if (currentUser == null) {
       print('ERROR: Current user is null after OTP verification');
       
-      // Try to get the user again or create a new account
+      // Try to sign in again with phone credential if user is null
       try {
         // Try to sign in again with phone credential if user is null
         PhoneAuthCredential credential = PhoneAuthProvider.credential(
@@ -845,25 +840,27 @@ Future<void> _processUserData(User user) async {
     // Save user data to Firestore
     await _saveUserData(currentUser, imageUrl);
     
-    setState(() {
-      _isLoading = false;
-    });
-    
-    // Show success message
-    _showSnackBar('Account created successfully!');
-    
-    // Navigate to next screen
-    Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => HeyWorkHomePage()));
+    if (mounted) {
+      setState(() {
+        _isLoading = false;
+      });
+      
+      // Show success message
+      _showSnackBar('Account created successfully!');
+      
+      // Navigate to next screen
+      Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => MainScreen()));
+    }
   } catch (e) {
-    setState(() {
-      _isLoading = false;
-    });
-    print('Error in form submission: $e');
-    _showSnackBar('Error: $e', isError: true);
+    if (mounted) {
+      setState(() {
+        _isLoading = false;
+      });
+      print('Error in form submission: $e');
+      _showSnackBar('Error: $e', isError: true);
+    }
   }
 }
-
-
   Future<String> _uploadImage() async {
     if (_selectedImage == null) {
       throw Exception('No image selected');
@@ -878,7 +875,7 @@ Future<void> _processUserData(User user) async {
     return downloadUrl;
   }
 
- Future<void> _saveUserData(User user, String? imageUrl) async {
+Future<void> _saveUserData(User user, String? imageUrl) async {
   try {
     // Format phone number
     String phoneNumber = _phoneController.text.trim();
@@ -886,12 +883,13 @@ Future<void> _processUserData(User user) async {
       phoneNumber = '+91$phoneNumber';
     }
 
-    // Create user data map
+    // Create user data map with null checks for all fields
     Map<String, dynamic> userData = {
       'id': user.uid,
-      'name': _nameController.text.trim(),
-      'businessName': _businessNameController.text.trim(),
-      'location': _selectedLocation?['placeName'] ?? _locationController.text.trim(),
+      'name': _nameController.text.isNotEmpty ? _nameController.text.trim() : "User",
+      'businessName': _businessNameController.text.isNotEmpty ? _businessNameController.text.trim() : "",
+      'location': _selectedLocation != null ? _selectedLocation!['placeName'] : 
+                 _locationController.text.isNotEmpty ? _locationController.text.trim() : "",
       'phoneNumber': phoneNumber,
       'profileImage': imageUrl,
       'createdAt': FieldValue.serverTimestamp(),
@@ -900,33 +898,25 @@ Future<void> _processUserData(User user) async {
 
     print('Saving user data for UID ${user.uid}: $userData');
 
-    // IMPORTANT - CREATE THE DATABASE FIRST
-    // First check if the database/collection exists by writing to a test collection
+    // First check database connectivity with proper error handling
     try {
-      // Just try to access a document first to verify the database exists
-      await FirebaseFirestore.instance.collection('test_connection').doc('test').set({
-        'timestamp': FieldValue.serverTimestamp()
-      });
-      print('Firebase connection verified - database exists');
-    } catch (testError) {
-      print('Firebase database check failed: $testError');
-      // This typically means the database doesn't exist yet
-      _showSnackBar('Firebase database not found. Please create a Firestore database in the Firebase console first.', isError: true);
-      throw Exception('Firebase database not configured. See console logs.');
+      // Try writing to Firestore
+      await FirebaseFirestore.instance
+          .collection('hirers')
+          .doc(user.uid)
+          .set(userData, SetOptions(merge: true));
+      
+      print('User data saved successfully');
+    } catch (firestoreError) {
+      print('Firebase database error: $firestoreError');
+      throw Exception('Failed to save user data. Please check your internet connection and try again.');
     }
-
-    // Now save the actual user data
-    await FirebaseFirestore.instance
-        .collection('users')
-        .doc(user.uid)
-        .set(userData, SetOptions(merge: true));
-    
-    print('User data saved successfully');
   } catch (e) {
     print('Error saving user data: $e');
     throw e; // Re-throw to handle in the calling method
   }
-}}
+}
+}
 
 // Main signup form widget
 class SignupForm extends StatelessWidget {
@@ -999,7 +989,7 @@ class SignupForm extends StatelessWidget {
                   ),
                 ),
               ),
-              SizedBox(height: responsive.getHeight(10)),
+        
               Center(
                 child: Text(
                   "You are signing up as a hirer",
@@ -1009,7 +999,7 @@ class SignupForm extends StatelessWidget {
                   ),
                 ),
               ),
-              SizedBox(height: responsive.getHeight(32)),
+              SizedBox(height: responsive.getHeight(12)),
               
               // Profile Image
               Center(
@@ -1019,7 +1009,7 @@ class SignupForm extends StatelessWidget {
                   onImagePicked: onImagePicked,
                 ),
               ),
-              SizedBox(height: responsive.getHeight(24)),
+          
               
               // Form Fields
               LabelText(responsive: responsive, text: "Your Name"),
