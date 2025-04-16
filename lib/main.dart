@@ -34,31 +34,22 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Create instances of services first
-    final authService = AuthService();
-    final firebaseService = FirebaseService();
-    final locationService = LocationService();
+ 
     
-    return MultiProvider(
-      providers: [
-        Provider<AuthService>.value(value: authService),
-        Provider<FirebaseService>.value(value: firebaseService),
-        Provider<LocationService>.value(value: locationService),
-      ],
-      child: MaterialApp(
-        debugShowCheckedModeBanner: false,
-        title: 'Hirer Sign Up',
-        theme: ThemeData(
-          primaryColor: const Color(0xFF2020F0),
-          scaffoldBackgroundColor: Colors.white,
-          fontFamily: 'Roboto',
-          colorScheme: ColorScheme.fromSeed(
-            seedColor: const Color(0xFF2020F0),
-            primary: const Color(0xFF2020F0),
-          ),
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      title: 'Hirer Sign Up',
+      theme: ThemeData(
+        primaryColor: const Color(0xFF2020F0),
+        scaffoldBackgroundColor: Colors.white,
+        fontFamily: 'Roboto',
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFF2020F0),
+          primary: const Color(0xFF2020F0),
         ),
-        
-        home: const SignupPage(),
       ),
+      
+      home: const SignupPage(),
     );
   }
 }
