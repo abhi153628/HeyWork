@@ -1,98 +1,117 @@
 import 'package:flutter/material.dart';
+import 'package:hey_work/presentation/hirer_section/common/bottom_nav_bar.dart';
 
-class JobPostModalBottomSheet extends StatelessWidget {
+class BottomNavBar extends StatelessWidget {
+  final int currentIndex;
+  final Function(int) onTap;
+
+  const BottomNavBar({
+    Key? key,
+    required this.currentIndex,
+    required this.onTap,
+  }) : super(key: key);
+
   @override
   Widget build(BuildContext context) {
+    // Use fixed height instead of ScreenUtil
+    const bottomNavHeight = 60.0;
+    
+    // Get the theme colors
+    final Color secondaryBlue = const Color(0xFF0011C9); // Default color if AppTheme not available
+    
     return Container(
-      padding: EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.only(
-          topLeft: Radius.circular(20),
-          topRight: Radius.circular(20),
-        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.2),
+            spreadRadius: 1,
+            blurRadius: 5,
+            offset: const Offset(0, -1),
+          ),
+        ],
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
+      height: bottomNavHeight,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          // Divider at the top
-          Container(
-            width: 60,
-            height: 4,
-            margin: EdgeInsets.symmetric(vertical: 20),
-            decoration: BoxDecoration(
-              color: Color(0xFF1A73E8), // Dark blue color
-              borderRadius: BorderRadius.circular(5),
-            ),
+          BottomNavItem(
+            icon: Icons.home,
+            title: 'Home',
+            isActive: currentIndex == 0,
+            onTap: () => onTap(0),
+            activeColor: secondaryBlue,
           ),
-
-          // Title
-          Text(
-            "Post a job to reach workers around you.",
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Colors.black,
-            ),
+          BottomNavItem(
+            icon: Icons.notifications_outlined,
+            title: 'Notification',
+            isActive: currentIndex == 1,
+            onTap: () => onTap(1),
+            activeColor: secondaryBlue,
           ),
-
-          // Subtitle
-          SizedBox(height: 10),
-          Text(
-            "Browse through the applicants and choose the perfect fit.",
-            style: TextStyle(
-              fontSize: 14,
-              color: Color(0xFF6B6B6B), // Grayish text color
-            ),
-            textAlign: TextAlign.center,
+          BottomNavItem(
+            icon: Icons.work_outline,
+            title: 'Jobs',
+            isActive: currentIndex == 2,
+            onTap: () => onTap(2),
+            activeColor: secondaryBlue,
           ),
-
-          // Buttons
-          SizedBox(height: 30),
-          ElevatedButton(
-            onPressed: () {
-              // Handle Part Time Worker button press
-              Navigator.pop(context); // Close the modal
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Color(0xFF1A73E8), // Dark blue color
-              padding: EdgeInsets.symmetric(vertical: 15),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-            ),
-            child: Text(
-              "PART TIME WORKER",
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.white,
-              ),
-            ),
-          ),
-
-          SizedBox(height: 15),
-          OutlinedButton(
-            onPressed: () {
-              // Handle Full Time Worker button press
-              Navigator.pop(context); // Close the modal
-            },
-            style: OutlinedButton.styleFrom(
-              side: BorderSide(color: Color(0xFF1A73E8)), // Dark blue color
-              padding: EdgeInsets.symmetric(vertical: 15),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-            ),
-            child: Text(
-              "FULL TIME WORKER",
-              style: TextStyle(
-                fontSize: 16,
-                color: Color(0xFF1A73E8), // Dark blue color
-              ),
-            ),
+          BottomNavItem(
+            icon: Icons.person,
+            title: 'Profile',
+            isActive: currentIndex == 3,
+            onTap: () => onTap(3),
+            activeColor: secondaryBlue,
           ),
         ],
       ),
     );
   }
 }
+
+// // ==============================
+// // BOTTOM NAVIGATION ITEM COMPONENT (Fixed without ScreenUtil)
+// // ==============================
+// class BottomNavItem extends StatelessWidget {
+//   final IconData icon;
+//   final String title;
+//   final bool isActive;
+//   final VoidCallback onTap;
+//   final Color activeColor;
+
+//   const BottomNavItem({
+//     Key? key,
+//     required this.icon,
+//     required this.title,
+//     required this.isActive,
+//     required this.onTap,
+//     required this.activeColor,
+//   }) : super(key: key);
+
+//   @override
+//   Widget build(BuildContext context) {
+//     return GestureDetector(
+//       onTap: onTap,
+//       behavior: HitTestBehavior.opaque,
+//       child: Column(
+//         mainAxisAlignment: MainAxisAlignment.center,
+//         children: [
+//           Icon(
+//             icon,
+//             color: isActive ? activeColor : Colors.grey,
+//             size: 24, // Fixed size instead of using ScreenUtil
+//           ),
+//           const SizedBox(height: 4), // Fixed size instead of using ScreenUtil
+//           Text(
+//             title,
+//             style: TextStyle(
+//               color: isActive ? activeColor : Colors.grey,
+//               fontSize: 10, // Fixed size instead of using ScreenUtil
+//               fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
+//             ),
+//           ),
+//         ],
+//       ),
+//     );
+//   }
+// }

@@ -7,6 +7,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:hey_work/data/data_sources/remote/firebase_auth_hirer.dart';
 import 'package:hey_work/firebase_options.dart';
 import 'package:hey_work/presentation/hirer_section/signup_screen/signup_screen.dart';
+import 'package:hey_work/presentation/hirer_section/industry_selecction.dart';
 import 'package:provider/provider.dart';
 
 void main() async {
@@ -49,7 +50,7 @@ class MyApp extends StatelessWidget {
         ),
       ),
       
-      home: const SignupPage(),
+      home: const IndustrySelectionScreen(),
     );
   }
 }

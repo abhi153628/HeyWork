@@ -723,8 +723,24 @@ Future<void> _verifyOTP() async {
 // Fix 1: Process User Data Method
 Future<void> _processUserData(User user) async {
   try {
-    // Don't validate the form again, it was already validated before reaching this point
     print('Processing data for user: ${user.uid}');
+    
+    // Upload image if available
+    String? imageUrl;
+    if (_selectedImage != null) {
+      try {
+        final uuid = Uuid();
+        String fileName = '${uuid.v4()}.jpg';
+        final storageRef = FirebaseStorage.instance.ref().child('profile_images/$fileName');
+        final uploadTask = storageRef.putFile(_selectedImage!);
+        final snapshot = await uploadTask;
+        imageUrl = await snapshot.ref.getDownloadURL();
+        print('Image uploaded successfully: $imageUrl');
+      } catch (e) {
+        print('Error uploading image: $e');
+        // Continue without image if upload fails
+      }
+    }
     
     // Create a comprehensive user data map with null checks
     Map<String, dynamic> userData = {
@@ -735,6 +751,7 @@ Future<void> _processUserData(User user) async {
                   _locationController.text.isNotEmpty ? _locationController.text.trim() : "",
       'phoneNumber': _phoneController.text.isNotEmpty ? "+91${_phoneController.text.trim()}" : "",
       'userType': 'hirer',
+      'profileImage': imageUrl, // Add this line to include the image URL
       'createdAt': FieldValue.serverTimestamp(),
     };
     
@@ -748,7 +765,7 @@ Future<void> _processUserData(User user) async {
     
     print('User data saved successfully');
     
-    // Update UI state - ensure we check if component is still mounted
+    // Update UI state
     if (mounted) {
       setState(() {
         _isLoading = false;
@@ -760,11 +777,17 @@ Future<void> _processUserData(User user) async {
       // Navigate to home page
       print('Navigating to home page');
       
-      if (mounted) {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => HeyWorkHomePage())
-        );
-      }
+if (mounted) {
+  // Use a try-catch to handle any potential navigation errors
+  try {
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(builder: (_) => const HeyWorkHomePage())
+    );
+  } catch (e) {
+    print('Navigation error: $e');
+    _showSnackBar('Error navigating to home page. Please restart the app.', isError: true);
+  }
+}
     }
   } catch (e) {
     print('Error processing user data: $e');
@@ -777,8 +800,7 @@ Future<void> _processUserData(User user) async {
       _showSnackBar('Error saving user data: $e', isError: true);
     }
   }
-}  // Form submission
- Future<void> _submitForm() async {
+} Future<void> _submitForm() async {
   if (!_formKey.currentState!.validate() || !_acceptedTerms) {
     setState(() {
       _isLoading = false;

@@ -1,11 +1,8 @@
-// ==============================
-// CATEGORIES CHIPS COMPONENT
-// ==============================
 import 'package:flutter/material.dart';
-import 'package:flutter/widgets.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:hey_work/main.dart';
 
+// ==============================
+// CATEGORIES CHIPS COMPONENT (Fixed without ScreenUtil)
+// ==============================
 class CategoryChips extends StatelessWidget {
   const CategoryChips({Key? key}) : super(key: key);
 
@@ -18,7 +15,7 @@ class CategoryChips extends StatelessWidget {
     
     return Wrap(
       spacing: chipSpacing,
-      runSpacing: 8.h,
+      runSpacing: 8, // Fixed size instead of ScreenUtil
       children: [
         _buildCategoryChip(
           context: context,
@@ -90,7 +87,6 @@ class CategoryChips extends StatelessWidget {
     );
   }
   
-
   Widget _buildCategoryChip({
     required BuildContext context,
     required IconData icon,
@@ -103,24 +99,27 @@ class CategoryChips extends StatelessWidget {
     // Clamp font size for very small or large devices
     final clampedFontSize = fontSize.clamp(10.0, 14.0);
     
+    // Get background color - defaulting to light grey if AppTheme not available
+    final Color backgroundColor = isDark ? Colors.black : Colors.grey[200]!;
+    
     return Container(
-      padding: EdgeInsets.symmetric(
-        horizontal: 12.w, 
-        vertical: 8.h,
+      padding: const EdgeInsets.symmetric(
+        horizontal: 12, 
+        vertical: 8,
       ),
       decoration: BoxDecoration(
-        color: isDark ? Colors.black : AppTheme.backgroundGrey,
-        borderRadius: BorderRadius.circular(24.r),
+        color: backgroundColor,
+        borderRadius: BorderRadius.circular(24),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(
             icon,
-            size: 16.sp,
+            size: 16,
             color: isDark ? Colors.white : Colors.black54,
           ),
-          SizedBox(width: 6.w),
+          const SizedBox(width: 6),
           Text(
             label,
             style: TextStyle(
@@ -134,21 +133,29 @@ class CategoryChips extends StatelessWidget {
     );
   }
 }
+
 class CategoriesHeader extends StatelessWidget {
+  const CategoriesHeader({Key? key}) : super(key: key);
+
   @override
   Widget build(BuildContext context) {
-    return Row(
+    return const Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(
           'Categories',
           style: TextStyle(
-            fontSize: 20.sp,
+            fontSize: 18,
             fontWeight: FontWeight.bold,
           ),
         ),
-        // Pagination dots
-       
+        Text(
+          'View All',
+          style: TextStyle(
+            color: Colors.blue,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
       ],
     );
   }

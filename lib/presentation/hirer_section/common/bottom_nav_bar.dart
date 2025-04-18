@@ -1,14 +1,12 @@
-// ==============================
-// APP ROUTES
-// ==============================
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:hey_work/main.dart';
 import 'package:hey_work/presentation/hirer_section/home_page/home_page.dart';
 import 'package:hey_work/presentation/hirer_section/jobs/jobs.dart';
 import 'package:hey_work/presentation/hirer_section/notification_screen/notification.dart';
 import 'package:hey_work/presentation/hirer_section/profile/profile.dart';
 
+// ==============================
+// APP ROUTES
+// ==============================
 class AppRoutes {
   static final Map<String, WidgetBuilder> routes = {
     '/': (context) => const MainScreen(),
@@ -59,7 +57,7 @@ class _MainScreenState extends State<MainScreen> {
 }
 
 // ==============================
-// BOTTOM NAVIGATION BAR COMPONENT
+// BOTTOM NAVIGATION BAR COMPONENT - NO SCREENUTIL
 // ==============================
 class BottomNavBar extends StatelessWidget {
   final int currentIndex;
@@ -73,8 +71,11 @@ class BottomNavBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Calculate adaptive heights based on device
-    final bottomNavHeight = 60.h;
+    // Fixed height instead of using ScreenUtil
+    const double bottomNavHeight = 60.0;
+    
+    // Fixed color instead of relying on AppTheme
+    const Color secondaryBlue = Color(0xFF0011C9);
     
     return Container(
       decoration: BoxDecoration(
@@ -97,25 +98,28 @@ class BottomNavBar extends StatelessWidget {
             title: 'Home',
             isActive: currentIndex == 0,
             onTap: () => onTap(0),
+            activeColor: secondaryBlue,
           ),
           BottomNavItem(
-            icon: Icons.person_outline,
+            icon: Icons.notifications_outlined,
             title: 'Notification',
             isActive: currentIndex == 1,
             onTap: () => onTap(1),
+            activeColor: secondaryBlue,
           ),
           BottomNavItem(
             icon: Icons.work_outline,
             title: 'Jobs',
             isActive: currentIndex == 2,
             onTap: () => onTap(2),
+            activeColor: secondaryBlue,
           ),
-         
           BottomNavItem(
             icon: Icons.person,
             title: 'Profile',
             isActive: currentIndex == 3,
             onTap: () => onTap(3),
+            activeColor: secondaryBlue,
           ),
         ],
       ),
@@ -124,13 +128,14 @@ class BottomNavBar extends StatelessWidget {
 }
 
 // ==============================
-// BOTTOM NAVIGATION ITEM COMPONENT
+// BOTTOM NAVIGATION ITEM COMPONENT - NO SCREENUTIL
 // ==============================
 class BottomNavItem extends StatelessWidget {
   final IconData icon;
   final String title;
   final bool isActive;
   final VoidCallback onTap;
+  final Color activeColor;
 
   const BottomNavItem({
     Key? key,
@@ -138,6 +143,7 @@ class BottomNavItem extends StatelessWidget {
     required this.title,
     required this.isActive,
     required this.onTap,
+    required this.activeColor,
   }) : super(key: key);
 
   @override
@@ -150,15 +156,15 @@ class BottomNavItem extends StatelessWidget {
         children: [
           Icon(
             icon,
-            color: isActive ? AppTheme.secondaryBlue : Colors.grey,
-            size: 24.sp,
+            color: isActive ? activeColor : Colors.grey,
+            size: 24, // Fixed size instead of using ScreenUtil
           ),
-          SizedBox(height: 4.h),
+          const SizedBox(height: 4), // Fixed size
           Text(
             title,
             style: TextStyle(
-              color: isActive ? AppTheme.secondaryBlue : Colors.grey,
-              fontSize: 10.sp,
+              color: isActive ? activeColor : Colors.grey,
+              fontSize: 10, // Fixed size
               fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
             ),
           ),
