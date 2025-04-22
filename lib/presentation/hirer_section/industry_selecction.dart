@@ -22,6 +22,7 @@ class IndustryData {
 class _IndustrySelectionScreenState extends State<IndustrySelectionScreen> {
   final TextEditingController _searchController = TextEditingController();
   String selectedIndustry = '';
+  bool _isLoading = false; // Add a loading state variable
 
   final List<IndustryData> industryList = [
   IndustryData(name: 'Restaurants & Food Services'),
@@ -210,6 +211,11 @@ class _IndustrySelectionScreenState extends State<IndustrySelectionScreen> {
   }
 
   Future<void> _saveIndustryToFirebase() async {
+    // Set loading state to true
+    setState(() {
+      _isLoading = true;
+    });
+    
     try {
       User? user = FirebaseAuth.instance.currentUser;
       if (user != null && selectedIndustry.isNotEmpty) {
@@ -223,13 +229,8 @@ class _IndustrySelectionScreenState extends State<IndustrySelectionScreen> {
             .doc(user.uid)
             .set(userData, SetOptions(merge: true));
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Industry saved successfully!'),
-            backgroundColor: Colors.green,
-          ),
-        );
-        
+     
+      
         // Navigate to next screen
         Navigator.pushReplacement(
           context,
@@ -237,6 +238,10 @@ class _IndustrySelectionScreenState extends State<IndustrySelectionScreen> {
         );
 
       } else {
+        setState(() {
+          _isLoading = false; // Set loading state to false if validation fails
+        });
+        
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Please select an industry first'),
@@ -245,6 +250,11 @@ class _IndustrySelectionScreenState extends State<IndustrySelectionScreen> {
         );
       }
     } catch (e) {
+      // Set loading state to false if error occurs
+      setState(() {
+        _isLoading = false;
+      });
+      
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Error: ${e.toString()}'),
@@ -359,22 +369,32 @@ class _IndustrySelectionScreenState extends State<IndustrySelectionScreen> {
                 width: double.infinity,
                 height: 56,
                 child: ElevatedButton(
-                  onPressed: _saveIndustryToFirebase,
+                  onPressed: _isLoading ? null : _saveIndustryToFirebase, // Disable button when loading
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF0000CC),
+                    backgroundColor: _isLoading ? Colors.grey[400] : const Color(0xFF0000CC), // Change color when loading
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8),
                     ),
                     elevation: 0,
                   ),
-                  child: const Text(
-                    'Continue',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white,
-                    ),
-                  ),
+                  child: _isLoading 
+                    // Show loading indicator when loading
+                    ? const SizedBox(
+                        height: 24,
+                        width: 24,
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 3,
+                        ),
+                      )
+                    : const Text(
+                        'Continue',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                        ),
+                      ),
                 ),
               ),
               

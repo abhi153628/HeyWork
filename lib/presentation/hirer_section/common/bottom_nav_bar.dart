@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:hey_work/presentation/hirer_section/home_page/home_page.dart';
-import 'package:hey_work/presentation/hirer_section/jobs/jobs.dart';
+import 'package:hey_work/presentation/hirer_section/jobs/posted_jobs.dart';
 import 'package:hey_work/presentation/hirer_section/notification_screen/notification.dart';
 import 'package:hey_work/presentation/hirer_section/profile/profile.dart';
 
@@ -11,7 +11,7 @@ class AppRoutes {
   static final Map<String, WidgetBuilder> routes = {
     '/': (context) => const MainScreen(),
     '/navigator': (context) => const NotificationPage(),
-    '/jobs': (context) => const JobsScreen(),
+    '/jobs': (context) => const JobsPostedScreen(submittedJob: {},),
     '/profile': (context) => const JobPostingScreen(),
   };
 }
@@ -33,7 +33,7 @@ class _MainScreenState extends State<MainScreen> {
   final List<Widget> _screens = [
     const HeyWorkHomePage(),
     const NotificationPage(),
-    const JobsScreen(),
+    const  JobsPostedScreen(submittedJob: {},),
     const JobPostingScreen(),
   ];
   

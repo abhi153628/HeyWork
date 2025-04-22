@@ -7,7 +7,7 @@ import 'package:hey_work/presentation/hirer_section/common/floating_action_butto
 import 'package:hey_work/presentation/hirer_section/job_catogory.dart';
 import 'package:hey_work/presentation/hirer_section/settings_screen/settings_page.dart';
 import 'package:hey_work/presentation/hirer_section/widgets/category_chips.dart';
-import 'package:hey_work/presentation/hirer_section/widgets/job_catogory.dart';
+import 'package:hey_work/presentation/hirer_section/widgets/worker_type_bottom_sheet.dart';
 
 //! S E A R C H  B A R  W I D G E T
 class SearchBar extends StatelessWidget {

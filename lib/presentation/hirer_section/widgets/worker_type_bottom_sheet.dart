@@ -1,24 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/widgets.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:hey_work/presentation/hirer_section/job_detail_page.dart/job_detail.dart';
 
+import 'package:hey_work/presentation/hirer_section/jobs_posted/job_detail_screen.dart';
 
-
-
-
-
-
-
-// Bottom Sheet that appears when a category is clicked (Fixed without ScreenUtil)
 class WorkerTypeBottomSheet extends StatelessWidget {
   final String jobCategory;
   
   const WorkerTypeBottomSheet({
-    Key? key,
+    super.key,
     required this.jobCategory,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -54,7 +44,7 @@ class WorkerTypeBottomSheet extends StatelessWidget {
                   'Post a job to reach workers around you.',
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    fontSize: 20,
+                    fontSize: 18,
                     fontWeight: FontWeight.w600,
                     color: Colors.black,
                   ),
@@ -152,30 +142,6 @@ class WorkerTypeBottomSheet extends StatelessWidget {
           
           const SizedBox(height: 48), // Bottom padding
         ],
-      ),
-    );
-  }
-}
-
-// Placeholder for JobDetailsScreen
-class JobDetailsScreen extends StatelessWidget {
-  final String jobCategory;
-  final String jobType;
-  
-  const JobDetailsScreen({
-    Key? key,
-    required this.jobCategory,
-    required this.jobType,
-  }) : super(key: key);
-  
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('$jobCategory - $jobType'),
-      ),
-      body: const Center(
-        child: Text('Job Details Screen'),
       ),
     );
   }

@@ -32,25 +32,27 @@ void main() async {
 class MyApp extends StatelessWidget {
   const MyApp({Key? key}) : super(key: key);
 
-  @override
+ @override
   Widget build(BuildContext context) {
-    // Create instances of services first
- 
-    
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'Hirer Sign Up',
-      theme: ThemeData(
-        primaryColor: const Color(0xFF2020F0),
-        scaffoldBackgroundColor: Colors.white,
-        fontFamily: 'Roboto',
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF2020F0),
-          primary: const Color(0xFF2020F0),
-        ),
-      ),
-      
-      home: const IndustrySelectionScreen(),
+    // Initialize ScreenUtil with default design size
+    return ScreenUtilInit(
+      designSize: const Size(375, 812),
+      minTextAdapt: true,
+      splitScreenMode: true,
+      builder: (context, child) {
+        return MaterialApp(
+          title: 'Hey Work',
+          debugShowCheckedModeBanner: false,
+          theme: ThemeData(
+            primaryColor: const Color(0xFF0011C9),
+            primarySwatch: Colors.blue,
+            scaffoldBackgroundColor: Colors.white,
+            fontFamily: 'Poppins',
+            useMaterial3: false,
+          ),
+          home: const IndustrySelectionScreen(),
+        );
+      },
     );
   }
 }
