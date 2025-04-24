@@ -4,10 +4,11 @@ import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:hey_work/data/data_sources/remote/firebase_auth_hirer.dart';
+import 'package:hey_work/core/services/database/jobs_service.dart';
+
 import 'package:hey_work/firebase_options.dart';
-import 'package:hey_work/presentation/hirer_section/signup_screen/signup_screen.dart';
-import 'package:hey_work/presentation/hirer_section/industry_selecction.dart';
+
+import 'package:hey_work/presentation/worker_section/home_page/home_page.dart';
 import 'package:provider/provider.dart';
 
 void main() async {
@@ -40,17 +41,21 @@ class MyApp extends StatelessWidget {
       minTextAdapt: true,
       splitScreenMode: true,
       builder: (context, child) {
-        return MaterialApp(
-          title: 'Hey Work',
-          debugShowCheckedModeBanner: false,
-          theme: ThemeData(
-            primaryColor: const Color(0xFF0011C9),
-            primarySwatch: Colors.blue,
-            scaffoldBackgroundColor: Colors.white,
-            fontFamily: 'Poppins',
-            useMaterial3: false,
+        return MultiProvider(   providers: [
+        ChangeNotifierProvider(create: (_) => JobProvider()),
+        ],
+          child: MaterialApp(
+            title: 'Hey Work',
+            debugShowCheckedModeBanner: false,
+            theme: ThemeData(
+              primaryColor: const Color(0xFF0011C9),
+              primarySwatch: Colors.blue,
+              scaffoldBackgroundColor: Colors.white,
+              fontFamily: 'Poppins',
+              useMaterial3: false,
+            ),
+            home: const HomeScreen(),
           ),
-          home: const IndustrySelectionScreen(),
         );
       },
     );
