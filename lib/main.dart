@@ -7,8 +7,10 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:hey_work/core/services/database/jobs_service.dart';
 
 import 'package:hey_work/firebase_options.dart';
+import 'package:hey_work/presentation/hirer_section/signup_screen/signup_screen_hirer.dart';
 
 import 'package:hey_work/presentation/worker_section/home_page/home_page.dart';
+import 'package:hey_work/presentation/worker_section/worker_signup_page/worker_signup_page.dart';
 import 'package:provider/provider.dart';
 
 void main() async {
@@ -54,7 +56,7 @@ class MyApp extends StatelessWidget {
               fontFamily: 'Poppins',
               useMaterial3: false,
             ),
-            home: const HomeScreen(),
+            home: WorkerSignupPage(),
           ),
         );
       },

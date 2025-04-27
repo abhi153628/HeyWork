@@ -251,15 +251,15 @@ class _PhoneInputFieldState extends State<PhoneInputField> {
   }
 }
 
-class SignupPage extends StatefulWidget {
-  const SignupPage({Key? key
+class WorkerSignupPage extends StatefulWidget {
+  const WorkerSignupPage({Key? key
 }) : super(key: key);
 
   @override
-  _SignupPageState createState() => _SignupPageState();
+  _WorkerSignupPageState createState() => _WorkerSignupPageState();
 }
 
-class _SignupPageState extends State<SignupPage> {
+class _WorkerSignupPageState extends State<WorkerSignupPage> {
   final _formKey = GlobalKey<FormState>();
   bool _isLoading = false;
   bool _acceptedTerms = false;
@@ -721,168 +721,145 @@ Future<void> _verifyOTP() async {
   }
 }// Replace your _processUserData with this simplified version for debugging
 // Fix 1: Process User Data Method
-Future<void> _processUserData(User user) async {
-  try {
-    print('Processing data for user: ${user.uid}');
-    
-    // Upload image if available
-    String? imageUrl;
-    if (_selectedImage != null) {
-      try {
-        final uuid = Uuid();
-        String fileName = '${uuid.v4()}.jpg';
-        final storageRef = FirebaseStorage.instance.ref().child('profile_images/$fileName');
-        final uploadTask = storageRef.putFile(_selectedImage!);
-        final snapshot = await uploadTask;
-        imageUrl = await snapshot.ref.getDownloadURL();
-        print('Image uploaded successfully: $imageUrl');
-      } catch (e) {
-        print('Error uploading image: $e');
-        // Continue without image if upload fails
-      }
-    }
-    
-    // Create a comprehensive user data map with null checks
-    Map<String, dynamic> userData = {
-      'id': user.uid,
-      'name': _nameController.text.isNotEmpty ? _nameController.text.trim() : "User",
-      'businessName': _businessNameController.text.isNotEmpty ? _businessNameController.text.trim() : "",
-      'location': _selectedLocation != null ? _selectedLocation!['placeName'] : 
-                  _locationController.text.isNotEmpty ? _locationController.text.trim() : "",
-      'phoneNumber': _phoneController.text.isNotEmpty ? "+91${_phoneController.text.trim()}" : "",
-      'userType': 'hirer',
-      'profileImage': imageUrl, // Add this line to include the image URL
-      'createdAt': FieldValue.serverTimestamp(),
-    };
-    
-    print('Saving user data: $userData');
-    
-    // Save to Firestore with better error handling
-    await FirebaseFirestore.instance
-        .collection('hirers')
-        .doc(user.uid)
-        .set(userData, SetOptions(merge: true));
-    
-    print('User data saved successfully');
-    
-    // Update UI state
-    if (mounted) {
-      setState(() {
-        _isLoading = false;
-      });
-    
-      // Show success message
-      _showSnackBar('Account created successfully!');
-    
-      // Navigate to home page
-      print('Navigating to home page');
+ Future<void> _processUserData(User user) async {
+    try {
+      print('Processing data for user: ${user.uid}');
       
-if (mounted) {
-  // Use a try-catch to handle any potential navigation errors
-  try {
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (_) => const HeyWorkHomePage())
-    );
-  } catch (e) {
-    print('Navigation error: $e');
-    _showSnackBar('Error navigating to home page. Please restart the app.', isError: true);
-  }
-}
-    }
-  } catch (e) {
-    print('Error processing user data: $e');
-    print(StackTrace.current);
-    
-    if (mounted) {
-      setState(() {
-        _isLoading = false;
-      });
-      _showSnackBar('Error saving user data: $e', isError: true);
-    }
-  }
-} Future<void> _submitForm() async {
-  if (!_formKey.currentState!.validate() || !_acceptedTerms) {
-    setState(() {
-      _isLoading = false;
-    });
-    _showSnackBar('Please fill all required fields and accept terms', isError: true);
-    return;
-  }
-
-  setState(() {
-    _isLoading = true;
-  });
-
-  try {
-    // Get the current user - this is the critical part that's failing
-    User? currentUser = FirebaseAuth.instance.currentUser;
-    
-    // Better error handling for null user
-    if (currentUser == null) {
-      print('ERROR: Current user is null after OTP verification');
-      
-      // Try to sign in again with phone credential if user is null
-      try {
-        // Try to sign in again with phone credential if user is null
-        PhoneAuthCredential credential = PhoneAuthProvider.credential(
-          verificationId: _verificationId,
-          smsCode: _otpController.text.trim(),
-        );
-        
-        UserCredential userCredential = await FirebaseAuth.instance.signInWithCredential(credential);
-        currentUser = userCredential.user;
-        
-        if (currentUser == null) {
-          throw Exception('Failed to authenticate user after multiple attempts');
+      // Upload image if available
+      String? imageUrl;
+      if (_selectedImage != null) {
+        try {
+          final uuid = Uuid();
+          String fileName = '${uuid.v4()}.jpg';
+          final storageRef = FirebaseStorage.instance.ref().child('profile_images/$fileName');
+          final uploadTask = storageRef.putFile(_selectedImage!);
+          final snapshot = await uploadTask;
+          imageUrl = await snapshot.ref.getDownloadURL();
+          print('Image uploaded successfully: $imageUrl');
+        } catch (e) {
+          print('Error uploading image: $e');
+          // Continue without image if upload fails
         }
+      }
+      
+      // Create a comprehensive user data map with null checks
+      Map<String, dynamic> userData = {
+        'id': user.uid,
+        'name': _nameController.text.isNotEmpty ? _nameController.text.trim() : "User",
+        'location': _selectedLocation != null ? _selectedLocation!['placeName'] : 
+                   _locationController.text.isNotEmpty ? _locationController.text.trim() : "",
+        'phoneNumber': _phoneController.text.isNotEmpty ? "+91${_phoneController.text.trim()}" : "",
+        'userType': 'worker',
+        'profileImage': imageUrl,
+        'createdAt': FieldValue.serverTimestamp(),
+      };
+      
+      print('Saving worker data: $userData');
+      
+      // Save to Firestore with better error handling - using 'workers' collection
+      await FirebaseFirestore.instance
+          .collection('workers')
+          .doc(user.uid)
+          .set(userData, SetOptions(merge: true));
+      
+      print('Worker data saved successfully');
+      
+      // Update UI state
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      
+        // Show success message
+        _showSnackBar('Account created successfully!');
+      
+        // Navigate to home page
+        print('Navigating to home page');
         
-        print('Successfully authenticated user on retry: ${currentUser.uid}');
-      } catch (authError) {
-        print('Authentication retry error: $authError');
-        throw Exception('Authentication failed. Please try again with a new OTP.');
+        if (mounted) {
+          // Use a try-catch to handle any potential navigation errors
+          try {
+            Navigator.of(context).pushReplacement(
+              MaterialPageRoute(builder: (_) => const HeyWorkHomePage())
+            );
+          } catch (e) {
+            print('Navigation error: $e');
+            _showSnackBar('Error navigating to home page. Please restart the app.', isError: true);
+          }
+        }
       }
-    }
-    
-    print('Processing signup for user: ${currentUser.uid}');
-    
-    String? imageUrl;
-    
-    // Upload image if selected
-    if (_selectedImage != null) {
-      try {
-        imageUrl = await _uploadImage();
-        print('Image uploaded successfully: $imageUrl');
-      } catch (e) {
-        print('Error uploading image: $e');
-        // Continue without image if upload fails
-        _showSnackBar('Failed to upload image, continuing without profile picture', isError: true);
+    } catch (e) {
+      print('Error processing user data: $e');
+      print(StackTrace.current);
+      
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+        _showSnackBar('Error saving user data: $e', isError: true);
       }
-    }
-    
-    // Save user data to Firestore
-    await _saveUserData(currentUser, imageUrl);
-    
-    if (mounted) {
-      setState(() {
-        _isLoading = false;
-      });
-      
-      // Show success message
-      _showSnackBar('Account created successfully!');
-      
-      // Navigate to next screen
-      Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => MainScreen()));
-    }
-  } catch (e) {
-    if (mounted) {
-      setState(() {
-        _isLoading = false;
-      });
-      print('Error in form submission: $e');
-      _showSnackBar('Error: $e', isError: true);
     }
   }
-}
+
+
+  Future<void> _submitForm() async {
+    if (!_formKey.currentState!.validate() || !_acceptedTerms) {
+      setState(() {
+        _isLoading = false;
+      });
+      _showSnackBar('Please fill all required fields and accept terms', isError: true);
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      // Get the current user - this is the critical part that's failing
+      User? currentUser = FirebaseAuth.instance.currentUser;
+      
+      // Better error handling for null user
+      if (currentUser == null) {
+        print('ERROR: Current user is null after OTP verification');
+        
+        // Try to sign in again with phone credential if user is null
+        try {
+          // Try to sign in again with phone credential if user is null
+          PhoneAuthCredential credential = PhoneAuthProvider.credential(
+            verificationId: _verificationId,
+            smsCode: _otpController.text.trim(),
+          );
+          
+          UserCredential userCredential = await FirebaseAuth.instance.signInWithCredential(credential);
+          currentUser = userCredential.user;
+          
+          if (currentUser == null) {
+            throw Exception('Failed to authenticate user after multiple attempts');
+          }
+          
+          print('Successfully authenticated user on retry: ${currentUser.uid}');
+        } catch (authError) {
+          print('Authentication retry error: $authError');
+          throw Exception('Authentication failed. Please try again with a new OTP.');
+        }
+      }
+      
+      print('Processing signup for user: ${currentUser.uid}');
+      
+      // Process user data
+      await _processUserData(currentUser);
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+        print('Error in form submission: $e');
+        _showSnackBar('Error: $e', isError: true);
+      }
+    }
+  }
+
   Future<String> _uploadImage() async {
     if (_selectedImage == null) {
       throw Exception('No image selected');
@@ -909,7 +886,7 @@ Future<void> _saveUserData(User user, String? imageUrl) async {
     Map<String, dynamic> userData = {
       'id': user.uid,
       'name': _nameController.text.isNotEmpty ? _nameController.text.trim() : "User",
-      'businessName': _businessNameController.text.isNotEmpty ? _businessNameController.text.trim() : "",
+    
       'location': _selectedLocation != null ? _selectedLocation!['placeName'] : 
                  _locationController.text.isNotEmpty ? _locationController.text.trim() : "",
       'phoneNumber': phoneNumber,
@@ -921,18 +898,7 @@ Future<void> _saveUserData(User user, String? imageUrl) async {
     print('Saving user data for UID ${user.uid}: $userData');
 
     // First check database connectivity with proper error handling
-    try {
-      // Try writing to Firestore
-      await FirebaseFirestore.instance
-          .collection('hirers')
-          .doc(user.uid)
-          .set(userData, SetOptions(merge: true));
-      
-      print('User data saved successfully');
-    } catch (firestoreError) {
-      print('Firebase database error: $firestoreError');
-      throw Exception('Failed to save user data. Please check your internet connection and try again.');
-    }
+
   } catch (e) {
     print('Error saving user data: $e');
     throw e; // Re-throw to handle in the calling method
@@ -1003,7 +969,7 @@ class SignupForm extends StatelessWidget {
               // Header
               Center(
                 child: Text(
-                  "Hirer Sign Up",
+                  "Worker Sign Up",
                   style: GoogleFonts.roboto(
                     fontSize: responsive.getFontSize(28),
                     fontWeight: FontWeight.w700,
@@ -1014,14 +980,14 @@ class SignupForm extends StatelessWidget {
         
               Center(
                 child: Text(
-                  "You are signing up as a hirer",
+                  "You are signing up as a worker",
                   style: GoogleFonts.roboto(
                     fontSize: responsive.getFontSize(16),
                     color: Colors.grey.shade600,
                   ),
                 ),
               ),
-              SizedBox(height: responsive.getHeight(12)),
+              SizedBox(height: responsive.getHeight(36)),
               
               // Profile Image
               Center(
@@ -1045,18 +1011,9 @@ class SignupForm extends StatelessWidget {
               ),
               SizedBox(height: responsive.getHeight(20)),
               
-              LabelText(responsive: responsive, text: "Business Name"),
-              SizedBox(height: responsive.getHeight(8)),
-              CustomTextField(
-                responsive: responsive,
-                controller: businessNameController,
-                hintText: "Enter the name of your business",
-                validator: FormValidator.validateBusinessName,
-                prefixIcon: Icons.business_outlined,
-              ),
-              SizedBox(height: responsive.getHeight(20)),
+           
               
-              LabelText(responsive: responsive, text: "Business Location"),
+              LabelText(responsive: responsive, text: "Your Location"),
               SizedBox(height: responsive.getHeight(8)),
               LocationSelector(
                 responsive: responsive,
