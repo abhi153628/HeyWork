@@ -915,7 +915,7 @@ class _JobDetailsScreenState extends State<JobDetailsScreen> with SingleTickerPr
               ),
             ),
           );
-        }).toList(),
+        }),
       ],
     );
   }

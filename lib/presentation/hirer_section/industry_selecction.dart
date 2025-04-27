@@ -211,58 +211,55 @@ class _IndustrySelectionScreenState extends State<IndustrySelectionScreen> {
   }
 
   Future<void> _saveIndustryToFirebase() async {
-    // Set loading state to true
-    setState(() {
-      _isLoading = true;
-    });
-    
-    try {
-      User? user = FirebaseAuth.instance.currentUser;
-      if (user != null && selectedIndustry.isNotEmpty) {
-        Map<String, dynamic> userData = {
-          'businessType': selectedIndustry,
-          'updatedAt': FieldValue.serverTimestamp(),
-        };
+  // Set loading state to true
+  setState(() {
+    _isLoading = true;
+  });
+  
+  try {
+    User? user = FirebaseAuth.instance.currentUser;
+    if (user != null && selectedIndustry.isNotEmpty) {
+      Map<String, dynamic> userData = {
+        'industry': selectedIndustry, // Changed from 'businessType' to 'industry'
+        'updatedAt': FieldValue.serverTimestamp(),
+      };
 
-        await FirebaseFirestore.instance
-            .collection('hirers')
-            .doc(user.uid)
-            .set(userData, SetOptions(merge: true));
+      await FirebaseFirestore.instance
+          .collection('hirers')
+          .doc(user.uid)
+          .set(userData, SetOptions(merge: true));
 
-     
-      
-        // Navigate to next screen
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const MainScreen()),
-        );
-
-      } else {
-        setState(() {
-          _isLoading = false; // Set loading state to false if validation fails
-        });
-        
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Please select an industry first'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    } catch (e) {
-      // Set loading state to false if error occurs
+      // Navigate to next screen
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const MainScreen()),
+      );
+    } else {
       setState(() {
-        _isLoading = false;
+        _isLoading = false; // Set loading state to false if validation fails
       });
       
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error: ${e.toString()}'),
+        const SnackBar(
+          content: Text('Please select an industry first'),
           backgroundColor: Colors.red,
         ),
       );
     }
+  } catch (e) {
+    // Set loading state to false if error occurs
+    setState(() {
+      _isLoading = false;
+    });
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Error: ${e.toString()}'),
+        backgroundColor: Colors.red,
+      ),
+    );
   }
+}
 
   @override
   Widget build(BuildContext context) {

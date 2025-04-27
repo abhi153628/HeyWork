@@ -1,51 +1,84 @@
-// main.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:firebase_core/firebase_core.dart';
-import 'package:provider/provider.dart';
-
-
 
 class JobModel {
   final String id;
   final String title;
   final String company;
   final String location;
-  final String district;
-  final int salary;
-  final String salaryPeriod;
+  final String description;
+  final int budget;
+  final Map<String, dynamic>? salaryRange;
   final String jobType;
+  final String jobCategory;
   final String? imageUrl;
-  final DateTime postedAt;
+  final DateTime createdAt;
+  final DateTime date;
+  final String status;
+  final String hirerId;
+  final String hirerName;
+  final String hirerPhone;
+  final String hirerLocation;
+  final String hirerIndustry;
+  final String hirerBusinessName;
 
   JobModel({
     required this.id,
     required this.title,
     required this.company,
     required this.location,
-    required this.district,
-    required this.salary,
-    required this.salaryPeriod,
+    required this.description,
+    required this.budget,
+    this.salaryRange,
     required this.jobType,
+    required this.jobCategory,
     this.imageUrl,
-    required this.postedAt,
+    required this.createdAt,
+    required this.date,
+    required this.status,
+    required this.hirerId,
+    required this.hirerName,
+    required this.hirerPhone,
+    required this.hirerLocation,
+    required this.hirerIndustry,
+    required this.hirerBusinessName,
   });
 
   factory JobModel.fromFirestore(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
     
+    // Create salary range map if min and max exist in data
+    Map<String, dynamic>? salaryRangeMap;
+    if (data.containsKey('salaryRange')) {
+      salaryRangeMap = data['salaryRange'] as Map<String, dynamic>;
+    } else if (data.containsKey('min') && data.containsKey('max')) {
+      salaryRangeMap = {
+        'min': data['min'] ?? 0,
+        'max': data['max'] ?? 0,
+      };
+    }
+    
     return JobModel(
       id: doc.id,
-      title: data['jobTitle'] ?? '',
-      company: data['hirerBusinessName'] ?? '',
-      location: data['hirerLocation'] ?? '',
-      district: data['location'] ?? '',
-      salary: data['salary'] ?? 0,
-      salaryPeriod: data['salaryPeriod'] ?? 'per day',
+      title: data['jobTitle'] ?? data['title'] ?? 'No Title',
+      company: data['hirerBusinessName'] ?? 'No Company',
+      location: data['hirerLocation'] ?? 'No Location',
+      description: data['description'] ?? '',
+      budget: data['budget'] is int ? data['budget'] : 0,
+      salaryRange: salaryRangeMap,
       jobType: data['jobType'] ?? 'full-time',
+      jobCategory: data['jobCategory'] ?? 'All Works',
       imageUrl: data['hirerProfileImage'],
-      postedAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      date: (data['date'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      status: data['status'] ?? 'active',
+      hirerId: data['hirerId'] ?? '',
+      hirerName: data['hirerName'] ?? '',
+      hirerPhone: data['hirerPhone'] ?? '',
+      hirerLocation: data['hirerLocation'] ?? '',
+      hirerIndustry: data['hirerIndustry'] ?? '',
+      hirerBusinessName: data['hirerBusinessName'] ?? '',
     );
   }
 }
@@ -96,7 +129,6 @@ class JobProvider extends ChangeNotifier {
   }
 }
 
-
 class JobService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -112,7 +144,33 @@ class JobService {
         .orderBy('createdAt', descending: true)
         .snapshots()
         .map((snapshot) {
-      return snapshot.docs.map((doc) => JobModel.fromFirestore(doc)).toList();
+      return snapshot.docs.map((doc) {
+        try {
+          return JobModel.fromFirestore(doc);
+        } catch (e) {
+          print('Error parsing job document ${doc.id}: $e');
+          // Return a placeholder job model with error information
+          return JobModel(
+            id: doc.id,
+            title: 'Error parsing job',
+            company: 'Error',
+            location: 'Error',
+            description: 'Error parsing job: $e',
+            budget: 0,
+            jobType: 'unknown',
+            jobCategory: 'unknown',
+            createdAt: DateTime.now(),
+            date: DateTime.now(),
+            status: 'error',
+            hirerId: '',
+            hirerName: '',
+            hirerPhone: '',
+            hirerLocation: '',
+            hirerIndustry: '',
+            hirerBusinessName: '',
+          );
+        }
+      }).toList();
     });
   }
 
@@ -133,7 +191,21 @@ class JobService {
     });
   }
 
-  // Get predefined job categories
+  // Get job by ID
+  Future<JobModel?> getJobById(String jobId) async {
+    try {
+      final doc = await _firestore.collection('jobs').doc(jobId).get();
+      if (doc.exists) {
+        return JobModel.fromFirestore(doc);
+      }
+      return null;
+    } catch (e) {
+      print('Error fetching job by ID: $e');
+      return null;
+    }
+  }
+
+  // Get predefined job categories - updated based on screenshot
   List<JobCategory> getJobCategories() {
     return [
       JobCategory(
@@ -141,6 +213,11 @@ class JobService {
         name: 'All Works',
         iconPath: 'assets/icons/all_works.png',
         isSelected: true,
+      ),
+      JobCategory(
+        id: 'food-server',
+        name: 'Food Server',
+        iconPath: 'assets/icons/food_server.png',
       ),
       JobCategory(
         id: 'cleaning',
@@ -166,6 +243,11 @@ class JobService {
         id: 'housekeeping',
         name: 'Housekeeping',
         iconPath: 'assets/icons/housekeeping.png',
+      ),
+      JobCategory(
+        id: 'hospitality',
+        name: 'Hospitality & Hotels',
+        iconPath: 'assets/icons/hospitality.png',
       ),
     ];
   }
@@ -194,9 +276,27 @@ class JobService {
         jobData['timeFormatted'] = timeOfDay.format(context);
       }
 
+      // Handle salary range if provided as min/max values
+      if (jobData.containsKey('min') && jobData.containsKey('max')) {
+        jobData['salaryRange'] = {
+          'min': jobData['min'],
+          'max': jobData['max'],
+        };
+        // Keep the original fields too for backward compatibility
+      }
+
       // Get user data from hirers collection
       final userDoc = await _firestore.collection('hirers').doc(user.uid).get();
       final userData = userDoc.data() ?? {};
+      
+      // Check if industry data exists in jobData and save it to hirer document
+      if (jobData.containsKey('industry')) {
+        // Update hirer document with industry information
+        await _firestore.collection('hirers').doc(user.uid).update({
+          'industry': jobData['industry'],
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
+      }
 
       // Create job document with both job and user data
       final completeJobData = {
@@ -207,6 +307,7 @@ class JobService {
         'hirerLocation': userData['location'] ?? '',
         'hirerPhone': userData['phoneNumber'] ?? '',
         'hirerProfileImage': userData['profileImage'] ?? '',
+        'hirerIndustry': userData['industry'] ?? jobData['industry'] ?? '',
         'createdAt': FieldValue.serverTimestamp(),
         'updatedAt': FieldValue.serverTimestamp(),
         'status': 'active',
@@ -224,7 +325,7 @@ class JobService {
         completeJobData['jobId'] = jobRef.id;
         await jobRef.set(completeJobData);
 
-        // Also update user's jobs collection
+        // Also update user's jobs collection with more complete data
         await _firestore
             .collection('hirers')
             .doc(user.uid)
@@ -235,6 +336,10 @@ class JobService {
           'createdAt': FieldValue.serverTimestamp(),
           'jobCategory': jobData['jobCategory'],
           'jobType': jobData['jobType'],
+          'budget': jobData['budget'],
+          'description': jobData['description'],
+          'salaryRange': jobData['salaryRange'],
+          'industry': jobData['industry'] ?? userData['industry'] ?? '',
           'status': 'active',
         });
       }
@@ -252,63 +357,4 @@ class JobService {
       };
     }
   }
-}
-
-
-
-class AppColors {
-  static const Color primaryBlue = Color(0xFF0033CC);
-  static const Color white = Colors.white;
-  static const Color lightGrey = Color(0xFFF5F5F5);
-  static const Color mediumGrey = Color(0xFFE0E0E0);
-  static const Color darkGrey = Color(0xFF757575);
-  static const Color black = Colors.black;
-  static const Color green = Color(0xFF22C55E);
-}
-
-class AppTheme {
-  static ThemeData lightTheme = ThemeData(
-    primaryColor: AppColors.primaryBlue,
-    scaffoldBackgroundColor: Colors.white,
-    fontFamily: 'Poppins',
-    appBarTheme: const AppBarTheme(
-      backgroundColor: AppColors.primaryBlue,
-      elevation: 0,
-      centerTitle: false,
-      titleTextStyle: TextStyle(
-        color: AppColors.white,
-        fontSize: 22,
-        fontWeight: FontWeight.bold,
-        fontFamily: 'Poppins',
-      ),
-    ),
-    elevatedButtonTheme: ElevatedButtonThemeData(
-      style: ElevatedButton.styleFrom(
-        backgroundColor: AppColors.primaryBlue,
-        foregroundColor: AppColors.white,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
-        ),
-      ),
-    ),
-    textTheme: const TextTheme(
-      headlineMedium: TextStyle(
-        fontSize: 18,
-        fontWeight: FontWeight.bold,
-        color: AppColors.black,
-      ),
-      bodyLarge: TextStyle(
-        fontSize: 16,
-        color: AppColors.black,
-      ),
-      bodyMedium: TextStyle(
-        fontSize: 14,
-        color: AppColors.darkGrey,
-      ),
-      labelMedium: TextStyle(
-        fontSize: 12,
-        color: AppColors.darkGrey,
-      ),
-    ),
-  );
 }
