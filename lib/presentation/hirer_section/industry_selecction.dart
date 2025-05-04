@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:hey_work/presentation/hirer_section/common/bottom_nav_bar.dart';
-import 'package:hey_work/presentation/hirer_section/home_page/home_page.dart';
+import 'package:hey_work/presentation/hirer_section/home_page/hirer_home_page.dart';
 
 class IndustrySelectionScreen extends StatefulWidget {
   const IndustrySelectionScreen({super.key});

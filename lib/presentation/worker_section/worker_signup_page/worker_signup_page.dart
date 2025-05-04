@@ -4,9 +4,10 @@ import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:hey_work/presentation/hirer_section/common/bottom_nav_bar.dart';
-import 'package:hey_work/presentation/hirer_section/home_page/home_page.dart';
+import 'package:hey_work/presentation/hirer_section/home_page/hirer_home_page.dart';
 
 import 'package:hey_work/presentation/hirer_section/signup_screen/widgets/responsive_utils.dart';
+import 'package:hey_work/presentation/worker_section/home_page/worker_home_page.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:uuid/uuid.dart';
@@ -620,54 +621,80 @@ class _WorkerSignupPageState extends State<WorkerSignupPage> {
 
   // Phone verification methods
   Future<void> _verifyPhoneNumber() async {
-    if (_phoneController.text.isEmpty) {
-      _showSnackBar('Please enter your phone number', isError: true);
-      return;
-    }
+  if (_phoneController.text.isEmpty) {
+    _showSnackBar('Please enter your phone number', isError: true);
+    return;
+  }
 
-    // Format phone number to ensure it starts with +91
-    String phoneNumber = _phoneController.text.trim();
-    if (!phoneNumber.startsWith('+')) {
-      phoneNumber = '+91$phoneNumber';
-    }
+  // Format phone number to ensure it starts with +91
+  String phoneNumber = _phoneController.text.trim();
+  if (!phoneNumber.startsWith('+')) {
+    phoneNumber = '+91$phoneNumber';
+  }
 
-    setState(() {
-      _isLoading = true;
-    });
+  setState(() {
+    _isLoading = true;
+  });
 
-    try {
-      await FirebaseAuth.instance.verifyPhoneNumber(
-        phoneNumber: phoneNumber,
-        verificationCompleted: (PhoneAuthCredential credential) async {
+  try {
+    // Set verification timeout to a higher value
+    await FirebaseAuth.instance.verifyPhoneNumber(
+      phoneNumber: phoneNumber,
+      timeout: Duration(seconds: 120),
+      verificationCompleted: (PhoneAuthCredential credential) async {
+        // Auto-verification completed (mainly on Android)
+        try {
           await FirebaseAuth.instance.signInWithCredential(credential);
           _submitForm();
-        },
-        verificationFailed: (FirebaseAuthException e) {
+        } catch (e) {
           setState(() {
             _isLoading = false;
           });
-          _showSnackBar('Verification failed: ${e.message}', isError: true);
-        },
-        codeSent: (String verificationId, int? resendToken) {
-          setState(() {
-            _isLoading = false;
-            _otpSent = true;
-            _verificationId = verificationId;
-          });
-          _showSnackBar('OTP sent to your phone');
-        },
-        codeAutoRetrievalTimeout: (String verificationId) {
+          _showSnackBar('Auto-verification failed: $e', isError: true);
+        }
+      },
+      verificationFailed: (FirebaseAuthException e) {
+        setState(() {
+          _isLoading = false;
+        });
+        
+        // Handle specific error types
+        String errorMessage = 'Verification failed';
+        if (e.code == 'invalid-phone-number') {
+          errorMessage = 'Invalid phone number format';
+        } else if (e.message != null && e.message!.contains('BILLING_NOT_ENABLED')) {
+          errorMessage = 'Authentication service is temporarily unavailable. Please try again later or contact support.';
+          // Log the detailed error for debugging
+          print('BILLING ERROR: ${e.message}');
+        } else if (e.code == 'too-many-requests') {
+          errorMessage = 'Too many attempts from this device. Please try again later.';
+        } else if (e.code == 'app-not-authorized') {
+          errorMessage = 'App not authorized to use Firebase Authentication. Contact developer.';
+        } else {
+          errorMessage = e.message ?? 'Verification failed';
+        }
+        
+        _showSnackBar(errorMessage, isError: true);
+      },
+      codeSent: (String verificationId, int? resendToken) {
+        setState(() {
+          _isLoading = false;
+          _otpSent = true;
           _verificationId = verificationId;
-        },
-        timeout: Duration(seconds: 60),
-      );
-    } catch (e) {
-      setState(() {
-        _isLoading = false;
-      });
-      _showSnackBar('Error: $e', isError: true);
-    }
+        });
+        _showSnackBar('OTP sent to your phone');
+      },
+      codeAutoRetrievalTimeout: (String verificationId) {
+        _verificationId = verificationId;
+      },
+    );
+  } catch (e) {
+    setState(() {
+      _isLoading = false;
+    });
+    _showSnackBar('Error: $e', isError: true);
   }
+}
 
  // Replace your _verifyOTP method with this one
 Future<void> _verifyOTP() async {
@@ -780,7 +807,7 @@ Future<void> _verifyOTP() async {
           // Use a try-catch to handle any potential navigation errors
           try {
             Navigator.of(context).pushReplacement(
-              MaterialPageRoute(builder: (_) => const HeyWorkHomePage())
+              MaterialPageRoute(builder: (_) => const WorkerHomePage())
             );
           } catch (e) {
             print('Navigation error: $e');

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:hey_work/presentation/hirer_section/home_page/home_page.dart';
+import 'package:hey_work/presentation/hirer_section/home_page/hirer_home_page.dart';
 import 'package:hey_work/presentation/hirer_section/jobs/posted_jobs.dart';
 import 'package:hey_work/presentation/hirer_section/notification_screen/notification.dart';
 import 'package:hey_work/presentation/hirer_section/profile/profile.dart';
@@ -31,7 +31,7 @@ class _MainScreenState extends State<MainScreen> {
   
   // List of all screens accessible from bottom navigation
   final List<Widget> _screens = [
-    const HeyWorkHomePage(),
+    const HirerHomePage(),
     const NotificationPage(),
     const  JobsPostedScreen(submittedJob: {},),
     const JobPostingScreen(),

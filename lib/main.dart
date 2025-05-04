@@ -1,62 +1,81 @@
 // lib/main.dart
+import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:hey_work/core/services/database/jobs_service.dart';
-
-import 'package:hey_work/firebase_options.dart';
-import 'package:hey_work/presentation/hirer_section/signup_screen/signup_screen_hirer.dart';
-
-import 'package:hey_work/presentation/worker_section/home_page/home_page.dart';
-import 'package:hey_work/presentation/worker_section/worker_signup_page/worker_signup_page.dart';
 import 'package:provider/provider.dart';
 
+// Core
+import 'package:hey_work/core/services/database/jobs_service.dart';
+import 'package:hey_work/core/theme/app_theme.dart';
+
+// Firebase
+import 'package:hey_work/firebase_options.dart';
+
+// Presentation
+import 'package:hey_work/presentation/hirer_section/signup_screen/signup_screen_hirer.dart';
+import 'package:hey_work/presentation/worker_section/home_page/worker_home_page.dart';
+import 'package:hey_work/presentation/worker_section/worker_signup_page/worker_signup_page.dart';
+
 void main() async {
-  // Ensure Flutter binding is initialized before Firebase
-  WidgetsFlutterBinding.ensureInitialized();
-  
-  // Initialize Firebase
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
+  try {
+    // Ensure Flutter binding is initialized
+    WidgetsFlutterBinding.ensureInitialized();
+    
+    // Initialize Firebase
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+    
+    // Set system UI overlay style
+    SystemChrome.setSystemUIOverlayStyle(
+      const SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: Brightness.dark,
+      ),
+    );
+      // Initialize App Check
+  await FirebaseAppCheck.instance.activate(
+    // Use provider appropriate for your platform
+    webProvider: ReCaptchaV3Provider('your-recaptcha-site-key'),
+    androidProvider: AndroidProvider.playIntegrity,
+    appleProvider: AppleProvider.appAttest,
   );
-  
-  SystemChrome.setSystemUIOverlayStyle(
-    const SystemUiOverlayStyle(
-      statusBarColor: Colors.transparent,
-      statusBarIconBrightness: Brightness.dark,
-    ),
-  );
-  
-  runApp(const MyApp());
+    // Set preferred orientations
+    await SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.portraitDown,
+    ]);
+    
+    
+    runApp(const MyApp());
+  } catch (e) {
+    debugPrint('Error initializing app: $e');
+    // Handle initialization error appropriately
+  }
 }
 
 class MyApp extends StatelessWidget {
   const MyApp({Key? key}) : super(key: key);
 
- @override
+  @override
   Widget build(BuildContext context) {
-    // Initialize ScreenUtil with default design size
     return ScreenUtilInit(
       designSize: const Size(375, 812),
       minTextAdapt: true,
       splitScreenMode: true,
       builder: (context, child) {
-        return MultiProvider(   providers: [
-        ChangeNotifierProvider(create: (_) => JobProvider()),
-        ],
+        return MultiProvider(
+          providers: [
+            ChangeNotifierProvider(create: (_) => JobProvider()),
+          ],
           child: MaterialApp(
             title: 'Hey Work',
             debugShowCheckedModeBanner: false,
-            theme: ThemeData(
-              primaryColor: const Color(0xFF0011C9),
-              primarySwatch: Colors.blue,
-              scaffoldBackgroundColor: Colors.white,
-              fontFamily: 'Poppins',
-              useMaterial3: false,
-            ),
-            home: WorkerSignupPage(),
+            theme: AppTheme.lightTheme,
+            home: const WorkerSignupPage(),
           ),
         );
       },
@@ -69,7 +88,7 @@ class MyApp extends StatelessWidget {
 // ==============================
 class AppTheme {
   // Main colors
-  static const Color primaryBlue = Color(0xFF0000CC);
+  static const Color primaryBlue = Color(0xFF0011C9);
   static const Color secondaryBlue = Color(0xFF0033FF);
   static const Color backgroundGrey = Color(0xFFF0F2F7);
   

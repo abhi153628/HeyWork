@@ -174,22 +174,49 @@ class JobService {
     });
   }
 
-  // Fetch jobs by category
-  Stream<List<JobModel>> getJobsByCategory(String category) {
-    if (category == 'All Works') {
-      return getJobs();
-    }
-    
+// In JobService class (paste.txt)
+Stream<List<JobModel>> getJobsByCategory(String category, {String? workerLocation}) {
+  if (category == 'All Jobs') {
+    return getJobs();
+  } else if (workerLocation != null && category == workerLocation) {
+    // Filter by the worker's location
     return _firestore
         .collection('jobs')
         .where('status', isEqualTo: 'active')
-        .where('jobCategory', isEqualTo: category)
+        .where('hirerLocation', isEqualTo: category)
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .map((snapshot) {
+      return snapshot.docs.map((doc) => JobModel.fromFirestore(doc)).toList();
+    });
+  } else if (category == 'Full-Time') {
+    return _firestore
+        .collection('jobs')
+        .where('status', isEqualTo: 'active')
+        .where('jobType', isEqualTo: 'full-time')
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .map((snapshot) {
+      return snapshot.docs.map((doc) => JobModel.fromFirestore(doc)).toList();
+    });
+  } else if (category == 'Part-Time') {
+    return _firestore
+        .collection('jobs')
+        .where('status', isEqualTo: 'active')
+        .where('jobType', isEqualTo: 'part-time')
         .orderBy('createdAt', descending: true)
         .snapshots()
         .map((snapshot) {
       return snapshot.docs.map((doc) => JobModel.fromFirestore(doc)).toList();
     });
   }
+  
+  // Default return all jobs
+  return getJobs();
+}
+
+// Update extension methods 
+
 
   // Get job by ID
   Future<JobModel?> getJobById(String jobId) async {
@@ -206,53 +233,67 @@ class JobService {
   }
 
   // Get predefined job categories - updated based on screenshot
-  List<JobCategory> getJobCategories() {
-    return [
-      JobCategory(
-        id: 'all',
-        name: 'All Works',
-        iconPath: 'assets/icons/all_works.png',
-        isSelected: true,
-      ),
-      JobCategory(
-        id: 'food-server',
-        name: 'Food Server',
-        iconPath: 'assets/icons/food_server.png',
-      ),
-      JobCategory(
-        id: 'cleaning',
-        name: 'Cleaning',
-        iconPath: 'assets/icons/cleaning.png',
-      ),
-      JobCategory(
-        id: 'moving',
-        name: 'Moving',
-        iconPath: 'assets/icons/moving.png',
-      ),
-      JobCategory(
-        id: 'cooking',
-        name: 'Cooking',
-        iconPath: 'assets/icons/cooking.png',
-      ),
-      JobCategory(
-        id: 'driving',
-        name: 'Driving',
-        iconPath: 'assets/icons/driving.png',
-      ),
-      JobCategory(
-        id: 'housekeeping',
-        name: 'Housekeeping',
-        iconPath: 'assets/icons/housekeeping.png',
-      ),
-      JobCategory(
-        id: 'hospitality',
-        name: 'Hospitality & Hotels',
-        iconPath: 'assets/icons/hospitality.png',
-      ),
-    ];
-  }
+// In JobService class (paste.txt)
+// In JobService class (paste.txt)
+List<JobCategory> getJobCategories() {
+  return [
+    // Location category first - placeholder that will be updated
+    JobCategory(
+      id: 'location',
+      name: 'Location',
+      iconPath: 'assets/icons/location.png',
+      isSelected: true,
+    ),
+    // All Jobs category is second
+    JobCategory(
+      id: 'all',
+      name: 'All Jobs',
+      iconPath: 'assets/icons/all_works.png',
+    ),
+    JobCategory(
+      id: 'full-time',
+      name: 'Full-Time',
+      iconPath: 'assets/icons/full_time.png',
+    ),
+    JobCategory(
+      id: 'part-time',
+      name: 'Part-Time',
+      iconPath: 'assets/icons/part_time.png',
+    ),
+  ];
+}
 
-  // Save job data to Firestore
+// New method to get worker's location
+Future<String> getWorkerLocation() async {
+  final user = _auth.currentUser;
+  if (user != null) {
+    try {
+      final userDoc = await _firestore.collection('workers').doc(user.uid).get();
+      final userData = userDoc.data() ?? {};
+      return userData['location'] ?? 'Location';
+    } catch (e) {
+      print('Error fetching worker location: $e');
+      return 'Location';
+    }
+  }
+  return 'Location';
+}
+
+// Stream to listen for location changes
+Stream<String> watchWorkerLocation() {
+  final user = _auth.currentUser;
+  if (user != null) {
+    return _firestore
+        .collection('workers')
+        .doc(user.uid)
+        .snapshots()
+        .map((snapshot) {
+      final data = snapshot.data() ?? {};
+      return data['location'] ?? 'Location';
+    });
+  }
+  return Stream.value('Location');
+}  // Save job data to Firestore
   Future<Map<String, dynamic>> saveJobData({
     required Map<String, dynamic> jobData,
     required BuildContext context,
@@ -358,3 +399,5 @@ class JobService {
     }
   }
 }
+
+// Update extension methods 

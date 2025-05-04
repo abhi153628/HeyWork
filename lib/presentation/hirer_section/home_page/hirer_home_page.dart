@@ -50,14 +50,14 @@ class SearchBar extends StatelessWidget {
   }
 }
 //! M A I N  H O M E  P A G E
-class HeyWorkHomePage extends StatefulWidget {
-  const HeyWorkHomePage({Key? key}) : super(key: key);
+class HirerHomePage extends StatefulWidget {
+  const HirerHomePage({Key? key}) : super(key: key);
 
   @override
-  State<HeyWorkHomePage> createState() => _HeyWorkHomePageState();
+  State<HirerHomePage> createState() => _HirerHomePageState();
 }
 
-class _HeyWorkHomePageState extends State<HeyWorkHomePage> {
+class _HirerHomePageState extends State<HirerHomePage> {
   String _selectedIndustry = '';
   List<JobCategoryInfo> _jobCategories = [];
   bool _isLoading = true;

@@ -41,47 +41,46 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyDGS3AetzkA2eX0eTtVon-zZwVoN7Of8O4',
-    appId: '1:193622782630:web:4e7f6918bf2750f0e5fa67',
-    messagingSenderId: '193622782630',
-    projectId: 'heywork-e844a',
-    authDomain: 'heywork-e844a.firebaseapp.com',
-    storageBucket: 'heywork-e844a.firebasestorage.app',
+    apiKey: 'AIzaSyDjGpJeWBgYOPUIG-E9GZLNWecqaVFoBNA',
+    appId: '1:141872790596:web:5d08b3d90c05b5e1205011',
+    messagingSenderId: '141872790596',
+    projectId: 'heyworkoriginal',
+    authDomain: 'heyworkoriginal.firebaseapp.com',
+    storageBucket: 'heyworkoriginal.firebasestorage.app',
   );
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyDAgoMzuyNyStOxglT2ov-SpnjTOd21TYQ',
-    appId: '1:193622782630:android:c64c96f2a8630b59e5fa67',
-    messagingSenderId: '193622782630',
-    projectId: 'heywork-e844a',
-    storageBucket: 'heywork-e844a.firebasestorage.app',
+    apiKey: 'AIzaSyCHEM__GmyYvgTwQnajP1jBhNZKDwz67Ac',
+    appId: '1:141872790596:android:38d1f70446347cca205011',
+    messagingSenderId: '141872790596',
+    projectId: 'heyworkoriginal',
+    storageBucket: 'heyworkoriginal.firebasestorage.app',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyB1THbgVNIezSGPnkhJAZIJTusnYd412PM',
-    appId: '1:193622782630:ios:89798feb702527aae5fa67',
-    messagingSenderId: '193622782630',
-    projectId: 'heywork-e844a',
-    storageBucket: 'heywork-e844a.firebasestorage.app',
+    apiKey: 'AIzaSyDQc_OPoo5MwKgpKnGq7Ga9XavsO0yh22I',
+    appId: '1:141872790596:ios:f215597a6842dd71205011',
+    messagingSenderId: '141872790596',
+    projectId: 'heyworkoriginal',
+    storageBucket: 'heyworkoriginal.firebasestorage.app',
     iosBundleId: 'com.example.heyWork',
   );
 
   static const FirebaseOptions macos = FirebaseOptions(
-    apiKey: 'AIzaSyB1THbgVNIezSGPnkhJAZIJTusnYd412PM',
-    appId: '1:193622782630:ios:89798feb702527aae5fa67',
-    messagingSenderId: '193622782630',
-    projectId: 'heywork-e844a',
-    storageBucket: 'heywork-e844a.firebasestorage.app',
+    apiKey: 'AIzaSyDQc_OPoo5MwKgpKnGq7Ga9XavsO0yh22I',
+    appId: '1:141872790596:ios:f215597a6842dd71205011',
+    messagingSenderId: '141872790596',
+    projectId: 'heyworkoriginal',
+    storageBucket: 'heyworkoriginal.firebasestorage.app',
     iosBundleId: 'com.example.heyWork',
   );
 
   static const FirebaseOptions windows = FirebaseOptions(
-    apiKey: 'AIzaSyDGS3AetzkA2eX0eTtVon-zZwVoN7Of8O4',
-    appId: '1:193622782630:web:b75d58405fdb4813e5fa67',
-    messagingSenderId: '193622782630',
-    projectId: 'heywork-e844a',
-    authDomain: 'heywork-e844a.firebaseapp.com',
-    storageBucket: 'heywork-e844a.firebasestorage.app',
+    apiKey: 'AIzaSyDjGpJeWBgYOPUIG-E9GZLNWecqaVFoBNA',
+    appId: '1:141872790596:web:b30caba7b732969a205011',
+    messagingSenderId: '141872790596',
+    projectId: 'heyworkoriginal',
+    authDomain: 'heyworkoriginal.firebaseapp.com',
+    storageBucket: 'heyworkoriginal.firebasestorage.app',
   );
-
 }

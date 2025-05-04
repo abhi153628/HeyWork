@@ -5,54 +5,80 @@ import 'package:hey_work/core/services/database/jobs_service.dart';
 import 'package:hey_work/core/theme/app_colors.dart';
 import 'package:provider/provider.dart';
 
-class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+class WorkerHomePage extends StatefulWidget {
+  const WorkerHomePage({super.key});
 
   @override
-  State<HomeScreen> createState() => _HomeScreenState();
+  State<WorkerHomePage> createState() => _WorkerHomePageState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _WorkerHomePageState extends State<WorkerHomePage> {
   final JobService _jobService = JobService();
   late Stream<List<JobModel>> _jobsStream;
   late Stream<List<JobModel>> _allJobsStream;
   final ScrollController _scrollController = ScrollController();
   bool _showAllJobs = false;
   bool _isNavigating = false;
+
+
+
+  // In _WorkerHomePageState class (paste-2.txt)
+String _workerLocation = 'Location';
   
   // For smooth scrolling experience
   final GlobalKey _homeContentKey = GlobalKey();
   final GlobalKey _searchBarKey = GlobalKey();
   double _searchBarInitialPosition = 0;
-  
-  @override
-  void initState() {
-    super.initState();
-    SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
-      statusBarColor: Colors.transparent,
-      statusBarBrightness: Brightness.light,
-      statusBarIconBrightness: Brightness.light,
-    ));
 
-    // Initialize job categories
-    final jobProvider = Provider.of<JobProvider>(context, listen: false);
-    jobProvider.setCategories(_jobService.getJobCategories());
 
-    // Set initial jobs stream
-    _jobsStream = _jobService.getJobs();
-    
-    // Pre-fetch all jobs for instant navigation
-    _allJobsStream = _jobService.getAllJobs();
-    
-    // Setup scroll listener for navigation
-    _scrollController.addListener(_handleScroll);
-    
-    // Schedule measurement of search bar position after layout
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _measureSearchBarPosition();
-    });
-  }
+@override
+void initState() {
+  super.initState();
+  SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
+    statusBarColor: Colors.transparent,
+    statusBarBrightness: Brightness.light,
+    statusBarIconBrightness: Brightness.light,
+  ));
+
+  // Get worker's location
+  _fetchWorkerLocation();
+
+  // Initialize job categories
+  final jobProvider = Provider.of<JobProvider>(context, listen: false);
+  jobProvider.setCategories(_jobService.getJobCategories());
+
+  // Set initial jobs stream
+  _jobsStream = _jobService.getJobs();
   
+  // Pre-fetch all jobs for instant navigation
+  _allJobsStream = _jobService.getAllJobs();
+  
+  // Setup scroll listener for navigation
+  _scrollController.addListener(_handleScroll);
+  
+  // Schedule measurement of search bar position after layout
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    _measureSearchBarPosition();
+  });
+}
+
+void _fetchWorkerLocation() async {
+  final location = await _jobService.getWorkerLocation();
+  setState(() {
+    _workerLocation = location;
+  });
+  
+  // Update the first category with the worker's location
+  final jobProvider = Provider.of<JobProvider>(context, listen: false);
+  List<JobCategory> categories = List.from(jobProvider.categories);
+  categories[0] = JobCategory(
+    id: 'location',
+    name: _workerLocation,
+    iconPath: 'assets/icons/location.png',
+    isSelected: categories[0].isSelected,
+  );
+  jobProvider.setCategories(categories);
+}
   void _measureSearchBarPosition() {
     if (_searchBarKey.currentContext != null) {
       final RenderBox renderBox = _searchBarKey.currentContext!.findRenderObject() as RenderBox;
@@ -83,21 +109,22 @@ class _HomeScreenState extends State<HomeScreen> {
     _scrollController.dispose();
     super.dispose();
   }
+  
+void _onCategorySelected(String category) {
+  final jobProvider = Provider.of<JobProvider>(context, listen: false);
+  jobProvider.setSelectedCategory(category);
+  setState(() {
+    _jobsStream = _jobService.getJobsByCategory(category, workerLocation: _workerLocation);
+    
+    // If we're in all jobs view, update that stream too
+    if (_showAllJobs) {
+      _allJobsStream = category == 'All Jobs' ? 
+          _jobService.getAllJobs() : 
+          _jobService.getAllJobsByCategory(category, workerLocation: _workerLocation);
+    }
+  });
+}
 
-  void _onCategorySelected(String category) {
-    final jobProvider = Provider.of<JobProvider>(context, listen: false);
-    jobProvider.setSelectedCategory(category);
-    setState(() {
-      _jobsStream = _jobService.getJobsByCategory(category);
-      
-      // If we're in all jobs view, update that stream too
-      if (_showAllJobs) {
-        _allJobsStream = category == 'All Works' ? 
-            _jobService.getAllJobs() : 
-            _jobService.getAllJobsByCategory(category);
-      }
-    });
-  }
 
   void _navigateToAllJobs({bool smooth = false}) {
     if (_showAllJobs) return;
@@ -206,7 +233,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                       SizedBox(width: 4),
                       Text(
-                        'Bengaluru, Karnataka',
+                      _workerLocation,
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                               color: Colors.white,
                               fontSize: 12,
@@ -307,38 +334,52 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
   
-  Widget _buildAllJobsView() {
+
     // Get the current selected category
-    final jobProvider = Provider.of<JobProvider>(context, listen: false);
-    
-    return CustomScrollView(
-      controller: _scrollController,
-      slivers: [
-        // Fixed AppBar with search
-        SliverAppBar(
-          backgroundColor: Color(0xFF0000CC),
-          pinned: true,
-          expandedHeight: 110,
-          automaticallyImplyLeading: false,
-          title: Row(
-            children: [
-              IconButton(
-                icon: const Icon(
-                  Icons.arrow_back,
-                  color: Colors.white,
-                ),
-                onPressed: () => _navigateToHome(),
+  Widget _buildAllJobsView() {
+  // Get the current selected category
+  final jobProvider = Provider.of<JobProvider>(context, listen: false);
+  
+  // Format the title based on the category
+  String title = jobProvider.selectedCategory;
+  if (title == 'All Jobs') {
+    title = 'All Jobs';
+  } else if (title == 'Bengaluru') {
+    title = 'Jobs in Bengaluru';
+  } else if (title == 'Full-Time') {
+    title = 'Full-Time Jobs';
+  } else if (title == 'Part-Time') {
+    title = 'Part-Time Jobs';
+  }
+  
+  return CustomScrollView(
+    controller: _scrollController,
+    slivers: [
+      // Fixed AppBar with search
+      SliverAppBar(
+        backgroundColor: Color(0xFF0000CC),
+        pinned: true,
+        expandedHeight: 110,
+        automaticallyImplyLeading: false,
+        title: Row(
+          children: [
+            IconButton(
+              icon: const Icon(
+                Icons.arrow_back,
+                color: Colors.white,
               ),
-              Text(
-                '${jobProvider.selectedCategory} Jobs',
-                style: GoogleFonts.roboto(
-                  color: Colors.white,
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
+              onPressed: () => _navigateToHome(),
+            ),
+            Text(
+              title,
+              style: GoogleFonts.roboto(
+                color: Colors.white,
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
               ),
-            ],
-          ),
+            ),
+          ],
+        ),
           flexibleSpace: FlexibleSpaceBar(
             background: Container(
               color: Color(0xFF0000CC),
@@ -541,6 +582,9 @@ class SearchBarWidget extends StatelessWidget {
   }
 }
 
+// In paste-2.txt file
+// Update the CategoryListWidget to reflect the new category icons
+
 class CategoryListWidget extends StatelessWidget {
   final List<JobCategory> categories;
   final String selectedCategory;
@@ -572,10 +616,10 @@ class CategoryListWidget extends StatelessWidget {
               width: 120,
               margin: const EdgeInsets.symmetric(horizontal: 4.0),
               decoration: BoxDecoration(
-                color: isSelected ? Color(0xFF0000CC) : Colors.white,
+                color: isSelected ? Colors.black : Colors.white,
                 borderRadius: BorderRadius.circular(14),
                 border: Border.all(
-                  color: isSelected ? Color(0xFF0000CC) : AppColors.mediumGrey,
+                  color: isSelected ? Colors.black  : AppColors.mediumGrey,
                   width: 1,
                 ),
                 boxShadow: isSelected
@@ -622,22 +666,14 @@ class CategoryListWidget extends StatelessWidget {
 
   IconData _getCategoryIcon(String categoryName) {
     switch (categoryName) {
-      case 'All Works':
+      case 'All Jobs':
         return Icons.work;
-      case 'Cleaning':
-        return Icons.cleaning_services;
-      case 'Moving':
-        return Icons.local_shipping;
-      case 'Cooking':
-        return Icons.restaurant;
-      case 'Driving':
-        return Icons.drive_eta;
-      case 'Housekeeping':
-        return Icons.home;
-      case 'Food Server':
-        return Icons.restaurant_menu;
-      case 'Hospitality & Hotels':
-        return Icons.hotel;
+      case 'Bengaluru':
+        return Icons.location_on;
+      case 'Full-Time':
+        return Icons.access_time_filled;
+      case 'Part-Time':
+        return Icons.access_time;
       default:
         return Icons.work;
     }
@@ -861,33 +897,7 @@ class JobCardWidget extends StatelessWidget {
           const SizedBox(height: 12),
 
           // Category and description
-          Container(
-            padding: EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-            decoration: BoxDecoration(
-              color: Colors.grey.shade50,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(
-                color: Colors.grey.shade200,
-              ),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (job.description.isNotEmpty) ...[
-                  SizedBox(height: 4),
-                  Text(
-                    job.description,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.black87,
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
-              ],
-            ),
-          ),
+         
         ],
       ),
     );
@@ -917,16 +927,14 @@ class JobCardWidget extends StatelessWidget {
   }
 }
 
-// Add these new service methods to JobService class
-extension JobServiceExtension on JobService {
+// Change the name to something different
+extension JobServiceViewExtension on JobService {
   Stream<List<JobModel>> getAllJobs() {
-    // Similar to getJobs but returns all jobs without limitation
-    // This should be pre-loaded to avoid delay when navigating
-    return getJobs(); // Replace with actual implementation
+    // Return all jobs without limitation
+    return getJobs();
   }
   
-  Stream<List<JobModel>> getAllJobsByCategory(String category) {
-    // Similar to getJobsByCategory but returns all jobs in the category
-    return getJobsByCategory(category); // Replace with actual implementation
-  }
+Stream<List<JobModel>> getAllJobsByCategory(String category, {String? workerLocation}) {
+  return getJobsByCategory(category, workerLocation: workerLocation);
+}
 }
