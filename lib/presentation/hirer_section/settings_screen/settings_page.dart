@@ -8,7 +8,7 @@ class SettingsScreen extends StatelessWidget {
     // Get screen size to calculate responsive sizes
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
-    
+
     // Calculate responsive values without using ScreenUtil
     double horizontalPadding = screenWidth * 0.04; // approximately 16.w
     double verticalPadding = screenHeight * 0.02; // approximately 16.h
@@ -23,7 +23,8 @@ class SettingsScreen extends StatelessWidget {
     return Scaffold(
       body: SafeArea(
         child: Padding(
-          padding: EdgeInsets.symmetric(horizontal: horizontalPadding, vertical: verticalPadding),
+          padding: EdgeInsets.symmetric(
+              horizontal: horizontalPadding, vertical: verticalPadding),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -39,9 +40,9 @@ class SettingsScreen extends StatelessWidget {
                   color: Colors.black,
                 ),
               ),
-              
+
               SizedBox(height: standardSpacing),
-              
+
               // Settings title
               Text(
                 "Settings",
@@ -51,9 +52,9 @@ class SettingsScreen extends StatelessWidget {
                   color: Colors.black,
                 ),
               ),
-              
+
               SizedBox(height: standardSpacing * 1.5),
-              
+
               // Settings options
               SettingsOptionsList(
                 horizontalPadding: horizontalPadding,
@@ -110,18 +111,20 @@ class SettingsOptionsList extends StatelessWidget {
           borderRadius: borderRadius,
           iconSize: iconSize,
           normalFontSize: normalFontSize,
-          onTap: () => navigateToPage(context, PersonalInfoPage(
-            horizontalPadding: horizontalPadding,
-            verticalPadding: verticalPadding,
-            standardSpacing: standardSpacing,
-            smallSpacing: smallSpacing,
-            borderRadius: borderRadius,
-            iconSize: iconSize,
-            normalFontSize: normalFontSize,
-            smallFontSize: smallFontSize,
-          )),
+          onTap: () => navigateToPage(
+              context,
+              PersonalInfoPage(
+                horizontalPadding: horizontalPadding,
+                verticalPadding: verticalPadding,
+                standardSpacing: standardSpacing,
+                smallSpacing: smallSpacing,
+                borderRadius: borderRadius,
+                iconSize: iconSize,
+                normalFontSize: normalFontSize,
+                smallFontSize: smallFontSize,
+              )),
         ),
-        
+
         SettingsOption(
           icon: Icons.shield_outlined,
           title: "Privacy and security",
@@ -132,18 +135,20 @@ class SettingsOptionsList extends StatelessWidget {
           borderRadius: borderRadius,
           iconSize: iconSize,
           normalFontSize: normalFontSize,
-          onTap: () => navigateToPage(context, PrivacySecurityPage(
-            horizontalPadding: horizontalPadding,
-            verticalPadding: verticalPadding,
-            standardSpacing: standardSpacing,
-            smallSpacing: smallSpacing,
-            borderRadius: borderRadius,
-            iconSize: iconSize,
-            normalFontSize: normalFontSize,
-            smallFontSize: smallFontSize,
-          )),
+          onTap: () => navigateToPage(
+              context,
+              PrivacySecurityPage(
+                horizontalPadding: horizontalPadding,
+                verticalPadding: verticalPadding,
+                standardSpacing: standardSpacing,
+                smallSpacing: smallSpacing,
+                borderRadius: borderRadius,
+                iconSize: iconSize,
+                normalFontSize: normalFontSize,
+                smallFontSize: smallFontSize,
+              )),
         ),
-        
+
         SettingsOption(
           icon: Icons.description_outlined,
           title: "Raise BBPS dispute",
@@ -154,18 +159,20 @@ class SettingsOptionsList extends StatelessWidget {
           borderRadius: borderRadius,
           iconSize: iconSize,
           normalFontSize: normalFontSize,
-          onTap: () => navigateToPage(context, RaiseDisputePage(
-            horizontalPadding: horizontalPadding,
-            verticalPadding: verticalPadding,
-            standardSpacing: standardSpacing,
-            smallSpacing: smallSpacing,
-            borderRadius: borderRadius,
-            iconSize: iconSize,
-            normalFontSize: normalFontSize,
-            smallFontSize: smallFontSize,
-          )),
+          onTap: () => navigateToPage(
+              context,
+              RaiseDisputePage(
+                horizontalPadding: horizontalPadding,
+                verticalPadding: verticalPadding,
+                standardSpacing: standardSpacing,
+                smallSpacing: smallSpacing,
+                borderRadius: borderRadius,
+                iconSize: iconSize,
+                normalFontSize: normalFontSize,
+                smallFontSize: smallFontSize,
+              )),
         ),
-        
+
         // Divider
         Padding(
           padding: EdgeInsets.symmetric(vertical: standardSpacing),
@@ -175,7 +182,7 @@ class SettingsOptionsList extends StatelessWidget {
             color: Colors.grey.shade200,
           ),
         ),
-        
+
         // Second group
         SettingsOption(
           icon: Icons.help_outline_rounded,
@@ -187,18 +194,20 @@ class SettingsOptionsList extends StatelessWidget {
           borderRadius: borderRadius,
           iconSize: iconSize,
           normalFontSize: normalFontSize,
-          onTap: () => navigateToPage(context, HelpFeedbackPage(
-            horizontalPadding: horizontalPadding,
-            verticalPadding: verticalPadding,
-            standardSpacing: standardSpacing,
-            smallSpacing: smallSpacing,
-            borderRadius: borderRadius,
-            iconSize: iconSize,
-            normalFontSize: normalFontSize,
-            smallFontSize: smallFontSize,
-          )),
+          onTap: () => navigateToPage(
+              context,
+              HelpFeedbackPage(
+                horizontalPadding: horizontalPadding,
+                verticalPadding: verticalPadding,
+                standardSpacing: standardSpacing,
+                smallSpacing: smallSpacing,
+                borderRadius: borderRadius,
+                iconSize: iconSize,
+                normalFontSize: normalFontSize,
+                smallFontSize: smallFontSize,
+              )),
         ),
-        
+
         SettingsOption(
           icon: Icons.logout,
           title: "Log out",
@@ -209,9 +218,10 @@ class SettingsOptionsList extends StatelessWidget {
           borderRadius: borderRadius,
           iconSize: iconSize,
           normalFontSize: normalFontSize,
-          onTap: () => _showLogoutDialog(context, normalFontSize, smallFontSize),
+          onTap: () =>
+              _showLogoutDialog(context, normalFontSize, smallFontSize),
         ),
-        
+
         SettingsOption(
           icon: Icons.power_settings_new_rounded,
           title: "Close account",
@@ -222,12 +232,13 @@ class SettingsOptionsList extends StatelessWidget {
           borderRadius: borderRadius,
           iconSize: iconSize,
           normalFontSize: normalFontSize,
-          onTap: () => _showCloseAccountDialog(context, normalFontSize, smallFontSize),
+          onTap: () =>
+              _showCloseAccountDialog(context, normalFontSize, smallFontSize),
         ),
       ],
     );
   }
-  
+
   void navigateToPage(BuildContext context, Widget page) {
     Navigator.push(
       context,
@@ -244,8 +255,8 @@ class SettingsOptionsList extends StatelessWidget {
     );
   }
 
-  
-  void _showLogoutDialog(BuildContext context, double normalFontSize, double smallFontSize) {
+  void _showLogoutDialog(
+      BuildContext context, double normalFontSize, double smallFontSize) {
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -298,8 +309,9 @@ class SettingsOptionsList extends StatelessWidget {
       },
     );
   }
-  
-  void _showCloseAccountDialog(BuildContext context, double normalFontSize, double smallFontSize) {
+
+  void _showCloseAccountDialog(
+      BuildContext context, double normalFontSize, double smallFontSize) {
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -386,7 +398,8 @@ class SettingsOption extends StatelessWidget {
       onTap: onTap,
       child: Container(
         width: double.infinity,
-        padding: EdgeInsets.symmetric(vertical: verticalPadding, horizontal: horizontalPadding),
+        padding: EdgeInsets.symmetric(
+            vertical: verticalPadding, horizontal: horizontalPadding),
         margin: EdgeInsets.only(bottom: smallSpacing),
         decoration: BoxDecoration(
           color: Colors.grey.shade50,
@@ -464,28 +477,28 @@ class PersonalInfoPage extends StatelessWidget {
             ),
             SizedBox(height: standardSpacing * 1.5),
             ProfileInfoItem(
-              label: 'Name', 
+              label: 'Name',
               value: 'John Doe',
               smallFontSize: smallFontSize,
               normalFontSize: normalFontSize,
               smallSpacing: smallSpacing,
             ),
             ProfileInfoItem(
-              label: 'Email', 
+              label: 'Email',
               value: 'john.doe@example.com',
               smallFontSize: smallFontSize,
               normalFontSize: normalFontSize,
               smallSpacing: smallSpacing,
             ),
             ProfileInfoItem(
-              label: 'Phone', 
+              label: 'Phone',
               value: '+91 9876543210',
               smallFontSize: smallFontSize,
               normalFontSize: normalFontSize,
               smallSpacing: smallSpacing,
             ),
             ProfileInfoItem(
-              label: 'Date of Birth', 
+              label: 'Date of Birth',
               value: '01 Jan 1990',
               smallFontSize: smallFontSize,
               normalFontSize: normalFontSize,
@@ -660,7 +673,8 @@ class PrivacySecurityPage extends StatelessWidget {
               ],
             ),
           ),
-          Icon(Icons.arrow_forward_ios, size: iconSize * 0.67, color: Colors.grey),
+          Icon(Icons.arrow_forward_ios,
+              size: iconSize * 0.67, color: Colors.grey),
         ],
       ),
     );
@@ -890,7 +904,8 @@ class HelpFeedbackPage extends StatelessWidget {
               ],
             ),
           ),
-          Icon(Icons.arrow_forward_ios, size: iconSize * 0.67, color: Colors.grey),
+          Icon(Icons.arrow_forward_ios,
+              size: iconSize * 0.67, color: Colors.grey),
         ],
       ),
     );

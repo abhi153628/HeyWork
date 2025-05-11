@@ -28,10 +28,9 @@ class FloatingNewButton extends StatelessWidget {
             Text(
               'New',
               style: TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-                fontSize: 15
-              ),
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 15),
             ),
           ],
         ),

@@ -12,6 +12,11 @@ android {
     namespace = "com.example.hey_work"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
+    
+    // Add buildFeatures configuration here
+    buildFeatures {
+        buildConfig true
+    }
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_1_8

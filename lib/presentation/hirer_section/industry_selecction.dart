@@ -1,21 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:hey_work/presentation/hirer_section/common/bottom_nav_bar.dart';
-import 'package:hey_work/presentation/hirer_section/home_page/hirer_home_page.dart';
+import 'common/bottom_nav_bar.dart';
+import 'home_page/hirer_home_page.dart';
 
 class IndustrySelectionScreen extends StatefulWidget {
   const IndustrySelectionScreen({super.key});
 
   @override
-  State<IndustrySelectionScreen> createState() => _IndustrySelectionScreenState();
+  State<IndustrySelectionScreen> createState() =>
+      _IndustrySelectionScreenState();
 }
 
 // Model class to avoid LateInitializationError
 class IndustryData {
   String name;
   bool isSelected;
-  
+
   IndustryData({required this.name, this.isSelected = false});
 }
 
@@ -25,50 +26,50 @@ class _IndustrySelectionScreenState extends State<IndustrySelectionScreen> {
   bool _isLoading = false; // Add a loading state variable
 
   final List<IndustryData> industryList = [
-  IndustryData(name: 'Restaurants & Food Services'),
-  IndustryData(name: 'Hospitality & Hotels'),
-  IndustryData(name: 'Warehouse & Logistics'),
-  IndustryData(name: 'Cleaning & Facility Services'),
-  IndustryData(name: 'Retail & Stores'),
-  IndustryData(name: 'Packing & Moving Services'),
-  IndustryData(name: 'Event Management & Catering'),
-  IndustryData(name: 'Construction & Civil Work'),
-  IndustryData(name: 'Transport & Delivery'),
-  IndustryData(name: 'Mechanic & Repair Services'),
-  IndustryData(name: 'Home Services'),
-  IndustryData(name: 'Pet Care Services'),
-  IndustryData(name: 'Printing & Photocopy Services'),
-  IndustryData(name: 'Salon & Beauty Services'),
-  IndustryData(name: 'Educational Institutes & Coaching Centers'),
-  IndustryData(name: 'Small Scale Manufacturing Units'),
-  IndustryData(name: 'Courier & Logistics Companies'),
-  IndustryData(name: 'IT Repair & Laptop Services'),
-  IndustryData(name: 'Real Estate & Property Management'),
-  IndustryData(name: 'Security Services'),
-  IndustryData(name: 'Healthcare Support Services'),
-  IndustryData(name: 'Textile & Garment Units'),
-  IndustryData(name: 'Agriculture & Plantation'),
-  IndustryData(name: 'Recycling & Waste Management'),
-  IndustryData(name: 'Printing & Packaging'),
-  IndustryData(name: 'Home Renovation & Painting'),
-  IndustryData(name: 'Cold Storage & Food Processing'),
-  IndustryData(name: 'Public Utility & Government Tenders'),
-  IndustryData(name: 'Religious/Community Event Services'),
-  IndustryData(name: 'Furniture & Carpentry Services'),
-  IndustryData(name: 'Bakery & Confectionery Units'),
-  IndustryData(name: 'Laundry & Dry Cleaning Services'),
-  IndustryData(name: 'Mobile Repair Shops & Electronic Stores'),
-  IndustryData(name: 'E-Waste Handling & Scrap Services'),
-  IndustryData(name: 'ATM & Banking Support Vendors'),
-  IndustryData(name: 'Field Survey & Campaign Work'),
-  IndustryData(name: 'Local Government Schemes & Civic Work'),
-  IndustryData(name: 'Photography & Videography Support'),
-  IndustryData(name: 'Water Can & Gas Delivery Services'),
-  IndustryData(name: 'Interior Design & Modular Furniture Setup'),
-  IndustryData(name: 'Cultural Programs & Religious Functions'),
-  IndustryData(name: 'Animal Shelters & Farms'),
-  IndustryData(name: 'Fisheries & Marine Services'),
-];
+    IndustryData(name: 'Restaurants & Food Services'),
+    IndustryData(name: 'Hospitality & Hotels'),
+    IndustryData(name: 'Warehouse & Logistics'),
+    IndustryData(name: 'Cleaning & Facility Services'),
+    IndustryData(name: 'Retail & Stores'),
+    IndustryData(name: 'Packing & Moving Services'),
+    IndustryData(name: 'Event Management & Catering'),
+    IndustryData(name: 'Construction & Civil Work'),
+    IndustryData(name: 'Transport & Delivery'),
+    IndustryData(name: 'Mechanic & Repair Services'),
+    IndustryData(name: 'Home Services'),
+    IndustryData(name: 'Pet Care Services'),
+    IndustryData(name: 'Printing & Photocopy Services'),
+    IndustryData(name: 'Salon & Beauty Services'),
+    IndustryData(name: 'Educational Institutes & Coaching Centers'),
+    IndustryData(name: 'Small Scale Manufacturing Units'),
+    IndustryData(name: 'Courier & Logistics Companies'),
+    IndustryData(name: 'IT Repair & Laptop Services'),
+    IndustryData(name: 'Real Estate & Property Management'),
+    IndustryData(name: 'Security Services'),
+    IndustryData(name: 'Healthcare Support Services'),
+    IndustryData(name: 'Textile & Garment Units'),
+    IndustryData(name: 'Agriculture & Plantation'),
+    IndustryData(name: 'Recycling & Waste Management'),
+    IndustryData(name: 'Printing & Packaging'),
+    IndustryData(name: 'Home Renovation & Painting'),
+    IndustryData(name: 'Cold Storage & Food Processing'),
+    IndustryData(name: 'Public Utility & Government Tenders'),
+    IndustryData(name: 'Religious/Community Event Services'),
+    IndustryData(name: 'Furniture & Carpentry Services'),
+    IndustryData(name: 'Bakery & Confectionery Units'),
+    IndustryData(name: 'Laundry & Dry Cleaning Services'),
+    IndustryData(name: 'Mobile Repair Shops & Electronic Stores'),
+    IndustryData(name: 'E-Waste Handling & Scrap Services'),
+    IndustryData(name: 'ATM & Banking Support Vendors'),
+    IndustryData(name: 'Field Survey & Campaign Work'),
+    IndustryData(name: 'Local Government Schemes & Civic Work'),
+    IndustryData(name: 'Photography & Videography Support'),
+    IndustryData(name: 'Water Can & Gas Delivery Services'),
+    IndustryData(name: 'Interior Design & Modular Furniture Setup'),
+    IndustryData(name: 'Cultural Programs & Religious Functions'),
+    IndustryData(name: 'Animal Shelters & Farms'),
+    IndustryData(name: 'Fisheries & Marine Services'),
+  ];
 
   List<IndustryData> filteredIndustries = [];
 
@@ -132,7 +133,7 @@ class _IndustrySelectionScreenState extends State<IndustrySelectionScreen> {
                         borderRadius: BorderRadius.circular(10),
                       ),
                     ),
-                    
+
                     //! S E A R C H  F I E L D
                     Padding(
                       padding: const EdgeInsets.all(16),
@@ -159,7 +160,7 @@ class _IndustrySelectionScreenState extends State<IndustrySelectionScreen> {
                         },
                       ),
                     ),
-                    
+
                     //! L I S T  O F  I N D U S T R I E S
                     Expanded(
                       child: ListView.builder(
@@ -211,55 +212,56 @@ class _IndustrySelectionScreenState extends State<IndustrySelectionScreen> {
   }
 
   Future<void> _saveIndustryToFirebase() async {
-  // Set loading state to true
-  setState(() {
-    _isLoading = true;
-  });
-  
-  try {
-    User? user = FirebaseAuth.instance.currentUser;
-    if (user != null && selectedIndustry.isNotEmpty) {
-      Map<String, dynamic> userData = {
-        'industry': selectedIndustry, // Changed from 'businessType' to 'industry'
-        'updatedAt': FieldValue.serverTimestamp(),
-      };
+    // Set loading state to true
+    setState(() {
+      _isLoading = true;
+    });
 
-      await FirebaseFirestore.instance
-          .collection('hirers')
-          .doc(user.uid)
-          .set(userData, SetOptions(merge: true));
+    try {
+      User? user = FirebaseAuth.instance.currentUser;
+      if (user != null && selectedIndustry.isNotEmpty) {
+        Map<String, dynamic> userData = {
+          'industry':
+              selectedIndustry, // Changed from 'businessType' to 'industry'
+          'updatedAt': FieldValue.serverTimestamp(),
+        };
 
-      // Navigate to next screen
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const MainScreen()),
-      );
-    } else {
+        await FirebaseFirestore.instance
+            .collection('hirers')
+            .doc(user.uid)
+            .set(userData, SetOptions(merge: true));
+
+        // Navigate to next screen
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const MainScreen()),
+        );
+      } else {
+        setState(() {
+          _isLoading = false; // Set loading state to false if validation fails
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please select an industry first'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      // Set loading state to false if error occurs
       setState(() {
-        _isLoading = false; // Set loading state to false if validation fails
+        _isLoading = false;
       });
-      
+
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please select an industry first'),
+        SnackBar(
+          content: Text('Error: ${e.toString()}'),
           backgroundColor: Colors.red,
         ),
       );
     }
-  } catch (e) {
-    // Set loading state to false if error occurs
-    setState(() {
-      _isLoading = false;
-    });
-    
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Error: ${e.toString()}'),
-        backgroundColor: Colors.red,
-      ),
-    );
   }
-}
 
   @override
   Widget build(BuildContext context) {
@@ -271,7 +273,7 @@ class _IndustrySelectionScreenState extends State<IndustrySelectionScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const SizedBox(height: 40),
-              
+
               //! H E A D E R
               Text(
                 'Choose your\nIndustry',
@@ -282,9 +284,9 @@ class _IndustrySelectionScreenState extends State<IndustrySelectionScreen> {
                   height: 1.2,
                 ),
               ),
-              
+
               const SizedBox(height: 16),
-              
+
               //! S U B H E A D E R
               Text(
                 'Choose the type of works you will be ready get hired for.',
@@ -294,9 +296,9 @@ class _IndustrySelectionScreenState extends State<IndustrySelectionScreen> {
                   height: 1.3,
                 ),
               ),
-              
+
               const SizedBox(height: 24),
-              
+
               //! S E A R C H  F I E L D
               GestureDetector(
                 onTap: _showIndustriesBottomSheet,
@@ -318,7 +320,9 @@ class _IndustrySelectionScreenState extends State<IndustrySelectionScreen> {
                       // Wrap with Expanded to prevent overflow
                       Expanded(
                         child: Text(
-                          selectedIndustry.isNotEmpty ? selectedIndustry : 'Warehouse',
+                          selectedIndustry.isNotEmpty
+                              ? selectedIndustry
+                              : 'Warehouse',
                           style: TextStyle(
                             fontSize: 16,
                             color: Colors.grey[700],
@@ -331,9 +335,9 @@ class _IndustrySelectionScreenState extends State<IndustrySelectionScreen> {
                   ),
                 ),
               ),
-              
+
               const SizedBox(height: 24),
-              
+
               //! S E L E C T E D  I N D U S T R Y
               if (selectedIndustry.isNotEmpty)
                 Container(
@@ -358,43 +362,47 @@ class _IndustrySelectionScreenState extends State<IndustrySelectionScreen> {
                     maxLines: 2, // Allow text to wrap to second line if needed
                   ),
                 ),
-              
+
               const Spacer(),
-              
+
               //! C O N T I N U E  B U T T O N
               SizedBox(
                 width: double.infinity,
                 height: 56,
                 child: ElevatedButton(
-                  onPressed: _isLoading ? null : _saveIndustryToFirebase, // Disable button when loading
+                  onPressed: _isLoading
+                      ? null
+                      : _saveIndustryToFirebase, // Disable button when loading
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: _isLoading ? Colors.grey[400] : const Color(0xFF0000CC), // Change color when loading
+                    backgroundColor: _isLoading
+                        ? Colors.grey[400]
+                        : const Color(0xFF0000CC), // Change color when loading
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8),
                     ),
                     elevation: 0,
                   ),
-                  child: _isLoading 
-                    // Show loading indicator when loading
-                    ? const SizedBox(
-                        height: 24,
-                        width: 24,
-                        child: CircularProgressIndicator(
-                          color: Colors.white,
-                          strokeWidth: 3,
+                  child: _isLoading
+                      // Show loading indicator when loading
+                      ? const SizedBox(
+                          height: 24,
+                          width: 24,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 3,
+                          ),
+                        )
+                      : const Text(
+                          'Continue',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
+                          ),
                         ),
-                      )
-                    : const Text(
-                        'Continue',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.white,
-                        ),
-                      ),
                 ),
               ),
-              
+
               const SizedBox(height: 32),
             ],
           ),

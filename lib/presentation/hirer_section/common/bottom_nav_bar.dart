@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:hey_work/presentation/hirer_section/home_page/hirer_home_page.dart';
-import 'package:hey_work/presentation/hirer_section/jobs/posted_jobs.dart';
-import 'package:hey_work/presentation/hirer_section/notification_screen/notification.dart';
-import 'package:hey_work/presentation/hirer_section/profile/profile.dart';
+import '../home_page/hirer_home_page.dart';
+import '../job_managment_screen/job_managment_screen.dart';
+import '../jobs/posted_jobs.dart';
+import '../notification_screen/notification.dart';
+import '../profile/profile.dart';
 
 // ==============================
 // APP ROUTES
@@ -11,7 +12,9 @@ class AppRoutes {
   static final Map<String, WidgetBuilder> routes = {
     '/': (context) => const MainScreen(),
     '/navigator': (context) => const NotificationPage(),
-    '/jobs': (context) => const JobsPostedScreen(submittedJob: {},),
+    '/jobs': (context) => const JobsPostedScreen(
+          submittedJob: {},
+        ),
     '/profile': (context) => const JobPostingScreen(),
   };
 }
@@ -28,21 +31,21 @@ class MainScreen extends StatefulWidget {
 
 class _MainScreenState extends State<MainScreen> {
   int _currentIndex = 0;
-  
+
   // List of all screens accessible from bottom navigation
   final List<Widget> _screens = [
     const HirerHomePage(),
     const NotificationPage(),
-    const  JobsPostedScreen(submittedJob: {},),
+    const JobManagementScreen(),
     const JobPostingScreen(),
   ];
-  
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       // BODY: Current selected screen from bottom nav
       body: _screens[_currentIndex],
-      
+
       // BOTTOM NAVIGATION BAR
       bottomNavigationBar: BottomNavBar(
         currentIndex: _currentIndex,
@@ -73,10 +76,10 @@ class BottomNavBar extends StatelessWidget {
   Widget build(BuildContext context) {
     // Fixed height instead of using ScreenUtil
     const double bottomNavHeight = 60.0;
-    
+
     // Fixed color instead of relying on AppTheme
     const Color secondaryBlue = Color(0xFF0011C9);
-    
+
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,

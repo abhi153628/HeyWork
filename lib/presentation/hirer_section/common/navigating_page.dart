@@ -1,16 +1,14 @@
 import 'package:flutter/material.dart';
 
-
 class LoginScreen extends StatelessWidget {
   const LoginScreen({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-  
     final Size screenSize = MediaQuery.of(context).size;
-    
+
     return Scaffold(
-      backgroundColor: const Color(0xFF0033FF), 
+      backgroundColor: const Color(0xFF0033FF),
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -24,14 +22,13 @@ class LoginScreen extends StatelessWidget {
                 children: [
                   //! Logo at the top
                   Image.asset(
-                    'asset/image.png', 
+                    'asset/image.png',
                     width: screenSize.width * 0.5,
-                    height: screenSize.width * 0.5  ,
-                
+                    height: screenSize.width * 0.5,
                   ),
-                  
+
                   SizedBox(height: screenSize.height * 0.15),
-                  
+
                   //! "What are you looking for?" text
                   Text(
                     'What are you looking for?',
@@ -42,9 +39,9 @@ class LoginScreen extends StatelessWidget {
                     ),
                     textAlign: TextAlign.center,
                   ),
-                  
+
                   SizedBox(height: screenSize.height * 0.017),
-                  
+
                   //! "I want to work" button
                   _buildButton(
                     context: context,
@@ -52,9 +49,9 @@ class LoginScreen extends StatelessWidget {
                     isPrimary: true,
                     screenSize: screenSize,
                   ),
-                  
+
                   SizedBox(height: screenSize.height * 0.02),
-                  
+
                   //! "I want to Hire" button
                   _buildButton(
                     context: context,

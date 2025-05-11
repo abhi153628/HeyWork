@@ -12,8 +12,8 @@ class NotificationPage extends StatelessWidget {
         title: Text(
           'Notification',
           style: Theme.of(context).textTheme.displayLarge?.copyWith(
-            color: Colors.black,
-          ),
+                color: Colors.black,
+              ),
         ),
       ),
       body: Center(

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:hey_work/presentation/hirer_section/common/bottom_nav_bar.dart';
+import '../common/bottom_nav_bar.dart';
 
 class BottomNavBar extends StatelessWidget {
   final int currentIndex;
@@ -15,10 +15,11 @@ class BottomNavBar extends StatelessWidget {
   Widget build(BuildContext context) {
     // Use fixed height instead of ScreenUtil
     const bottomNavHeight = 60.0;
-    
+
     // Get the theme colors
-    final Color secondaryBlue = const Color(0xFF0011C9); // Default color if AppTheme not available
-    
+    final Color secondaryBlue =
+        const Color(0xFF0011C9); // Default color if AppTheme not available
+
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -68,4 +69,3 @@ class BottomNavBar extends StatelessWidget {
     );
   }
 }
-

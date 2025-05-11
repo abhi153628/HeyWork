@@ -2,7 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:hey_work/presentation/hirer_section/signup_screen/widgets/responsive_utils.dart';
+import 'responsive_utils.dart';
 import 'package:image_picker/image_picker.dart';
 
 class ProfileImageSelector extends StatelessWidget {
@@ -58,7 +58,7 @@ class ProfileImageSelector extends StatelessWidget {
 
   Future<void> _pickImage(BuildContext context) async {
     final ImagePicker picker = ImagePicker();
-    
+
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.white,

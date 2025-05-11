@@ -2,7 +2,7 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:hey_work/presentation/hirer_section/signup_screen/widgets/responsive_utils.dart';
+import 'responsive_utils.dart';
 
 class LocationSelector extends StatefulWidget {
   final ResponsiveUtil responsive;
@@ -33,13 +33,13 @@ class _LocationSelectorState extends State<LocationSelector> {
     super.initState();
     widget.controller.addListener(_onSearchChanged);
   }
-  
+
   @override
   void dispose() {
     widget.controller.removeListener(_onSearchChanged);
     super.dispose();
   }
-  
+
   void _onSearchChanged() {
     final query = widget.controller.text;
     if (query.length < 3) {
@@ -50,12 +50,12 @@ class _LocationSelectorState extends State<LocationSelector> {
       }
       return;
     }
-    
+
     setState(() {
       _isSearching = true;
       _showSuggestions = true;
     });
-    
+
     widget.onSearchChanged(query);
     setState(() {
       _isSearching = false;
@@ -83,7 +83,7 @@ class _LocationSelectorState extends State<LocationSelector> {
               color: Colors.grey.shade600,
               size: widget.responsive.getWidth(22),
             ),
-            suffixIcon: _isSearching 
+            suffixIcon: _isSearching
                 ? Padding(
                     padding: EdgeInsets.all(widget.responsive.getWidth(14)),
                     child: SizedBox(
@@ -158,8 +158,10 @@ class _LocationSelectorState extends State<LocationSelector> {
             child: ListView.builder(
               shrinkWrap: true,
               physics: NeverScrollableScrollPhysics(),
-              padding: EdgeInsets.symmetric(vertical: widget.responsive.getHeight(8)),
-              itemCount: widget.suggestions.length > 5 ? 5 : widget.suggestions.length,
+              padding: EdgeInsets.symmetric(
+                  vertical: widget.responsive.getHeight(8)),
+              itemCount:
+                  widget.suggestions.length > 5 ? 5 : widget.suggestions.length,
               itemBuilder: (context, index) {
                 final suggestion = widget.suggestions[index];
                 return InkWell(

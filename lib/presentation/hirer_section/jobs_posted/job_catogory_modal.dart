@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:hey_work/presentation/hirer_section/widgets/worker_type_bottom_sheet.dart';
-
-
+import '../widgets/worker_type_bottom_sheet.dart';
 
 class JobCategoryGrid extends StatelessWidget {
   const JobCategoryGrid({Key? key}) : super(key: key);
@@ -28,7 +26,8 @@ class JobCategoryGrid extends StatelessWidget {
   }
 
   // Individual category card
-  Widget _buildCategoryCard(BuildContext context, Map<String, dynamic> category) {
+  Widget _buildCategoryCard(
+      BuildContext context, Map<String, dynamic> category) {
     return InkWell(
       onTap: () => _showWorkerTypeSheet(context, category['name']),
       borderRadius: BorderRadius.circular(12.r),
@@ -61,7 +60,7 @@ class JobCategoryGrid extends StatelessWidget {
               ),
             ),
             SizedBox(height: 8.h),
-            
+
             // Category name
             Text(
               category['name'],

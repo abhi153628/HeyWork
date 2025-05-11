@@ -2,9 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:hey_work/core/services/database/jobs_service.dart';
-import 'package:hey_work/presentation/hirer_section/jobs/posted_jobs.dart';
+import '../jobs/posted_jobs.dart';
 import 'package:intl/intl.dart';
-
 
 class JobDetailsScreen extends StatefulWidget {
   final String jobCategory;
@@ -26,29 +25,30 @@ class JobDetailsScreen extends StatefulWidget {
   State<JobDetailsScreen> createState() => _JobDetailsScreenState();
 }
 
-class _JobDetailsScreenState extends State<JobDetailsScreen> with SingleTickerProviderStateMixin {
+class _JobDetailsScreenState extends State<JobDetailsScreen>
+    with SingleTickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
   final JobService _jobService = JobService(); // Initialize the job service
   bool _isLoading = false; // Loading state
-  
+
   // Form fields
   final TextEditingController _categoryController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
   final TextEditingController _budgetController = TextEditingController();
   final TextEditingController _minSalaryController = TextEditingController();
   final TextEditingController _maxSalaryController = TextEditingController();
-  
+
   DateTime? _selectedDate;
   TimeOfDay? _selectedTime;
   String _jobType = '';
-  
+
   // Animation controller for transitions
   late AnimationController _animationController;
   late Animation<double> _animation;
-  
+
   // Constants
   static const int _minimumBudget = 400;
-  
+
   // Job Categories Data Structure
   final List<Map<String, dynamic>> _generalJobs = [
     {'name': 'Cleaner', 'category': 'General'},
@@ -71,31 +71,31 @@ class _JobDetailsScreenState extends State<JobDetailsScreen> with SingleTickerPr
     {'name': 'Ironing Staff', 'category': 'General'},
     {'name': 'Survey Helper', 'category': 'General'},
   ];
-  
+
   final List<Map<String, dynamic>> _industryJobs = [
     // Restaurants & Food Services
     {'name': 'Waiter', 'category': 'Restaurants & Food Services'},
     {'name': 'Cook Assistant', 'category': 'Restaurants & Food Services'},
     {'name': 'Dishwasher', 'category': 'Restaurants & Food Services'},
     {'name': 'Food Server', 'category': 'Restaurants & Food Services'},
-    
+
     // Hospitality & Hotels
     {'name': 'Housekeeper', 'category': 'Hospitality & Hotels'},
     {'name': 'Room Boy', 'category': 'Hospitality & Hotels'},
     {'name': 'Bellboy', 'category': 'Hospitality & Hotels'},
     {'name': 'Front Desk Assistant', 'category': 'Hospitality & Hotels'},
-    
+
     // Warehouse & Logistics
     {'name': 'Inventory Assistant', 'category': 'Warehouse & Logistics'},
     {'name': 'Forklift Operator', 'category': 'Warehouse & Logistics'},
-    
+
     // Construction & Civil Work
     {'name': 'Mason', 'category': 'Construction & Civil Work'},
     {'name': 'Electrician', 'category': 'Construction & Civil Work'},
     {'name': 'Plumber', 'category': 'Construction & Civil Work'},
     {'name': 'Tile Fitter', 'category': 'Construction & Civil Work'},
     {'name': 'Painter', 'category': 'Construction & Civil Work'},
-    
+
     // Home Services
     {'name': 'Maid', 'category': 'Home Services'},
     {'name': 'Cook', 'category': 'Home Services'},
@@ -103,38 +103,39 @@ class _JobDetailsScreenState extends State<JobDetailsScreen> with SingleTickerPr
     {'name': 'Babysitter', 'category': 'Home Services'},
     {'name': 'Elderly Care Assistant', 'category': 'Home Services'},
   ];
-  
-  List<Map<String, dynamic>> get _allJobs => [..._generalJobs, ..._industryJobs];
-  
+
+  List<Map<String, dynamic>> get _allJobs =>
+      [..._generalJobs, ..._industryJobs];
+
   bool get _isFullTime => _jobType == 'full-time';
 
   @override
   void initState() {
     super.initState();
-    
+
     // Set default budget
     _budgetController.text = _minimumBudget.toString();
-    
+
     // Initialize animation controller
     _animationController = AnimationController(
       duration: const Duration(milliseconds: 300),
       vsync: this,
     );
-    
+
     _animation = CurvedAnimation(
       parent: _animationController,
       curve: Curves.easeInOut,
     );
-    
+
     // Set job type
     _jobType = widget.jobType;
     if (_isFullTime) {
       _animationController.value = 1.0;
     }
-    
+
     // Set initial text for category controller
     _categoryController.text = widget.jobCategory;
-    
+
     // If editing, populate with existing data
     if (widget.isEditing && widget.existingJob != null) {
       _populateExistingJobData();
@@ -143,17 +144,17 @@ class _JobDetailsScreenState extends State<JobDetailsScreen> with SingleTickerPr
 
   void _populateExistingJobData() {
     final job = widget.existingJob!;
-    
+
     _categoryController.text = job['jobCategory'] ?? '';
     _descriptionController.text = job['description'] ?? '';
-    
+
     if (_isFullTime && job.containsKey('salaryRange')) {
       _minSalaryController.text = job['salaryRange']['min']?.toString() ?? '';
       _maxSalaryController.text = job['salaryRange']['max']?.toString() ?? '';
     } else {
       _budgetController.text = job['budget']?.toString() ?? '';
     }
-    
+
     _selectedDate = job['date'];
     _selectedTime = job['time'];
   }
@@ -228,19 +229,19 @@ class _JobDetailsScreenState extends State<JobDetailsScreen> with SingleTickerPr
           // Job Type Toggle
           _buildJobTypeToggle(),
           SizedBox(height: 24.h),
-          
+
           // Job Category (Clickable)
           _buildCategoryField(),
           SizedBox(height: 16.h),
-          
+
           // Job Description
           _buildDescriptionField(),
           SizedBox(height: 16.h),
-          
+
           // Date & Time Selection
           _buildDateTimeSection(),
           SizedBox(height: 16.h),
-          
+
           // Budget or Salary Range based on job type with animation
           AnimatedBuilder(
             animation: _animation,
@@ -248,11 +249,12 @@ class _JobDetailsScreenState extends State<JobDetailsScreen> with SingleTickerPr
               return AnimatedCrossFade(
                 firstChild: _buildBudgetField(),
                 secondChild: _buildSalaryRangeFields(),
-                crossFadeState: _isFullTime 
-                    ? CrossFadeState.showSecond 
+                crossFadeState: _isFullTime
+                    ? CrossFadeState.showSecond
                     : CrossFadeState.showFirst,
                 duration: const Duration(milliseconds: 300),
-                layoutBuilder: (topChild, topChildKey, bottomChild, bottomChildKey) {
+                layoutBuilder:
+                    (topChild, topChildKey, bottomChild, bottomChildKey) {
                   return Stack(
                     alignment: Alignment.center,
                     children: <Widget>[
@@ -271,7 +273,7 @@ class _JobDetailsScreenState extends State<JobDetailsScreen> with SingleTickerPr
             },
           ),
           SizedBox(height: 24.h),
-          
+
           // Submit Button
           _buildSubmitButton(),
         ],
@@ -311,8 +313,8 @@ class _JobDetailsScreenState extends State<JobDetailsScreen> with SingleTickerPr
                     duration: const Duration(milliseconds: 300),
                     margin: EdgeInsets.all(4.w),
                     decoration: BoxDecoration(
-                      color: !_isFullTime 
-                          ? const Color(0xFF0011C9) 
+                      color: !_isFullTime
+                          ? const Color(0xFF0011C9)
                           : Colors.transparent,
                       borderRadius: BorderRadius.circular(8.r),
                     ),
@@ -329,7 +331,7 @@ class _JobDetailsScreenState extends State<JobDetailsScreen> with SingleTickerPr
                   ),
                 ),
               ),
-              
+
               // Full Time Button
               Expanded(
                 child: InkWell(
@@ -338,8 +340,8 @@ class _JobDetailsScreenState extends State<JobDetailsScreen> with SingleTickerPr
                     duration: const Duration(milliseconds: 300),
                     margin: EdgeInsets.all(4.w),
                     decoration: BoxDecoration(
-                      color: _isFullTime 
-                          ? const Color(0xFF0011C9) 
+                      color: _isFullTime
+                          ? const Color(0xFF0011C9)
                           : Colors.transparent,
                       borderRadius: BorderRadius.circular(8.r),
                     ),
@@ -396,13 +398,13 @@ class _JobDetailsScreenState extends State<JobDetailsScreen> with SingleTickerPr
                 SizedBox(width: 12.w),
                 Expanded(
                   child: Text(
-                    _categoryController.text.isNotEmpty 
-                        ? _categoryController.text 
+                    _categoryController.text.isNotEmpty
+                        ? _categoryController.text
                         : 'Select Job Category',
                     style: GoogleFonts.poppins(
                       fontSize: 16.sp,
-                      color: _categoryController.text.isNotEmpty 
-                          ? Colors.black 
+                      color: _categoryController.text.isNotEmpty
+                          ? Colors.black
                           : Colors.grey,
                     ),
                   ),
@@ -456,9 +458,11 @@ class _JobDetailsScreenState extends State<JobDetailsScreen> with SingleTickerPr
                   borderRadius: BorderRadius.circular(12.r),
                 ),
                 errorText: _selectedDate == null ? '' : null,
-                errorStyle: const TextStyle(height: 0, color: Colors.transparent),
+                errorStyle:
+                    const TextStyle(height: 0, color: Colors.transparent),
                 prefixIcon: const Icon(Icons.calendar_today),
-                contentPadding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 12.h),
+                contentPadding:
+                    EdgeInsets.symmetric(horizontal: 12.w, vertical: 12.h),
               ),
               child: Text(
                 _selectedDate != null
@@ -473,7 +477,7 @@ class _JobDetailsScreenState extends State<JobDetailsScreen> with SingleTickerPr
           ),
         ),
         SizedBox(width: 12.w),
-        
+
         // Time Picker
         Expanded(
           child: InkWell(
@@ -485,9 +489,11 @@ class _JobDetailsScreenState extends State<JobDetailsScreen> with SingleTickerPr
                   borderRadius: BorderRadius.circular(12.r),
                 ),
                 errorText: _selectedTime == null ? '' : null,
-                errorStyle: const TextStyle(height: 0, color: Colors.transparent),
+                errorStyle:
+                    const TextStyle(height: 0, color: Colors.transparent),
                 prefixIcon: const Icon(Icons.access_time),
-                contentPadding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 12.h),
+                contentPadding:
+                    EdgeInsets.symmetric(horizontal: 12.w, vertical: 12.h),
               ),
               child: Text(
                 _selectedTime != null
@@ -584,7 +590,7 @@ class _JobDetailsScreenState extends State<JobDetailsScreen> with SingleTickerPr
                 ),
               ),
               SizedBox(width: 12.w),
-              
+
               // Maximum Salary
               Expanded(
                 child: TextFormField(
@@ -626,7 +632,7 @@ class _JobDetailsScreenState extends State<JobDetailsScreen> with SingleTickerPr
 
   Widget _buildSubmitButton() {
     return ElevatedButton(
-      onPressed: _isLoading ? null : _submitForm,  // Disable button when loading
+      onPressed: _isLoading ? null : _submitForm, // Disable button when loading
       style: ElevatedButton.styleFrom(
         backgroundColor: const Color(0xFF0011C9),
         foregroundColor: Colors.white,
@@ -664,7 +670,7 @@ class _JobDetailsScreenState extends State<JobDetailsScreen> with SingleTickerPr
         );
       },
     );
-    
+
     if (pickedDate != null) {
       setState(() {
         _selectedDate = pickedDate;
@@ -687,26 +693,27 @@ class _JobDetailsScreenState extends State<JobDetailsScreen> with SingleTickerPr
         );
       },
     );
-    
+
     if (pickedTime != null) {
       setState(() {
         _selectedTime = pickedTime;
       });
     }
-  }void _showJobCategoryBottomSheet() {
+  }
+
+  void _showJobCategoryBottomSheet() {
     // Currently selected category for highlighting
     final currentCategory = _categoryController.text;
-    
+
     // Search text controller
     final TextEditingController searchController = TextEditingController();
-    
+
     // Filtered jobs list - initially all jobs
     List<Map<String, dynamic>> filteredJobs = _allJobs;
-    
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      
       backgroundColor: Colors.transparent,
       builder: (context) {
         return StatefulBuilder(
@@ -717,13 +724,19 @@ class _JobDetailsScreenState extends State<JobDetailsScreen> with SingleTickerPr
                 filteredJobs = _allJobs;
               } else {
                 filteredJobs = _allJobs.where((job) {
-                  return job['name'].toString().toLowerCase().contains(query.toLowerCase()) ||
-                      job['category'].toString().toLowerCase().contains(query.toLowerCase());
+                  return job['name']
+                          .toString()
+                          .toLowerCase()
+                          .contains(query.toLowerCase()) ||
+                      job['category']
+                          .toString()
+                          .toLowerCase()
+                          .contains(query.toLowerCase());
                 }).toList();
               }
               setStateLocal(() {});
             }
-            
+
             return Container(
               height: MediaQuery.of(context).size.height * 0.75,
               decoration: const BoxDecoration(
@@ -734,7 +747,7 @@ class _JobDetailsScreenState extends State<JobDetailsScreen> with SingleTickerPr
                 ),
               ),
               child: Column(
-                     mainAxisSize: MainAxisSize.min,
+                mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // Handle and title
@@ -760,10 +773,11 @@ class _JobDetailsScreenState extends State<JobDetailsScreen> with SingleTickerPr
                       ),
                     ),
                   ),
-                  
+
                   // Search bar
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
                     child: TextField(
                       controller: searchController,
                       decoration: InputDecoration(
@@ -772,12 +786,13 @@ class _JobDetailsScreenState extends State<JobDetailsScreen> with SingleTickerPr
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                        contentPadding:
+                            const EdgeInsets.symmetric(vertical: 12),
                       ),
                       onChanged: filterJobs,
                     ),
                   ),
-                  
+
                   // Job Categories List
                   Expanded(
                     child: filteredJobs.isEmpty
@@ -791,34 +806,39 @@ class _JobDetailsScreenState extends State<JobDetailsScreen> with SingleTickerPr
                             ),
                           )
                         : ListView(
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 8),
                             children: [
                               // Currently selected job (if any)
                               if (currentCategory.isNotEmpty)
                                 _buildJobCategorySection(
                                   title: 'Selected',
-                                  jobs: _allJobs.where((job) => 
-                                    job['name'] == currentCategory
-                                  ).toList(),
+                                  jobs: _allJobs
+                                      .where((job) =>
+                                          job['name'] == currentCategory)
+                                      .toList(),
                                   currentCategory: currentCategory,
                                 ),
-                              
+
                               // General Jobs
                               _buildJobCategorySection(
                                 title: 'General Jobs',
-                                jobs: filteredJobs.where((job) => 
-                                  job['category'] == 'General'
-                                ).toList(),
+                                jobs: filteredJobs
+                                    .where(
+                                        (job) => job['category'] == 'General')
+                                    .toList(),
                                 currentCategory: currentCategory,
                               ),
-                              
+
                               // Group by industry
-                              ..._getUniqueIndustries(filteredJobs).map((industry) {
+                              ..._getUniqueIndustries(filteredJobs)
+                                  .map((industry) {
                                 return _buildJobCategorySection(
                                   title: industry,
-                                  jobs: filteredJobs.where((job) => 
-                                    job['category'] == industry
-                                  ).toList(),
+                                  jobs: filteredJobs
+                                      .where(
+                                          (job) => job['category'] == industry)
+                                      .toList(),
                                   currentCategory: currentCategory,
                                 );
                               }),
@@ -839,13 +859,13 @@ class _JobDetailsScreenState extends State<JobDetailsScreen> with SingleTickerPr
 
   List<String> _getUniqueIndustries(List<Map<String, dynamic>> jobs) {
     final Set<String> industries = {};
-    
+
     for (var job in jobs) {
       if (job['category'] != 'General') {
         industries.add(job['category'] as String);
       }
     }
-    
+
     return industries.toList()..sort();
   }
 
@@ -855,7 +875,7 @@ class _JobDetailsScreenState extends State<JobDetailsScreen> with SingleTickerPr
     required String currentCategory,
   }) {
     if (jobs.isEmpty) return const SizedBox.shrink();
-    
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -872,7 +892,7 @@ class _JobDetailsScreenState extends State<JobDetailsScreen> with SingleTickerPr
         ),
         ...jobs.map((job) {
           final isSelected = job['name'] == currentCategory;
-          
+
           return InkWell(
             onTap: () {
               setState(() {
@@ -884,10 +904,14 @@ class _JobDetailsScreenState extends State<JobDetailsScreen> with SingleTickerPr
               padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
               margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
               decoration: BoxDecoration(
-                color: isSelected ? const Color(0xFF0011C9).withOpacity(0.1) : Colors.white,
+                color: isSelected
+                    ? const Color(0xFF0011C9).withOpacity(0.1)
+                    : Colors.white,
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(
-                  color: isSelected ? const Color(0xFF0011C9) : Colors.grey.shade300,
+                  color: isSelected
+                      ? const Color(0xFF0011C9)
+                      : Colors.grey.shade300,
                   width: isSelected ? 1.5 : 1,
                 ),
               ),
@@ -904,8 +928,10 @@ class _JobDetailsScreenState extends State<JobDetailsScreen> with SingleTickerPr
                       job['name'],
                       style: GoogleFonts.poppins(
                         fontSize: 16,
-                        fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-                        color: isSelected ? const Color(0xFF0011C9) : Colors.black,
+                        fontWeight:
+                            isSelected ? FontWeight.w600 : FontWeight.w400,
+                        color:
+                            isSelected ? const Color(0xFF0011C9) : Colors.black,
                       ),
                     ),
                   ),
@@ -926,7 +952,7 @@ class _JobDetailsScreenState extends State<JobDetailsScreen> with SingleTickerPr
     if (_formKey.currentState?.validate() != true) {
       return;
     }
-    
+
     // Validate date and time
     if (_selectedDate == null || _selectedTime == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -937,7 +963,7 @@ class _JobDetailsScreenState extends State<JobDetailsScreen> with SingleTickerPr
       );
       return;
     }
-    
+
     // Validate category
     if (_categoryController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -948,12 +974,12 @@ class _JobDetailsScreenState extends State<JobDetailsScreen> with SingleTickerPr
       );
       return;
     }
-    
+
     // Show loading indicator
     setState(() {
       _isLoading = true;
     });
-    
+
     try {
       // Create job data object
       final Map<String, dynamic> jobData = {
@@ -963,12 +989,12 @@ class _JobDetailsScreenState extends State<JobDetailsScreen> with SingleTickerPr
         'time': _selectedTime,
         'jobType': _jobType,
       };
-      
+
       // Add budget or salary range based on job type
       if (_isFullTime) {
         final minSalary = int.parse(_minSalaryController.text);
         final maxSalary = int.parse(_maxSalaryController.text);
-        
+
         // Additional validation for salary range
         if (minSalary < _minimumBudget) {
           setState(() {
@@ -982,7 +1008,7 @@ class _JobDetailsScreenState extends State<JobDetailsScreen> with SingleTickerPr
           );
           return;
         }
-        
+
         jobData['salaryRange'] = {
           'min': minSalary,
           'max': maxSalary,
@@ -991,7 +1017,7 @@ class _JobDetailsScreenState extends State<JobDetailsScreen> with SingleTickerPr
         jobData['budget'] = maxSalary;
       } else {
         final budget = int.parse(_budgetController.text);
-        
+
         // Additional validation for budget
         if (budget < _minimumBudget) {
           setState(() {
@@ -1005,10 +1031,10 @@ class _JobDetailsScreenState extends State<JobDetailsScreen> with SingleTickerPr
           );
           return;
         }
-        
+
         jobData['budget'] = budget;
       }
-      
+
       // Save to Firebase using the service
       final result = await _jobService.saveJobData(
         jobData: jobData,
@@ -1016,22 +1042,24 @@ class _JobDetailsScreenState extends State<JobDetailsScreen> with SingleTickerPr
         isEditing: widget.isEditing,
         jobId: widget.jobId,
       );
-      
+
       setState(() {
         _isLoading = false;
       });
-      
+
       if (result['success'] == true) {
         // Display success message
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              widget.isEditing ? 'Job updated successfully!' : 'Job posted successfully!',
+              widget.isEditing
+                  ? 'Job updated successfully!'
+                  : 'Job posted successfully!',
             ),
             backgroundColor: Colors.green,
           ),
         );
-        
+
         // Handle submit based on mode (create or edit)
         if (widget.isEditing) {
           // Return the updated job data to the previous screen
@@ -1041,7 +1069,8 @@ class _JobDetailsScreenState extends State<JobDetailsScreen> with SingleTickerPr
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(
-              builder: (context) => JobsPostedScreen(submittedJob: result['jobData']),
+              builder: (context) =>
+                  JobsPostedScreen(submittedJob: result['jobData']),
             ),
           );
         }
@@ -1058,7 +1087,7 @@ class _JobDetailsScreenState extends State<JobDetailsScreen> with SingleTickerPr
       setState(() {
         _isLoading = false;
       });
-      
+
       // Show error message
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -1067,4 +1096,5 @@ class _JobDetailsScreenState extends State<JobDetailsScreen> with SingleTickerPr
         ),
       );
     }
-  }}
+  }
+}

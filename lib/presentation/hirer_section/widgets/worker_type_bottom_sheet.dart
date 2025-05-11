@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 
-import 'package:hey_work/presentation/hirer_section/jobs_posted/job_detail_screen.dart';
+import '../jobs_posted/job_detail_screen.dart';
 
 class WorkerTypeBottomSheet extends StatelessWidget {
   final String jobCategory;
-  
+
   const WorkerTypeBottomSheet({
     super.key,
     required this.jobCategory,
@@ -29,12 +29,13 @@ class WorkerTypeBottomSheet extends StatelessWidget {
             width: 36,
             height: 4,
             decoration: BoxDecoration(
-              color: const Color(0xFF1E2B8E).withOpacity(0.5), // Dark blue indicator
+              color: const Color(0xFF1E2B8E)
+                  .withOpacity(0.5), // Dark blue indicator
               borderRadius: BorderRadius.circular(2),
             ),
           ),
           const SizedBox(height: 32),
-          
+
           // Title and description text
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -62,9 +63,9 @@ class WorkerTypeBottomSheet extends StatelessWidget {
               ],
             ),
           ),
-          
+
           const Spacer(),
-          
+
           // PART TIME WORKER Button
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -101,9 +102,9 @@ class WorkerTypeBottomSheet extends StatelessWidget {
               ),
             ),
           ),
-          
+
           const SizedBox(height: 16),
-          
+
           // FULL TIME WORKER Button
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -139,7 +140,7 @@ class WorkerTypeBottomSheet extends StatelessWidget {
               ),
             ),
           ),
-          
+
           const SizedBox(height: 48), // Bottom padding
         ],
       ),

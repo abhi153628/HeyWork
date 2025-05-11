@@ -1,7 +1,7 @@
 // Label text
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:hey_work/presentation/hirer_section/signup_screen/widgets/responsive_utils.dart';
+import 'responsive_utils.dart';
 
 class LabelText extends StatelessWidget {
   final ResponsiveUtil responsive;

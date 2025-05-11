@@ -9,10 +9,10 @@ class CategoryChips extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
-    
+
     // Adjust chip spacing based on screen width
     final chipSpacing = screenWidth * 0.02; // 2% of screen width
-    
+
     return Wrap(
       spacing: chipSpacing,
       runSpacing: 8, // Fixed size instead of ScreenUtil
@@ -86,7 +86,7 @@ class CategoryChips extends StatelessWidget {
       ],
     );
   }
-  
+
   Widget _buildCategoryChip({
     required BuildContext context,
     required IconData icon,
@@ -95,16 +95,16 @@ class CategoryChips extends StatelessWidget {
   }) {
     // Responsive text size
     final fontSize = MediaQuery.of(context).size.width * 0.03;
-    
+
     // Clamp font size for very small or large devices
     final clampedFontSize = fontSize.clamp(10.0, 14.0);
-    
+
     // Get background color - defaulting to light grey if AppTheme not available
     final Color backgroundColor = isDark ? Colors.black : Colors.grey[200]!;
-    
+
     return Container(
       padding: const EdgeInsets.symmetric(
-        horizontal: 12, 
+        horizontal: 12,
         vertical: 8,
       ),
       decoration: BoxDecoration(

@@ -5,6 +5,10 @@ import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:hey_work/presentation/worker_section/worker_signup_page/worker_signup_page.dart';
+import 'presentation/hirer_section/common/bottom_nav_bar.dart';
+import 'presentation/worker_section/bottom_navigation/bottom_nav_bar.dart';
+import 'presentation/worker_section/worker_application_screen/worker_applications_screen.dart';
 import 'package:provider/provider.dart';
 
 // Core
@@ -15,20 +19,18 @@ import 'package:hey_work/core/theme/app_theme.dart';
 import 'package:hey_work/firebase_options.dart';
 
 // Presentation
-import 'package:hey_work/presentation/hirer_section/signup_screen/signup_screen_hirer.dart';
-import 'package:hey_work/presentation/worker_section/home_page/worker_home_page.dart';
-import 'package:hey_work/presentation/worker_section/worker_signup_page/worker_signup_page.dart';
+
 
 void main() async {
   try {
     // Ensure Flutter binding is initialized
     WidgetsFlutterBinding.ensureInitialized();
-    
+
     // Initialize Firebase
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
-    
+
     // Set system UI overlay style
     SystemChrome.setSystemUIOverlayStyle(
       const SystemUiOverlayStyle(
@@ -36,20 +38,19 @@ void main() async {
         statusBarIconBrightness: Brightness.dark,
       ),
     );
-      // Initialize App Check
-  await FirebaseAppCheck.instance.activate(
-    // Use provider appropriate for your platform
-    webProvider: ReCaptchaV3Provider('your-recaptcha-site-key'),
-    androidProvider: AndroidProvider.playIntegrity,
-    appleProvider: AppleProvider.appAttest,
-  );
+    //flutt Initialize App Check
+    await FirebaseAppCheck.instance.activate(
+      // Use provider appropriate for your platform
+      // webProvider: ReCaptchaV3Provider('your-recaptcha-site-key'),
+      androidProvider: AndroidProvider.playIntegrity,
+      appleProvider: AppleProvider.appAttest,
+    );
     // Set preferred orientations
     await SystemChrome.setPreferredOrientations([
       DeviceOrientation.portraitUp,
       DeviceOrientation.portraitDown,
     ]);
-    
-    
+
     runApp(const MyApp());
   } catch (e) {
     debugPrint('Error initializing app: $e');
@@ -91,7 +92,6 @@ class AppTheme {
   static const Color primaryBlue = Color(0xFF0011C9);
   static const Color secondaryBlue = Color(0xFF0033FF);
   static const Color backgroundGrey = Color(0xFFF0F2F7);
-  
 
   static final ThemeData lightTheme = ThemeData(
     primaryColor: primaryBlue,
@@ -103,11 +103,18 @@ class AppTheme {
     ),
     textTheme: TextTheme(
       // Defined text styles for consistency
-      displayLarge: GoogleFonts.poppins(fontSize: 22.sp, fontWeight: FontWeight.bold, color: primaryBlue), // App title
-      bodyLarge: GoogleFonts.poppins(fontSize: 16.sp, color: Colors.black87), // Search text
-      bodyMedium: GoogleFonts.poppins(fontSize: 14.sp, color: Colors.black87), // Category title
-      bodySmall: GoogleFonts.poppins(fontSize: 12.sp, fontWeight: FontWeight.w500), // Card titles
-      labelSmall: GoogleFonts.poppins(fontSize: 10.sp, color: Colors.grey), // Bottom nav text
+      displayLarge: GoogleFonts.poppins(
+          fontSize: 22.sp,
+          fontWeight: FontWeight.bold,
+          color: primaryBlue), // App title
+      bodyLarge: GoogleFonts.poppins(
+          fontSize: 16.sp, color: Colors.black87), // Search text
+      bodyMedium: GoogleFonts.poppins(
+          fontSize: 14.sp, color: Colors.black87), // Category title
+      bodySmall: GoogleFonts.poppins(
+          fontSize: 12.sp, fontWeight: FontWeight.w500), // Card titles
+      labelSmall: GoogleFonts.poppins(
+          fontSize: 10.sp, color: Colors.grey), // Bottom nav text
     ),
   );
 }

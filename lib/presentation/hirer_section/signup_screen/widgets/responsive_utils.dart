@@ -4,48 +4,45 @@ import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 
-
 class ResponsiveUtil {
   static late MediaQueryData _mediaQueryData;
   static late double screenWidth;
   static late double screenHeight;
-  
+
   void init(BuildContext context) {
     _mediaQueryData = MediaQuery.of(context);
     screenWidth = _mediaQueryData.size.width;
     screenHeight = _mediaQueryData.size.height;
   }
-  
+
   // Get responsive height
   double getHeight(double height) {
     // Based on design height of 844 (iPhone 13 mini)
     return (height / 844.0) * screenHeight;
   }
-  
+
   // Get responsive width
   double getWidth(double width) {
     // Based on design width of 390 (iPhone 13 mini)
     return (width / 390.0) * screenWidth;
   }
-  
+
   // Responsive SizedBox for height
   Widget verticalSpace(double height) {
     return SizedBox(height: getHeight(height));
   }
-  
+
   // Responsive SizedBox for width
   Widget horizontalSpace(double width) {
     return SizedBox(width: getWidth(width));
   }
-    
+
   // Get adaptive font size
   double getFontSize(double size) {
     final scaleFactor = screenWidth / 390.0;
     return size * scaleFactor;
   }
 }
-
-
 
 // Add this class if it's missing in your code
 class FormValidator {

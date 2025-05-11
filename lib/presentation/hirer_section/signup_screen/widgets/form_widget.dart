@@ -80,7 +80,7 @@
 //                   ),
 //                 ),
 //               ),
-        
+
 //               Center(
 //                 child: Text(
 //                   "You are signing up as a hirer",
@@ -91,7 +91,7 @@
 //                 ),
 //               ),
 //               SizedBox(height: responsive.getHeight(12)),
-              
+
 //               // Profile Image
 //               Center(
 //                 child: ProfileImageSelector(
@@ -100,8 +100,7 @@
 //                   onImagePicked: onImagePicked,
 //                 ),
 //               ),
-          
-              
+
 //               // Form Fields
 //               LabelText(responsive: responsive, text: "Your Name"),
 //               SizedBox(height: responsive.getHeight(8)),
@@ -113,7 +112,7 @@
 //                 prefixIcon: Icons.person_outline,
 //               ),
 //               SizedBox(height: responsive.getHeight(20)),
-              
+
 //               LabelText(responsive: responsive, text: "Business Name"),
 //               SizedBox(height: responsive.getHeight(8)),
 //               CustomTextField(
@@ -124,7 +123,7 @@
 //                 prefixIcon: Icons.business_outlined,
 //               ),
 //               SizedBox(height: responsive.getHeight(20)),
-              
+
 //               LabelText(responsive: responsive, text: "Business Location"),
 //               SizedBox(height: responsive.getHeight(8)),
 //               LocationSelector(
@@ -135,7 +134,7 @@
 //                 onLocationSelected: onLocationSelected,
 //               ),
 //               SizedBox(height: responsive.getHeight(20)),
-              
+
 //               LabelText(responsive: responsive, text: "Mobile number"),
 //               SizedBox(height: responsive.getHeight(8)),
 //               PhoneInputField(
@@ -146,7 +145,7 @@
 //                 onSendOtp: onSendOtp,
 //               ),
 //               SizedBox(height: responsive.getHeight(24)),
-              
+
 //               // Terms and Privacy
 //               Row(
 //                 children: [
@@ -206,7 +205,7 @@
 //                 ],
 //               ),
 //               SizedBox(height: responsive.getHeight(32)),
-              
+
 //               // Submit Button
 //               SizedBox(
 //                 width: double.infinity,
@@ -231,7 +230,7 @@
 //                 ),
 //               ),
 //               SizedBox(height: responsive.getHeight(16)),
-              
+
 //               // Login Link
 //               Center(
 //                 child: Row(

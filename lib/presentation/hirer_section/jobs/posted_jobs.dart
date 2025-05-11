@@ -3,7 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:hey_work/presentation/hirer_section/jobs_posted/job_detail_screen.dart';
+import '../jobs_posted/job_detail_screen.dart';
 import 'package:intl/intl.dart';
 
 class JobsPostedScreen extends StatefulWidget {
@@ -21,53 +21,53 @@ class JobsPostedScreen extends StatefulWidget {
 class _JobsPostedScreenState extends State<JobsPostedScreen> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
-  
+
   bool _isLoading = true;
   List<Map<String, dynamic>> _jobs = [];
-  
+
   @override
   void initState() {
     super.initState();
     _loadJobs();
   }
-  
+
   // Load jobs from Firestore
   Future<void> _loadJobs() async {
     setState(() {
       _isLoading = true;
     });
-    
+
     try {
       final userId = _auth.currentUser?.uid;
       if (userId == null) {
         throw Exception('No user logged in');
       }
-      
+
       // Query jobs by the current user
       final snapshot = await _firestore
           .collection('jobs')
           .where('hirerId', isEqualTo: userId)
           .orderBy('createdAt', descending: true)
           .get();
-      
+
       final List<Map<String, dynamic>> loadedJobs = [];
-      
+
       for (var doc in snapshot.docs) {
         final data = doc.data();
         data['jobId'] = doc.id; // Add document ID to the job data
-        
+
         // Convert Firestore timestamps to DateTime
         if (data['createdAt'] != null) {
           data['createdAt'] = (data['createdAt'] as Timestamp).toDate();
         }
-        
+
         if (data['updatedAt'] != null) {
           data['updatedAt'] = (data['updatedAt'] as Timestamp).toDate();
         }
-        
+
         loadedJobs.add(data);
       }
-      
+
       setState(() {
         _jobs = loadedJobs;
         _isLoading = false;
@@ -77,7 +77,7 @@ class _JobsPostedScreenState extends State<JobsPostedScreen> {
       setState(() {
         _isLoading = false;
       });
-      
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Error loading jobs: $e'),
@@ -86,13 +86,13 @@ class _JobsPostedScreenState extends State<JobsPostedScreen> {
       );
     }
   }
-  
+
   // Delete job from Firestore
   Future<void> _deleteJob(String jobId) async {
     try {
       // Delete from main jobs collection
       await _firestore.collection('jobs').doc(jobId).delete();
-      
+
       // Delete from user's jobs subcollection
       final userId = _auth.currentUser?.uid;
       if (userId != null) {
@@ -103,12 +103,12 @@ class _JobsPostedScreenState extends State<JobsPostedScreen> {
             .doc(jobId)
             .delete();
       }
-      
+
       // Remove from local list
       setState(() {
         _jobs.removeWhere((job) => job['jobId'] == jobId);
       });
-      
+
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Job deleted successfully'),
@@ -117,7 +117,7 @@ class _JobsPostedScreenState extends State<JobsPostedScreen> {
       );
     } catch (e) {
       print('Error deleting job: $e');
-      
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Error deleting job: $e'),
@@ -228,26 +228,25 @@ class _JobsPostedScreenState extends State<JobsPostedScreen> {
     final bool isFullTime = job['jobType'] == 'full-time';
     final String jobCategory = job['jobCategory'] ?? 'Unknown';
     final int budget = job['budget'] ?? 0;
-    
+
     // Format date and time if available
     String dateTimeStr = 'N/A';
     if (job['date'] != null && job['time'] != null) {
-      final DateTime date = job['date'] is DateTime 
-          ? job['date'] 
+      final DateTime date = job['date'] is DateTime
+          ? job['date']
           : (job['date'] as Timestamp).toDate();
-          
+
       final TimeOfDay time = job['time'] is TimeOfDay
           ? job['time']
           : TimeOfDay(
-              hour: (job['time'] as Map)['hour'] ?? 0, 
-              minute: (job['time'] as Map)['minute'] ?? 0
-            );
-            
+              hour: (job['time'] as Map)['hour'] ?? 0,
+              minute: (job['time'] as Map)['minute'] ?? 0);
+
       final formattedDate = DateFormat('MMM dd, yyyy').format(date);
       final formattedTime = time.format(context);
       dateTimeStr = '$formattedDate at $formattedTime';
     }
-    
+
     return Card(
       margin: EdgeInsets.only(bottom: 16.h),
       elevation: 2,
@@ -265,8 +264,8 @@ class _JobsPostedScreenState extends State<JobsPostedScreen> {
                 Container(
                   padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
                   decoration: BoxDecoration(
-                    color: isFullTime 
-                        ? const Color(0xFF0011C9).withOpacity(0.1) 
+                    color: isFullTime
+                        ? const Color(0xFF0011C9).withOpacity(0.1)
                         : Colors.orange.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(4.r),
                   ),
@@ -275,8 +274,8 @@ class _JobsPostedScreenState extends State<JobsPostedScreen> {
                     style: GoogleFonts.poppins(
                       fontSize: 12.sp,
                       fontWeight: FontWeight.w600,
-                      color: isFullTime 
-                          ? const Color(0xFF0011C9) 
+                      color: isFullTime
+                          ? const Color(0xFF0011C9)
                           : Colors.orange.shade800,
                     ),
                   ),
@@ -296,7 +295,7 @@ class _JobsPostedScreenState extends State<JobsPostedScreen> {
               ],
             ),
             SizedBox(height: 12.h),
-            
+
             // Budget/Salary
             Row(
               children: [
@@ -319,7 +318,7 @@ class _JobsPostedScreenState extends State<JobsPostedScreen> {
               ],
             ),
             SizedBox(height: 8.h),
-            
+
             // Date & Time
             Row(
               children: [
@@ -341,7 +340,7 @@ class _JobsPostedScreenState extends State<JobsPostedScreen> {
               ],
             ),
             SizedBox(height: 8.h),
-            
+
             // Description
             if (job['description'] != null && job['description'].isNotEmpty)
               Padding(
@@ -356,7 +355,7 @@ class _JobsPostedScreenState extends State<JobsPostedScreen> {
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
-            
+
             // Status chip
             if (job['status'] != null)
               Container(
@@ -375,7 +374,7 @@ class _JobsPostedScreenState extends State<JobsPostedScreen> {
                   ),
                 ),
               ),
-            
+
             // Action Buttons
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
@@ -399,9 +398,9 @@ class _JobsPostedScreenState extends State<JobsPostedScreen> {
                       ),
                     ),
                   ),
-                
+
                 const Spacer(),
-                
+
                 // Edit Button
                 IconButton(
                   onPressed: () => _editJob(job),
@@ -411,7 +410,7 @@ class _JobsPostedScreenState extends State<JobsPostedScreen> {
                     color: Colors.blue.shade700,
                   ),
                 ),
-                
+
                 // Delete Button
                 IconButton(
                   onPressed: () => _confirmDeleteJob(job['jobId']),

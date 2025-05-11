@@ -3,11 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:hey_work/presentation/hirer_section/common/bottom_nav_bar.dart';
-import 'package:hey_work/presentation/hirer_section/home_page/hirer_home_page.dart';
+import '../../hirer_section/common/bottom_nav_bar.dart';
+import '../../hirer_section/home_page/hirer_home_page.dart';
 
-import 'package:hey_work/presentation/hirer_section/signup_screen/widgets/responsive_utils.dart';
-import 'package:hey_work/presentation/worker_section/home_page/worker_home_page.dart';
+import '../../hirer_section/signup_screen/widgets/responsive_utils.dart';
+import '../bottom_navigation/bottom_nav_bar.dart';
+import '../home_page/worker_home_page.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:uuid/uuid.dart';
@@ -16,8 +17,6 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 
 // Import utility classes
-
-
 
 // Phone input field widget
 class PhoneInputField extends StatefulWidget {
@@ -54,9 +53,8 @@ class _PhoneInputFieldState extends State<PhoneInputField> {
             color: Colors.grey.shade50,
             borderRadius: BorderRadius.circular(10),
             border: Border.all(
-              color: widget.otpSent 
-                ? Colors.grey.shade300 
-                : Colors.grey.shade200,
+              color:
+                  widget.otpSent ? Colors.grey.shade300 : Colors.grey.shade200,
               width: 1,
             ),
           ),
@@ -84,14 +82,14 @@ class _PhoneInputFieldState extends State<PhoneInputField> {
                   ),
                 ),
               ),
-              
+
               // Divider
               Container(
                 height: widget.responsive.getHeight(30),
                 width: 1,
                 color: Colors.grey.shade300,
               ),
-              
+
               // Phone input
               Expanded(
                 child: TextFormField(
@@ -140,7 +138,7 @@ class _PhoneInputFieldState extends State<PhoneInputField> {
             ],
           ),
         ),
-        
+
         // Error message
         if (_errorMessage != null)
           Padding(
@@ -156,7 +154,7 @@ class _PhoneInputFieldState extends State<PhoneInputField> {
               ),
             ),
           ),
-          
+
         // OTP field (visible only after OTP is sent)
         if (widget.otpSent) ...[
           SizedBox(height: widget.responsive.getHeight(20)),
@@ -253,8 +251,7 @@ class _PhoneInputFieldState extends State<PhoneInputField> {
 }
 
 class WorkerSignupPage extends StatefulWidget {
-  const WorkerSignupPage({Key? key
-}) : super(key: key);
+  const WorkerSignupPage({Key? key}) : super(key: key);
 
   @override
   _WorkerSignupPageState createState() => _WorkerSignupPageState();
@@ -264,39 +261,39 @@ class _WorkerSignupPageState extends State<WorkerSignupPage> {
   final _formKey = GlobalKey<FormState>();
   bool _isLoading = false;
   bool _acceptedTerms = false;
-  
+
   // Responsive util instance
   final ResponsiveUtil _responsive = ResponsiveUtil();
-  
+
   // Debouncer for location search
   final Debouncer _searchDebouncer = Debouncer(milliseconds: 500);
-  
+
   // Form controllers
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _businessNameController = TextEditingController();
   final TextEditingController _locationController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _otpController = TextEditingController();
-  
+
   // Image picker and selected image
   final ImagePicker _picker = ImagePicker();
   File? _selectedImage;
-  
+
   // Location suggestions
   List<Map<String, String>> _locationSuggestions = [];
   Map<String, String>? _selectedLocation;
-  
+
   // Phone verification
   bool _otpSent = false;
   String _verificationId = '';
-  
+
   @override
   void initState() {
     super.initState();
     // Add +91 as default country code for India
     _phoneController.text = '';
   }
-  
+
   @override
   void dispose() {
     _nameController.dispose();
@@ -336,75 +333,76 @@ class _WorkerSignupPageState extends State<WorkerSignupPage> {
   Widget build(BuildContext context) {
     // Initialize responsive util
     _responsive.init(context);
-    
+
     return Scaffold(
       body: SafeArea(
-        child: _isLoading 
-          ? const Center(
-              child: CircularProgressIndicator(
-                color: Colors.blue,
-                strokeWidth: 3,
+        child: _isLoading
+            ? const Center(
+                child: CircularProgressIndicator(
+                  color: Colors.blue,
+                  strokeWidth: 3,
+                ),
+              )
+            : SignupForm(
+                formKey: _formKey,
+                responsive: _responsive,
+                nameController: _nameController,
+                businessNameController: _businessNameController,
+                locationController: _locationController,
+                phoneController: _phoneController,
+                otpController: _otpController,
+                selectedImage: _selectedImage,
+                locationSuggestions: _locationSuggestions,
+                otpSent: _otpSent,
+                acceptedTerms: _acceptedTerms,
+                onImagePicked: (File image) {
+                  setState(() {
+                    _selectedImage = image;
+                  });
+                },
+                onSuggestionsFetched: (suggestions) {
+                  setState(() {
+                    _locationSuggestions = suggestions;
+                  });
+                },
+                onLocationSelected: (location) {
+                  setState(() {
+                    _selectedLocation = location;
+                    _locationController.text = location['placeName'] ?? '';
+                  });
+                },
+                onSearchLocation: (query) {
+                  _searchDebouncer.run(() {
+                    _fetchLocationSuggestions(query);
+                  });
+                },
+                onTermsChanged: (value) {
+                  setState(() {
+                    _acceptedTerms = value;
+                  });
+                },
+                onSendOtp: _verifyPhoneNumber,
+                onSubmit: () {
+                  if (_formKey.currentState!.validate()) {
+                    if (!_acceptedTerms) {
+                      _showSnackBar('Please accept terms and privacy policy',
+                          isError: true);
+                      return;
+                    }
+
+                    if (_otpSent) {
+                      _verifyOTP();
+                    } else {
+                      _verifyPhoneNumber();
+                    }
+                  }
+                },
               ),
-            )
-          : SignupForm(
-              formKey: _formKey,
-              responsive: _responsive,
-              nameController: _nameController,
-              businessNameController: _businessNameController,
-              locationController: _locationController,
-              phoneController: _phoneController,
-              otpController: _otpController,
-              selectedImage: _selectedImage,
-              locationSuggestions: _locationSuggestions,
-              otpSent: _otpSent,
-              acceptedTerms: _acceptedTerms,
-              onImagePicked: (File image) {
-                setState(() {
-                  _selectedImage = image;
-                });
-              },
-              onSuggestionsFetched: (suggestions) {
-                setState(() {
-                  _locationSuggestions = suggestions;
-                });
-              },
-              onLocationSelected: (location) {
-                setState(() {
-                  _selectedLocation = location;
-                  _locationController.text = location['placeName'] ?? '';
-                });
-              },
-              onSearchLocation: (query) {
-                _searchDebouncer.run(() {
-                  _fetchLocationSuggestions(query);
-                });
-              },
-              onTermsChanged: (value) {
-                setState(() {
-                  _acceptedTerms = value;
-                });
-              },
-              onSendOtp: _verifyPhoneNumber,
-              onSubmit: () {
-                if (_formKey.currentState!.validate()) {
-                  if (!_acceptedTerms) {
-                    _showSnackBar('Please accept terms and privacy policy', isError: true);
-                    return;
-                  }
-                  
-                  if (_otpSent) {
-                    _verifyOTP();
-                  } else {
-                    _verifyPhoneNumber();
-                  }
-                }
-              },
-            ),
       ),
     );
   }
 
- Future<void> _fetchLocationSuggestions(String query) async {
+  Future<void> _fetchLocationSuggestions(String query) async {
     if (query.length < 3) {
       setState(() {
         _locationSuggestions = [];
@@ -425,80 +423,271 @@ class _WorkerSignupPageState extends State<WorkerSignupPage> {
   // Location API methods
   // Cached location data for faster results
   static Map<String, List<Map<String, String>>> _cachedLocations = {};
-  
+
   // Indian cities data for quick results
   final List<Map<String, String>> _indianCities = [
-    {'placeName': 'Mumbai, Maharashtra', 'placeId': 'city_mumbai', 'latitude': '19.0760', 'longitude': '72.8777'},
-    {'placeName': 'Delhi, NCR', 'placeId': 'city_delhi', 'latitude': '28.7041', 'longitude': '77.1025'},
-    {'placeName': 'Bangalore, Karnataka', 'placeId': 'city_bangalore', 'latitude': '12.9716', 'longitude': '77.5946'},
-    {'placeName': 'Hyderabad, Telangana', 'placeId': 'city_hyderabad', 'latitude': '17.3850', 'longitude': '78.4867'},
-    {'placeName': 'Chennai, Tamil Nadu', 'placeId': 'city_chennai', 'latitude': '13.0827', 'longitude': '80.2707'},
-    {'placeName': 'Kolkata, West Bengal', 'placeId': 'city_kolkata', 'latitude': '22.5726', 'longitude': '88.3639'},
-    {'placeName': 'Pune, Maharashtra', 'placeId': 'city_pune', 'latitude': '18.5204', 'longitude': '73.8567'},
-    {'placeName': 'Ahmedabad, Gujarat', 'placeId': 'city_ahmedabad', 'latitude': '23.0225', 'longitude': '72.5714'},
-    {'placeName': 'Jaipur, Rajasthan', 'placeId': 'city_jaipur', 'latitude': '26.9124', 'longitude': '75.7873'},
-    {'placeName': 'Lucknow, Uttar Pradesh', 'placeId': 'city_lucknow', 'latitude': '26.8467', 'longitude': '80.9462'},
-    {'placeName': 'Kanpur, Uttar Pradesh', 'placeId': 'city_kanpur', 'latitude': '26.4499', 'longitude': '80.3319'},
-    {'placeName': 'Nagpur, Maharashtra', 'placeId': 'city_nagpur', 'latitude': '21.1458', 'longitude': '79.0882'},
-    {'placeName': 'Visakhapatnam, Andhra Pradesh', 'placeId': 'city_visakhapatnam', 'latitude': '17.6868', 'longitude': '83.2185'},
-    {'placeName': 'Bhopal, Madhya Pradesh', 'placeId': 'city_bhopal', 'latitude': '23.2599', 'longitude': '77.4126'},
-    {'placeName': 'Patna, Bihar', 'placeId': 'city_patna', 'latitude': '25.5941', 'longitude': '85.1376'},
-    {'placeName': 'Vadodara, Gujarat', 'placeId': 'city_vadodara', 'latitude': '22.3072', 'longitude': '73.1812'},
-    {'placeName': 'Ghaziabad, Uttar Pradesh', 'placeId': 'city_ghaziabad', 'latitude': '28.6692', 'longitude': '77.4538'},
-    {'placeName': 'Ludhiana, Punjab', 'placeId': 'city_ludhiana', 'latitude': '30.9010', 'longitude': '75.8573'},
-    {'placeName': 'Agra, Uttar Pradesh', 'placeId': 'city_agra', 'latitude': '27.1767', 'longitude': '78.0081'},
-    {'placeName': 'Nashik, Maharashtra', 'placeId': 'city_nashik', 'latitude': '19.9975', 'longitude': '73.7898'},
-    {'placeName': 'Ranchi, Jharkhand', 'placeId': 'city_ranchi', 'latitude': '23.3441', 'longitude': '85.3096'},
-    {'placeName': 'Faridabad, Haryana', 'placeId': 'city_faridabad', 'latitude': '28.4089', 'longitude': '77.3178'},
-    {'placeName': 'Indore, Madhya Pradesh', 'placeId': 'city_indore', 'latitude': '22.7196', 'longitude': '75.8577'},
-    {'placeName': 'Rajkot, Gujarat', 'placeId': 'city_rajkot', 'latitude': '22.3039', 'longitude': '70.8022'},
-    {'placeName': 'Guwahati, Assam', 'placeId': 'city_guwahati', 'latitude': '26.1445', 'longitude': '91.7362'},
-    {'placeName': 'Chandigarh, Punjab & Haryana', 'placeId': 'city_chandigarh', 'latitude': '30.7333', 'longitude': '76.7794'},
-    {'placeName': 'Hubli-Dharwad, Karnataka', 'placeId': 'city_hubli', 'latitude': '15.3647', 'longitude': '75.1240'},
-    {'placeName': 'Jodhpur, Rajasthan', 'placeId': 'city_jodhpur', 'latitude': '26.2389', 'longitude': '73.0243'},
-    {'placeName': 'Srinagar, Jammu & Kashmir', 'placeId': 'city_srinagar', 'latitude': '34.0837', 'longitude': '74.7973'},
-    {'placeName': 'Coimbatore, Tamil Nadu', 'placeId': 'city_coimbatore', 'latitude': '11.0168', 'longitude': '76.9558'},
-    {'placeName': 'Goa', 'placeId': 'city_goa', 'latitude': '15.2993', 'longitude': '74.1240'},
-    {'placeName': 'Kochi, Kerala', 'placeId': 'city_kochi', 'latitude': '9.9312', 'longitude': '76.2673'},
-    {'placeName': 'Thiruvananthapuram, Kerala', 'placeId': 'city_trivandrum', 'latitude': '8.5241', 'longitude': '76.9366'},
-    {'placeName': 'Haridwar, Uttarakhand', 'placeId': 'city_haridwar', 'latitude': '29.9457', 'longitude': '78.1642'},
-    {'placeName': 'Hampi, Karnataka', 'placeId': 'city_hampi', 'latitude': '15.3350', 'longitude': '76.4600'},
-    {'placeName': 'Haldwani, Uttarakhand', 'placeId': 'city_haldwani', 'latitude': '29.2183', 'longitude': '79.5130'},
-    {'placeName': 'Hapur, Uttar Pradesh', 'placeId': 'city_hapur', 'latitude': '28.7304', 'longitude': '77.7806'},
-    {'placeName': 'Hardoi, Uttar Pradesh', 'placeId': 'city_hardoi', 'latitude': '27.3989', 'longitude': '80.1313'},
+    {
+      'placeName': 'Mumbai, Maharashtra',
+      'placeId': 'city_mumbai',
+      'latitude': '19.0760',
+      'longitude': '72.8777'
+    },
+    {
+      'placeName': 'Delhi, NCR',
+      'placeId': 'city_delhi',
+      'latitude': '28.7041',
+      'longitude': '77.1025'
+    },
+    {
+      'placeName': 'Bangalore, Karnataka',
+      'placeId': 'city_bangalore',
+      'latitude': '12.9716',
+      'longitude': '77.5946'
+    },
+    {
+      'placeName': 'Hyderabad, Telangana',
+      'placeId': 'city_hyderabad',
+      'latitude': '17.3850',
+      'longitude': '78.4867'
+    },
+    {
+      'placeName': 'Chennai, Tamil Nadu',
+      'placeId': 'city_chennai',
+      'latitude': '13.0827',
+      'longitude': '80.2707'
+    },
+    {
+      'placeName': 'Kolkata, West Bengal',
+      'placeId': 'city_kolkata',
+      'latitude': '22.5726',
+      'longitude': '88.3639'
+    },
+    {
+      'placeName': 'Pune, Maharashtra',
+      'placeId': 'city_pune',
+      'latitude': '18.5204',
+      'longitude': '73.8567'
+    },
+    {
+      'placeName': 'Ahmedabad, Gujarat',
+      'placeId': 'city_ahmedabad',
+      'latitude': '23.0225',
+      'longitude': '72.5714'
+    },
+    {
+      'placeName': 'Jaipur, Rajasthan',
+      'placeId': 'city_jaipur',
+      'latitude': '26.9124',
+      'longitude': '75.7873'
+    },
+    {
+      'placeName': 'Lucknow, Uttar Pradesh',
+      'placeId': 'city_lucknow',
+      'latitude': '26.8467',
+      'longitude': '80.9462'
+    },
+    {
+      'placeName': 'Kanpur, Uttar Pradesh',
+      'placeId': 'city_kanpur',
+      'latitude': '26.4499',
+      'longitude': '80.3319'
+    },
+    {
+      'placeName': 'Nagpur, Maharashtra',
+      'placeId': 'city_nagpur',
+      'latitude': '21.1458',
+      'longitude': '79.0882'
+    },
+    {
+      'placeName': 'Visakhapatnam, Andhra Pradesh',
+      'placeId': 'city_visakhapatnam',
+      'latitude': '17.6868',
+      'longitude': '83.2185'
+    },
+    {
+      'placeName': 'Bhopal, Madhya Pradesh',
+      'placeId': 'city_bhopal',
+      'latitude': '23.2599',
+      'longitude': '77.4126'
+    },
+    {
+      'placeName': 'Patna, Bihar',
+      'placeId': 'city_patna',
+      'latitude': '25.5941',
+      'longitude': '85.1376'
+    },
+    {
+      'placeName': 'Vadodara, Gujarat',
+      'placeId': 'city_vadodara',
+      'latitude': '22.3072',
+      'longitude': '73.1812'
+    },
+    {
+      'placeName': 'Ghaziabad, Uttar Pradesh',
+      'placeId': 'city_ghaziabad',
+      'latitude': '28.6692',
+      'longitude': '77.4538'
+    },
+    {
+      'placeName': 'Ludhiana, Punjab',
+      'placeId': 'city_ludhiana',
+      'latitude': '30.9010',
+      'longitude': '75.8573'
+    },
+    {
+      'placeName': 'Agra, Uttar Pradesh',
+      'placeId': 'city_agra',
+      'latitude': '27.1767',
+      'longitude': '78.0081'
+    },
+    {
+      'placeName': 'Nashik, Maharashtra',
+      'placeId': 'city_nashik',
+      'latitude': '19.9975',
+      'longitude': '73.7898'
+    },
+    {
+      'placeName': 'Ranchi, Jharkhand',
+      'placeId': 'city_ranchi',
+      'latitude': '23.3441',
+      'longitude': '85.3096'
+    },
+    {
+      'placeName': 'Faridabad, Haryana',
+      'placeId': 'city_faridabad',
+      'latitude': '28.4089',
+      'longitude': '77.3178'
+    },
+    {
+      'placeName': 'Indore, Madhya Pradesh',
+      'placeId': 'city_indore',
+      'latitude': '22.7196',
+      'longitude': '75.8577'
+    },
+    {
+      'placeName': 'Rajkot, Gujarat',
+      'placeId': 'city_rajkot',
+      'latitude': '22.3039',
+      'longitude': '70.8022'
+    },
+    {
+      'placeName': 'Guwahati, Assam',
+      'placeId': 'city_guwahati',
+      'latitude': '26.1445',
+      'longitude': '91.7362'
+    },
+    {
+      'placeName': 'Chandigarh, Punjab & Haryana',
+      'placeId': 'city_chandigarh',
+      'latitude': '30.7333',
+      'longitude': '76.7794'
+    },
+    {
+      'placeName': 'Hubli-Dharwad, Karnataka',
+      'placeId': 'city_hubli',
+      'latitude': '15.3647',
+      'longitude': '75.1240'
+    },
+    {
+      'placeName': 'Jodhpur, Rajasthan',
+      'placeId': 'city_jodhpur',
+      'latitude': '26.2389',
+      'longitude': '73.0243'
+    },
+    {
+      'placeName': 'Srinagar, Jammu & Kashmir',
+      'placeId': 'city_srinagar',
+      'latitude': '34.0837',
+      'longitude': '74.7973'
+    },
+    {
+      'placeName': 'Coimbatore, Tamil Nadu',
+      'placeId': 'city_coimbatore',
+      'latitude': '11.0168',
+      'longitude': '76.9558'
+    },
+    {
+      'placeName': 'Goa',
+      'placeId': 'city_goa',
+      'latitude': '15.2993',
+      'longitude': '74.1240'
+    },
+    {
+      'placeName': 'Kochi, Kerala',
+      'placeId': 'city_kochi',
+      'latitude': '9.9312',
+      'longitude': '76.2673'
+    },
+    {
+      'placeName': 'Thiruvananthapuram, Kerala',
+      'placeId': 'city_trivandrum',
+      'latitude': '8.5241',
+      'longitude': '76.9366'
+    },
+    {
+      'placeName': 'Haridwar, Uttarakhand',
+      'placeId': 'city_haridwar',
+      'latitude': '29.9457',
+      'longitude': '78.1642'
+    },
+    {
+      'placeName': 'Hampi, Karnataka',
+      'placeId': 'city_hampi',
+      'latitude': '15.3350',
+      'longitude': '76.4600'
+    },
+    {
+      'placeName': 'Haldwani, Uttarakhand',
+      'placeId': 'city_haldwani',
+      'latitude': '29.2183',
+      'longitude': '79.5130'
+    },
+    {
+      'placeName': 'Hapur, Uttar Pradesh',
+      'placeId': 'city_hapur',
+      'latitude': '28.7304',
+      'longitude': '77.7806'
+    },
+    {
+      'placeName': 'Hardoi, Uttar Pradesh',
+      'placeId': 'city_hardoi',
+      'latitude': '27.3989',
+      'longitude': '80.1313'
+    },
   ];
 
-  Future<List<Map<String, String>>> fetchLocationSuggestions(String query) async {
+  Future<List<Map<String, String>>> fetchLocationSuggestions(
+      String query) async {
     if (query.length < 2) {
       return [];
     }
-    
+
     query = query.toLowerCase();
-    
+
     // First check cache for faster response
     if (_cachedLocations.containsKey(query)) {
       return _cachedLocations[query]!;
     }
-    
+
     // Next, check local Indian cities data for quick results
     List<Map<String, String>> filteredCities = _indianCities
         .where((city) => city['placeName']!.toLowerCase().contains(query))
         .toList();
-    
+
     // If we have local results, return them immediately
     if (filteredCities.isNotEmpty) {
       // Cache the results
       _cachedLocations[query] = filteredCities;
       return filteredCities;
     }
-    
+
     // If no local matches or we want more results, try API
     try {
       final apiResults = await fetchFromOpenStreetMap(query);
-      
+
       // Cache these results too
       _cachedLocations[query] = apiResults;
-      
+
       return apiResults;
     } catch (e) {
       print("OpenStreetMap API error: $e");
@@ -509,29 +698,30 @@ class _WorkerSignupPageState extends State<WorkerSignupPage> {
 
   Future<List<Map<String, String>>> fetchFromOpenStreetMap(String query) async {
     // Optimize query for Indian locations
-    final String url = 'https://nominatim.openstreetmap.org/search?q=$query+india&format=json&addressdetails=1&limit=10&countrycodes=in&bounded=1';
-    
+    final String url =
+        'https://nominatim.openstreetmap.org/search?q=$query+india&format=json&addressdetails=1&limit=10&countrycodes=in&bounded=1';
+
     Map<String, String> headers = {
       'User-Agent': 'HeyWork/1.0',
       'Accept-Language': 'en-US,en;q=0.9',
     };
-    
+
     final response = await http.get(Uri.parse(url), headers: headers);
-    
+
     if (response.statusCode == 200) {
       final List<dynamic> results = json.decode(response.body);
-      
+
       return results.map<Map<String, String>>((result) {
         String displayName = result['display_name'] ?? '';
-        
+
         // Optimize display name for better readability
         Map<String, dynamic> address = result['address'] ?? {};
         String formattedName = '';
-        
+
         if (address.isNotEmpty) {
           // Build a clean formatted address
           List<String> addressParts = [];
-          
+
           // Get the most relevant part first (city, town, village, etc.)
           if (address['city'] != null) {
             addressParts.add(address['city']);
@@ -544,7 +734,7 @@ class _WorkerSignupPageState extends State<WorkerSignupPage> {
           } else if (address['neighbourhood'] != null) {
             addressParts.add(address['neighbourhood']);
           }
-          
+
           // Add district/county if available
           if (address['state_district'] != null) {
             addressParts.add(address['state_district']);
@@ -553,24 +743,24 @@ class _WorkerSignupPageState extends State<WorkerSignupPage> {
           } else if (address['district'] != null) {
             addressParts.add(address['district']);
           }
-          
+
           // Always add state
           if (address['state'] != null) {
             addressParts.add(address['state']);
           }
-          
+
           formattedName = addressParts.join(', ');
         }
-        
+
         // If we couldn't create a nice formatted name, fall back to the original with some cleaning
         if (formattedName.isEmpty) {
           List<String> nameParts = displayName.split(', ');
           // Take first part, add the state if available (usually second to last), and add "India"
-          formattedName = nameParts.length > 3 
+          formattedName = nameParts.length > 3
               ? '${nameParts[0]}, ${nameParts[nameParts.length - 3]}, India'
               : displayName.replaceAll(', India', '') + ', India';
         }
-            
+
         return {
           'placeName': formattedName,
           'placeId': result['place_id']?.toString() ?? '',
@@ -579,7 +769,8 @@ class _WorkerSignupPageState extends State<WorkerSignupPage> {
         };
       }).toList();
     } else {
-      throw Exception('Failed to load from OpenStreetMap: ${response.statusCode}');
+      throw Exception(
+          'Failed to load from OpenStreetMap: ${response.statusCode}');
     }
   }
 
@@ -621,144 +812,152 @@ class _WorkerSignupPageState extends State<WorkerSignupPage> {
 
   // Phone verification methods
   Future<void> _verifyPhoneNumber() async {
-  if (_phoneController.text.isEmpty) {
-    _showSnackBar('Please enter your phone number', isError: true);
-    return;
-  }
+    if (_phoneController.text.isEmpty) {
+      _showSnackBar('Please enter your phone number', isError: true);
+      return;
+    }
 
-  // Format phone number to ensure it starts with +91
-  String phoneNumber = _phoneController.text.trim();
-  if (!phoneNumber.startsWith('+')) {
-    phoneNumber = '+91$phoneNumber';
-  }
+    // Format phone number to ensure it starts with +91
+    String phoneNumber = _phoneController.text.trim();
+    if (!phoneNumber.startsWith('+')) {
+      phoneNumber = '+91$phoneNumber';
+    }
 
-  setState(() {
-    _isLoading = true;
-  });
+    setState(() {
+      _isLoading = true;
+    });
 
-  try {
-    // Set verification timeout to a higher value
-    await FirebaseAuth.instance.verifyPhoneNumber(
-      phoneNumber: phoneNumber,
-      timeout: Duration(seconds: 120),
-      verificationCompleted: (PhoneAuthCredential credential) async {
-        // Auto-verification completed (mainly on Android)
-        try {
-          await FirebaseAuth.instance.signInWithCredential(credential);
-          _submitForm();
-        } catch (e) {
+    try {
+      // Set verification timeout to a higher value
+      await FirebaseAuth.instance.verifyPhoneNumber(
+        phoneNumber: phoneNumber,
+        timeout: Duration(seconds: 120),
+        verificationCompleted: (PhoneAuthCredential credential) async {
+          // Auto-verification completed (mainly on Android)
+          try {
+            await FirebaseAuth.instance.signInWithCredential(credential);
+            _submitForm();
+          } catch (e) {
+            setState(() {
+              _isLoading = false;
+            });
+            _showSnackBar('Auto-verification failed: $e', isError: true);
+          }
+        },
+        verificationFailed: (FirebaseAuthException e) {
           setState(() {
             _isLoading = false;
           });
-          _showSnackBar('Auto-verification failed: $e', isError: true);
-        }
-      },
-      verificationFailed: (FirebaseAuthException e) {
-        setState(() {
-          _isLoading = false;
-        });
-        
-        // Handle specific error types
-        String errorMessage = 'Verification failed';
-        if (e.code == 'invalid-phone-number') {
-          errorMessage = 'Invalid phone number format';
-        } else if (e.message != null && e.message!.contains('BILLING_NOT_ENABLED')) {
-          errorMessage = 'Authentication service is temporarily unavailable. Please try again later or contact support.';
-          // Log the detailed error for debugging
-          print('BILLING ERROR: ${e.message}');
-        } else if (e.code == 'too-many-requests') {
-          errorMessage = 'Too many attempts from this device. Please try again later.';
-        } else if (e.code == 'app-not-authorized') {
-          errorMessage = 'App not authorized to use Firebase Authentication. Contact developer.';
-        } else {
-          errorMessage = e.message ?? 'Verification failed';
-        }
-        
-        _showSnackBar(errorMessage, isError: true);
-      },
-      codeSent: (String verificationId, int? resendToken) {
-        setState(() {
-          _isLoading = false;
-          _otpSent = true;
+
+          // Handle specific error types
+          String errorMessage = 'Verification failed';
+          if (e.code == 'invalid-phone-number') {
+            errorMessage = 'Invalid phone number format';
+          } else if (e.message != null &&
+              e.message!.contains('BILLING_NOT_ENABLED')) {
+            errorMessage =
+                'Authentication service is temporarily unavailable. Please try again later or contact support.';
+            // Log the detailed error for debugging
+            print('BILLING ERROR: ${e.message}');
+          } else if (e.code == 'too-many-requests') {
+            errorMessage =
+                'Too many attempts from this device. Please try again later.';
+          } else if (e.code == 'app-not-authorized') {
+            errorMessage =
+                'App not authorized to use Firebase Authentication. Contact developer.';
+          } else {
+            errorMessage = e.message ?? 'Verification failed';
+          }
+
+          _showSnackBar(errorMessage, isError: true);
+        },
+        codeSent: (String verificationId, int? resendToken) {
+          setState(() {
+            _isLoading = false;
+            _otpSent = true;
+            _verificationId = verificationId;
+          });
+          _showSnackBar('OTP sent to your phone');
+        },
+        codeAutoRetrievalTimeout: (String verificationId) {
           _verificationId = verificationId;
-        });
-        _showSnackBar('OTP sent to your phone');
-      },
-      codeAutoRetrievalTimeout: (String verificationId) {
-        _verificationId = verificationId;
-      },
-    );
-  } catch (e) {
-    setState(() {
-      _isLoading = false;
-    });
-    _showSnackBar('Error: $e', isError: true);
-  }
-}
-
- // Replace your _verifyOTP method with this one
-Future<void> _verifyOTP() async {
-  if (_otpController.text.isEmpty) {
-    _showSnackBar('Please enter the OTP', isError: true);
-    return;
-  }
-
-  setState(() {
-    _isLoading = true;
-  });
-
-  try {
-    print('Verifying OTP: ${_otpController.text.trim()}');
-    print('Using verification ID: $_verificationId');
-
-    // Check for empty verification ID
-    if (_verificationId.isEmpty) {
-      throw Exception('Invalid verification session. Please request OTP again.');
-    }
-
-    // Create the credential
-    PhoneAuthCredential credential = PhoneAuthProvider.credential(
-      verificationId: _verificationId,
-      smsCode: _otpController.text.trim(),
-    );
-
-    // Sign in with the credential
-    UserCredential userCredential = await FirebaseAuth.instance.signInWithCredential(credential);
-    
-    // Get the user from the result
-    User? user = userCredential.user;
-    
-    if (user == null) {
-      throw Exception('Failed to authenticate user: No user returned');
-    }
-    
-    print('Successfully authenticated user: ${user.uid}');
-    
-    // Process the user data directly after successful authentication
-    await _processUserData(user);
-    
-  } catch (e) {
-    print('OTP verification error: $e');
-    if (mounted) {
+        },
+      );
+    } catch (e) {
       setState(() {
         _isLoading = false;
       });
-      _showSnackBar('Invalid OTP or verification failed. Please try again.', isError: true);
+      _showSnackBar('Error: $e', isError: true);
     }
   }
-}// Replace your _processUserData with this simplified version for debugging
+
+  // Replace your _verifyOTP method with this one
+  Future<void> _verifyOTP() async {
+    if (_otpController.text.isEmpty) {
+      _showSnackBar('Please enter the OTP', isError: true);
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      print('Verifying OTP: ${_otpController.text.trim()}');
+      print('Using verification ID: $_verificationId');
+
+      // Check for empty verification ID
+      if (_verificationId.isEmpty) {
+        throw Exception(
+            'Invalid verification session. Please request OTP again.');
+      }
+
+      // Create the credential
+      PhoneAuthCredential credential = PhoneAuthProvider.credential(
+        verificationId: _verificationId,
+        smsCode: _otpController.text.trim(),
+      );
+
+      // Sign in with the credential
+      UserCredential userCredential =
+          await FirebaseAuth.instance.signInWithCredential(credential);
+
+      // Get the user from the result
+      User? user = userCredential.user;
+
+      if (user == null) {
+        throw Exception('Failed to authenticate user: No user returned');
+      }
+
+      print('Successfully authenticated user: ${user.uid}');
+
+      // Process the user data directly after successful authentication
+      await _processUserData(user);
+    } catch (e) {
+      print('OTP verification error: $e');
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+        _showSnackBar('Invalid OTP or verification failed. Please try again.',
+            isError: true);
+      }
+    }
+  } // Replace your _processUserData with this simplified version for debugging
+
 // Fix 1: Process User Data Method
- Future<void> _processUserData(User user) async {
+  Future<void> _processUserData(User user) async {
     try {
       print('Processing data for user: ${user.uid}');
-      
+
       // Upload image if available
       String? imageUrl;
       if (_selectedImage != null) {
         try {
           final uuid = Uuid();
           String fileName = '${uuid.v4()}.jpg';
-          final storageRef = FirebaseStorage.instance.ref().child('profile_images/$fileName');
+          final storageRef =
+              FirebaseStorage.instance.ref().child('profile_images/$fileName');
           final uploadTask = storageRef.putFile(_selectedImage!);
           final snapshot = await uploadTask;
           imageUrl = await snapshot.ref.getDownloadURL();
@@ -768,57 +967,65 @@ Future<void> _verifyOTP() async {
           // Continue without image if upload fails
         }
       }
-      
+
       // Create a comprehensive user data map with null checks
       Map<String, dynamic> userData = {
         'id': user.uid,
-        'name': _nameController.text.isNotEmpty ? _nameController.text.trim() : "User",
-        'location': _selectedLocation != null ? _selectedLocation!['placeName'] : 
-                   _locationController.text.isNotEmpty ? _locationController.text.trim() : "",
-        'phoneNumber': _phoneController.text.isNotEmpty ? "+91${_phoneController.text.trim()}" : "",
+        'name': _nameController.text.isNotEmpty
+            ? _nameController.text.trim()
+            : "User",
+        'location': _selectedLocation != null
+            ? _selectedLocation!['placeName']
+            : _locationController.text.isNotEmpty
+                ? _locationController.text.trim()
+                : "",
+        'phoneNumber': _phoneController.text.isNotEmpty
+            ? "+91${_phoneController.text.trim()}"
+            : "",
         'userType': 'worker',
         'profileImage': imageUrl,
         'createdAt': FieldValue.serverTimestamp(),
       };
-      
+
       print('Saving worker data: $userData');
-      
+
       // Save to Firestore with better error handling - using 'workers' collection
       await FirebaseFirestore.instance
           .collection('workers')
           .doc(user.uid)
           .set(userData, SetOptions(merge: true));
-      
+
       print('Worker data saved successfully');
-      
+
       // Update UI state
       if (mounted) {
         setState(() {
           _isLoading = false;
         });
-      
+
         // Show success message
         _showSnackBar('Account created successfully!');
-      
+
         // Navigate to home page
         print('Navigating to home page');
-        
+
         if (mounted) {
           // Use a try-catch to handle any potential navigation errors
           try {
             Navigator.of(context).pushReplacement(
-              MaterialPageRoute(builder: (_) => const WorkerHomePage())
-            );
+                MaterialPageRoute(builder: (_) => const WorkerMainScreen()));
           } catch (e) {
             print('Navigation error: $e');
-            _showSnackBar('Error navigating to home page. Please restart the app.', isError: true);
+            _showSnackBar(
+                'Error navigating to home page. Please restart the app.',
+                isError: true);
           }
         }
       }
     } catch (e) {
       print('Error processing user data: $e');
       print(StackTrace.current);
-      
+
       if (mounted) {
         setState(() {
           _isLoading = false;
@@ -828,13 +1035,13 @@ Future<void> _verifyOTP() async {
     }
   }
 
-
   Future<void> _submitForm() async {
     if (!_formKey.currentState!.validate() || !_acceptedTerms) {
       setState(() {
         _isLoading = false;
       });
-      _showSnackBar('Please fill all required fields and accept terms', isError: true);
+      _showSnackBar('Please fill all required fields and accept terms',
+          isError: true);
       return;
     }
 
@@ -845,11 +1052,11 @@ Future<void> _verifyOTP() async {
     try {
       // Get the current user - this is the critical part that's failing
       User? currentUser = FirebaseAuth.instance.currentUser;
-      
+
       // Better error handling for null user
       if (currentUser == null) {
         print('ERROR: Current user is null after OTP verification');
-        
+
         // Try to sign in again with phone credential if user is null
         try {
           // Try to sign in again with phone credential if user is null
@@ -857,23 +1064,26 @@ Future<void> _verifyOTP() async {
             verificationId: _verificationId,
             smsCode: _otpController.text.trim(),
           );
-          
-          UserCredential userCredential = await FirebaseAuth.instance.signInWithCredential(credential);
+
+          UserCredential userCredential =
+              await FirebaseAuth.instance.signInWithCredential(credential);
           currentUser = userCredential.user;
-          
+
           if (currentUser == null) {
-            throw Exception('Failed to authenticate user after multiple attempts');
+            throw Exception(
+                'Failed to authenticate user after multiple attempts');
           }
-          
+
           print('Successfully authenticated user on retry: ${currentUser.uid}');
         } catch (authError) {
           print('Authentication retry error: $authError');
-          throw Exception('Authentication failed. Please try again with a new OTP.');
+          throw Exception(
+              'Authentication failed. Please try again with a new OTP.');
         }
       }
-      
+
       print('Processing signup for user: ${currentUser.uid}');
-      
+
       // Process user data
       await _processUserData(currentUser);
     } catch (e) {
@@ -894,43 +1104,47 @@ Future<void> _verifyOTP() async {
 
     final uuid = Uuid();
     String fileName = '${uuid.v4()}.jpg';
-    final storageRef = FirebaseStorage.instance.ref().child('profile_images/$fileName');
+    final storageRef =
+        FirebaseStorage.instance.ref().child('profile_images/$fileName');
     final uploadTask = storageRef.putFile(_selectedImage!);
     final snapshot = await uploadTask;
     String downloadUrl = await snapshot.ref.getDownloadURL();
     return downloadUrl;
   }
 
-Future<void> _saveUserData(User user, String? imageUrl) async {
-  try {
-    // Format phone number
-    String phoneNumber = _phoneController.text.trim();
-    if (!phoneNumber.startsWith('+')) {
-      phoneNumber = '+91$phoneNumber';
+  Future<void> _saveUserData(User user, String? imageUrl) async {
+    try {
+      // Format phone number
+      String phoneNumber = _phoneController.text.trim();
+      if (!phoneNumber.startsWith('+')) {
+        phoneNumber = '+91$phoneNumber';
+      }
+
+      // Create user data map with null checks for all fields
+      Map<String, dynamic> userData = {
+        'id': user.uid,
+        'name': _nameController.text.isNotEmpty
+            ? _nameController.text.trim()
+            : "User",
+        'location': _selectedLocation != null
+            ? _selectedLocation!['placeName']
+            : _locationController.text.isNotEmpty
+                ? _locationController.text.trim()
+                : "",
+        'phoneNumber': phoneNumber,
+        'profileImage': imageUrl,
+        'createdAt': FieldValue.serverTimestamp(),
+        'userType': 'hirer',
+      };
+
+      print('Saving user data for UID ${user.uid}: $userData');
+
+      // First check database connectivity with proper error handling
+    } catch (e) {
+      print('Error saving user data: $e');
+      throw e; // Re-throw to handle in the calling method
     }
-
-    // Create user data map with null checks for all fields
-    Map<String, dynamic> userData = {
-      'id': user.uid,
-      'name': _nameController.text.isNotEmpty ? _nameController.text.trim() : "User",
-    
-      'location': _selectedLocation != null ? _selectedLocation!['placeName'] : 
-                 _locationController.text.isNotEmpty ? _locationController.text.trim() : "",
-      'phoneNumber': phoneNumber,
-      'profileImage': imageUrl,
-      'createdAt': FieldValue.serverTimestamp(),
-      'userType': 'hirer',
-    };
-
-    print('Saving user data for UID ${user.uid}: $userData');
-
-    // First check database connectivity with proper error handling
-
-  } catch (e) {
-    print('Error saving user data: $e');
-    throw e; // Re-throw to handle in the calling method
   }
-}
 }
 
 // Main signup form widget
@@ -1004,7 +1218,7 @@ class SignupForm extends StatelessWidget {
                   ),
                 ),
               ),
-        
+
               Center(
                 child: Text(
                   "You are signing up as a worker",
@@ -1015,7 +1229,7 @@ class SignupForm extends StatelessWidget {
                 ),
               ),
               SizedBox(height: responsive.getHeight(36)),
-              
+
               // Profile Image
               Center(
                 child: ProfileImageSelector(
@@ -1024,8 +1238,7 @@ class SignupForm extends StatelessWidget {
                   onImagePicked: onImagePicked,
                 ),
               ),
-          
-              
+
               // Form Fields
               LabelText(responsive: responsive, text: "Your Name"),
               SizedBox(height: responsive.getHeight(8)),
@@ -1037,9 +1250,7 @@ class SignupForm extends StatelessWidget {
                 prefixIcon: Icons.person_outline,
               ),
               SizedBox(height: responsive.getHeight(20)),
-              
-           
-              
+
               LabelText(responsive: responsive, text: "Your Location"),
               SizedBox(height: responsive.getHeight(8)),
               LocationSelector(
@@ -1050,7 +1261,7 @@ class SignupForm extends StatelessWidget {
                 onLocationSelected: onLocationSelected,
               ),
               SizedBox(height: responsive.getHeight(20)),
-              
+
               LabelText(responsive: responsive, text: "Mobile number"),
               SizedBox(height: responsive.getHeight(8)),
               PhoneInputField(
@@ -1061,7 +1272,7 @@ class SignupForm extends StatelessWidget {
                 onSendOtp: onSendOtp,
               ),
               SizedBox(height: responsive.getHeight(24)),
-              
+
               // Terms and Privacy
               Row(
                 children: [
@@ -1121,7 +1332,7 @@ class SignupForm extends StatelessWidget {
                 ],
               ),
               SizedBox(height: responsive.getHeight(32)),
-              
+
               // Submit Button
               SizedBox(
                 width: double.infinity,
@@ -1146,7 +1357,7 @@ class SignupForm extends StatelessWidget {
                 ),
               ),
               SizedBox(height: responsive.getHeight(16)),
-              
+
               // Login Link
               Center(
                 child: Row(
@@ -1237,7 +1448,7 @@ class ProfileImageSelector extends StatelessWidget {
 
   Future<void> _pickImage(BuildContext context) async {
     final ImagePicker picker = ImagePicker();
-    
+
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.white,
@@ -1460,13 +1671,13 @@ class _LocationSelectorState extends State<LocationSelector> {
     super.initState();
     widget.controller.addListener(_onSearchChanged);
   }
-  
+
   @override
   void dispose() {
     widget.controller.removeListener(_onSearchChanged);
     super.dispose();
   }
-  
+
   void _onSearchChanged() {
     final query = widget.controller.text;
     if (query.length < 3) {
@@ -1477,12 +1688,12 @@ class _LocationSelectorState extends State<LocationSelector> {
       }
       return;
     }
-    
+
     setState(() {
       _isSearching = true;
       _showSuggestions = true;
     });
-    
+
     widget.onSearchChanged(query);
     setState(() {
       _isSearching = false;
@@ -1510,7 +1721,7 @@ class _LocationSelectorState extends State<LocationSelector> {
               color: Colors.grey.shade600,
               size: widget.responsive.getWidth(22),
             ),
-            suffixIcon: _isSearching 
+            suffixIcon: _isSearching
                 ? Padding(
                     padding: EdgeInsets.all(widget.responsive.getWidth(14)),
                     child: SizedBox(
@@ -1585,8 +1796,10 @@ class _LocationSelectorState extends State<LocationSelector> {
             child: ListView.builder(
               shrinkWrap: true,
               physics: NeverScrollableScrollPhysics(),
-              padding: EdgeInsets.symmetric(vertical: widget.responsive.getHeight(8)),
-              itemCount: widget.suggestions.length > 5 ? 5 : widget.suggestions.length,
+              padding: EdgeInsets.symmetric(
+                  vertical: widget.responsive.getHeight(8)),
+              itemCount:
+                  widget.suggestions.length > 5 ? 5 : widget.suggestions.length,
               itemBuilder: (context, index) {
                 final suggestion = widget.suggestions[index];
                 return InkWell(

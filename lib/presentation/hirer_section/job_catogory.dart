@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-
 // This class helps map industry types to their specific job categories
 class JobCategoryManager {
   // Mapping of industry types to their job categories with icons
@@ -84,25 +83,26 @@ class JobCategoryManager {
     if (industryToJobCategories.containsKey(industry)) {
       return industryToJobCategories[industry]!;
     }
-    
+
     // Otherwise return common job categories as fallback
     return commonJobCategories;
   }
-  
+
   // Fill categories to ensure we have at least 12 categories (for a 4x3 grid)
   static List<JobCategoryInfo> getFilledJobCategories(String industry) {
     List<JobCategoryInfo> categories = getJobCategoriesForIndustry(industry);
-    
+
     // If we don't have enough categories, add from common categories
     if (categories.length < 12) {
       // Add unique common categories that aren't already in the list
       for (var commonCategory in commonJobCategories) {
-        if (!categories.any((cat) => cat.title == commonCategory.title) && categories.length < 12) {
+        if (!categories.any((cat) => cat.title == commonCategory.title) &&
+            categories.length < 12) {
           categories.add(commonCategory);
         }
       }
     }
-    
+
     return categories;
   }
 }
@@ -111,7 +111,7 @@ class JobCategoryManager {
 class JobCategoryInfo {
   final String title;
   final IconData icon;
-  
+
   JobCategoryInfo({
     required this.title,
     required this.icon,

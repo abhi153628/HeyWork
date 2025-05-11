@@ -42,9 +42,7 @@ class ProfileHeaderSection extends StatelessWidget {
               width: 120.w,
               height: 120.w,
               decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: Color(0xFFc4c4c4)
-              ),
+                  shape: BoxShape.circle, color: Color(0xFFc4c4c4)),
             ),
           ),
           // Background design elements - slightly transparent shapes
@@ -122,11 +120,13 @@ class ProfileHeaderSection extends StatelessWidget {
               Container(
                 width: 120.w,
                 height: 120.w,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  
-                  boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.8),blurRadius: 3,offset: Offset(-4, 1),spreadRadius: 1)]
-                ),
+                decoration: BoxDecoration(shape: BoxShape.circle, boxShadow: [
+                  BoxShadow(
+                      color: Colors.black.withOpacity(0.8),
+                      blurRadius: 3,
+                      offset: Offset(-4, 1),
+                      spreadRadius: 1)
+                ]),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(70.r),
                   child: Image.asset(

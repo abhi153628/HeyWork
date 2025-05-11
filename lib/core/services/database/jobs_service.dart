@@ -22,6 +22,7 @@ class JobModel {
   final String hirerLocation;
   final String hirerIndustry;
   final String hirerBusinessName;
+  final String? timeFormatted; // Added field for formatted time
 
   JobModel({
     required this.id,
@@ -43,11 +44,12 @@ class JobModel {
     required this.hirerLocation,
     required this.hirerIndustry,
     required this.hirerBusinessName,
+    this.timeFormatted, // Added to constructor
   });
 
   factory JobModel.fromFirestore(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
-    
+
     // Create salary range map if min and max exist in data
     Map<String, dynamic>? salaryRangeMap;
     if (data.containsKey('salaryRange')) {
@@ -58,7 +60,7 @@ class JobModel {
         'max': data['max'] ?? 0,
       };
     }
-    
+
     return JobModel(
       id: doc.id,
       title: data['jobTitle'] ?? data['title'] ?? 'No Title',
@@ -79,6 +81,7 @@ class JobModel {
       hirerLocation: data['hirerLocation'] ?? '',
       hirerIndustry: data['hirerIndustry'] ?? '',
       hirerBusinessName: data['hirerBusinessName'] ?? '',
+      timeFormatted: data['timeFormatted'], // Get formatted time from Firestore
     );
   }
 }
@@ -175,48 +178,48 @@ class JobService {
   }
 
 // In JobService class (paste.txt)
-Stream<List<JobModel>> getJobsByCategory(String category, {String? workerLocation}) {
-  if (category == 'All Jobs') {
+  Stream<List<JobModel>> getJobsByCategory(String category,
+      {String? workerLocation}) {
+    if (category == 'All Jobs') {
+      return getJobs();
+    } else if (workerLocation != null && category == workerLocation) {
+      // Filter by the worker's location
+      return _firestore
+          .collection('jobs')
+          .where('status', isEqualTo: 'active')
+          .where('hirerLocation', isEqualTo: category)
+          .orderBy('createdAt', descending: true)
+          .snapshots()
+          .map((snapshot) {
+        return snapshot.docs.map((doc) => JobModel.fromFirestore(doc)).toList();
+      });
+    } else if (category == 'Full-Time') {
+      return _firestore
+          .collection('jobs')
+          .where('status', isEqualTo: 'active')
+          .where('jobType', isEqualTo: 'full-time')
+          .orderBy('createdAt', descending: true)
+          .snapshots()
+          .map((snapshot) {
+        return snapshot.docs.map((doc) => JobModel.fromFirestore(doc)).toList();
+      });
+    } else if (category == 'Part-Time') {
+      return _firestore
+          .collection('jobs')
+          .where('status', isEqualTo: 'active')
+          .where('jobType', isEqualTo: 'part-time')
+          .orderBy('createdAt', descending: true)
+          .snapshots()
+          .map((snapshot) {
+        return snapshot.docs.map((doc) => JobModel.fromFirestore(doc)).toList();
+      });
+    }
+
+    // Default return all jobs
     return getJobs();
-  } else if (workerLocation != null && category == workerLocation) {
-    // Filter by the worker's location
-    return _firestore
-        .collection('jobs')
-        .where('status', isEqualTo: 'active')
-        .where('hirerLocation', isEqualTo: category)
-        .orderBy('createdAt', descending: true)
-        .snapshots()
-        .map((snapshot) {
-      return snapshot.docs.map((doc) => JobModel.fromFirestore(doc)).toList();
-    });
-  } else if (category == 'Full-Time') {
-    return _firestore
-        .collection('jobs')
-        .where('status', isEqualTo: 'active')
-        .where('jobType', isEqualTo: 'full-time')
-        .orderBy('createdAt', descending: true)
-        .snapshots()
-        .map((snapshot) {
-      return snapshot.docs.map((doc) => JobModel.fromFirestore(doc)).toList();
-    });
-  } else if (category == 'Part-Time') {
-    return _firestore
-        .collection('jobs')
-        .where('status', isEqualTo: 'active')
-        .where('jobType', isEqualTo: 'part-time')
-        .orderBy('createdAt', descending: true)
-        .snapshots()
-        .map((snapshot) {
-      return snapshot.docs.map((doc) => JobModel.fromFirestore(doc)).toList();
-    });
   }
-  
-  // Default return all jobs
-  return getJobs();
-}
 
-// Update extension methods 
-
+// Update extension methods
 
   // Get job by ID
   Future<JobModel?> getJobById(String jobId) async {
@@ -235,65 +238,67 @@ Stream<List<JobModel>> getJobsByCategory(String category, {String? workerLocatio
   // Get predefined job categories - updated based on screenshot
 // In JobService class (paste.txt)
 // In JobService class (paste.txt)
-List<JobCategory> getJobCategories() {
-  return [
-    // Location category first - placeholder that will be updated
-    JobCategory(
-      id: 'location',
-      name: 'Location',
-      iconPath: 'assets/icons/location.png',
-      isSelected: true,
-    ),
-    // All Jobs category is second
-    JobCategory(
-      id: 'all',
-      name: 'All Jobs',
-      iconPath: 'assets/icons/all_works.png',
-    ),
-    JobCategory(
-      id: 'full-time',
-      name: 'Full-Time',
-      iconPath: 'assets/icons/full_time.png',
-    ),
-    JobCategory(
-      id: 'part-time',
-      name: 'Part-Time',
-      iconPath: 'assets/icons/part_time.png',
-    ),
-  ];
-}
+  List<JobCategory> getJobCategories() {
+    return [
+      // Location category first - placeholder that will be updated
+      JobCategory(
+        id: 'location',
+        name: 'Location',
+        iconPath: 'assets/icons/location.png',
+        isSelected: true,
+      ),
+      // All Jobs category is second
+      JobCategory(
+        id: 'all',
+        name: 'All Jobs',
+        iconPath: 'assets/icons/all_works.png',
+      ),
+      JobCategory(
+        id: 'full-time',
+        name: 'Full-Time',
+        iconPath: 'assets/icons/full_time.png',
+      ),
+      JobCategory(
+        id: 'part-time',
+        name: 'Part-Time',
+        iconPath: 'assets/icons/part_time.png',
+      ),
+    ];
+  }
 
 // New method to get worker's location
-Future<String> getWorkerLocation() async {
-  final user = _auth.currentUser;
-  if (user != null) {
-    try {
-      final userDoc = await _firestore.collection('workers').doc(user.uid).get();
-      final userData = userDoc.data() ?? {};
-      return userData['location'] ?? 'Location';
-    } catch (e) {
-      print('Error fetching worker location: $e');
-      return 'Location';
+  Future<String> getWorkerLocation() async {
+    final user = _auth.currentUser;
+    if (user != null) {
+      try {
+        final userDoc =
+            await _firestore.collection('workers').doc(user.uid).get();
+        final userData = userDoc.data() ?? {};
+        return userData['location'] ?? 'Location';
+      } catch (e) {
+        print('Error fetching worker location: $e');
+        return 'Location';
+      }
     }
+    return 'Location';
   }
-  return 'Location';
-}
 
 // Stream to listen for location changes
-Stream<String> watchWorkerLocation() {
-  final user = _auth.currentUser;
-  if (user != null) {
-    return _firestore
-        .collection('workers')
-        .doc(user.uid)
-        .snapshots()
-        .map((snapshot) {
-      final data = snapshot.data() ?? {};
-      return data['location'] ?? 'Location';
-    });
-  }
-  return Stream.value('Location');
-}  // Save job data to Firestore
+  Stream<String> watchWorkerLocation() {
+    final user = _auth.currentUser;
+    if (user != null) {
+      return _firestore
+          .collection('workers')
+          .doc(user.uid)
+          .snapshots()
+          .map((snapshot) {
+        final data = snapshot.data() ?? {};
+        return data['location'] ?? 'Location';
+      });
+    }
+    return Stream.value('Location');
+  } // Save job data to Firestore
+
   Future<Map<String, dynamic>> saveJobData({
     required Map<String, dynamic> jobData,
     required BuildContext context,
@@ -329,7 +334,7 @@ Stream<String> watchWorkerLocation() {
       // Get user data from hirers collection
       final userDoc = await _firestore.collection('hirers').doc(user.uid).get();
       final userData = userDoc.data() ?? {};
-      
+
       // Check if industry data exists in jobData and save it to hirer document
       if (jobData.containsKey('industry')) {
         // Update hirer document with industry information
@@ -400,4 +405,4 @@ Stream<String> watchWorkerLocation() {
   }
 }
 
-// Update extension methods 
+// Update extension methods

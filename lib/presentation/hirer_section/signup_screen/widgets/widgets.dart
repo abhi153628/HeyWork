@@ -75,8 +75,6 @@
 //   }
 // }
 
-
-
 // class LocationBottomSheet extends StatefulWidget {
 //   final LocationService locationService;
 //   final ResponsiveUtil responsiveUtil;
@@ -94,7 +92,7 @@
 // class _LocationBottomSheetState extends State<LocationBottomSheet> {
 //   final TextEditingController _searchController = TextEditingController();
 //   final _debouncer = Debouncer(milliseconds: 500);
-  
+
 //   List<Place> _places = [];
 //   bool _isLoading = false;
 //   bool _hasError = false;
@@ -141,7 +139,7 @@
 
 //     try {
 //       final places = await widget.locationService.searchPlaces(query);
-      
+
 //       if (mounted) {
 //         setState(() {
 //           _places = places;
@@ -166,7 +164,7 @@
 //   @override
 //   Widget build(BuildContext context) {
 //     final ResponsiveUtil responsiveUtil = widget.responsiveUtil;
-    
+
 //     return Container(
 //       height: responsiveUtil.getHeight(600),
 //       decoration: const BoxDecoration(
@@ -201,7 +199,7 @@
 //               ],
 //             ),
 //           ),
-          
+
 //           // Search bar
 //           Padding(
 //             padding: EdgeInsets.symmetric(
@@ -234,7 +232,7 @@
 //               ),
 //             ),
 //           ),
-          
+
 //           // Results
 //           Expanded(
 //             child: _buildResultsWidget(responsiveUtil),
@@ -250,7 +248,7 @@
 //         child: CircularProgressIndicator(),
 //       );
 //     }
-    
+
 //     if (_hasError) {
 //       return Center(
 //         child: Column(
@@ -284,7 +282,7 @@
 //         ),
 //       );
 //     }
-    
+
 //     if (_places.isEmpty && _searchQuery.length >= 2) {
 //       return Center(
 //         child: Column(
@@ -315,7 +313,7 @@
 //         ),
 //       );
 //     }
-    
+
 //     if (_searchQuery.length < 2) {
 //       return Center(
 //         child: Column(
@@ -346,7 +344,7 @@
 //         ),
 //       );
 //     }
-    
+
 //     return ListView.builder(
 //       itemCount: _places.length,
 //       padding: EdgeInsets.only(
@@ -385,8 +383,6 @@
 //     );
 //   }
 // }
-
-
 
 // class OTPInputField extends StatelessWidget {
 //   final TextEditingController controller;
@@ -458,8 +454,6 @@
 //   }
 // }
 
-
-
 // class CustomButton extends StatelessWidget {
 //   final String text;
 //   final VoidCallback onPressed;
@@ -483,8 +477,8 @@
 //       child: ElevatedButton(
 //         onPressed: (isLoading || !isEnabled) ? null : onPressed,
 //         style: ElevatedButton.styleFrom(
-//           backgroundColor: isEnabled 
-//               ? const Color(0xFF2020F0) 
+//           backgroundColor: isEnabled
+//               ? const Color(0xFF2020F0)
 //               : const Color(0xFF2020F0).withOpacity(0.5),
 //           shape: RoundedRectangleBorder(
 //             borderRadius: BorderRadius.circular(8),

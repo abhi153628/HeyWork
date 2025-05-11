@@ -1,9 +1,8 @@
-
 // Phone input field widget
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:hey_work/presentation/hirer_section/signup_screen/widgets/responsive_utils.dart';
+import 'responsive_utils.dart';
 
 class PhoneInputField extends StatefulWidget {
   final ResponsiveUtil responsive;
@@ -39,9 +38,8 @@ class _PhoneInputFieldState extends State<PhoneInputField> {
             color: Colors.grey.shade50,
             borderRadius: BorderRadius.circular(10),
             border: Border.all(
-              color: widget.otpSent 
-                ? Colors.grey.shade300 
-                : Colors.grey.shade200,
+              color:
+                  widget.otpSent ? Colors.grey.shade300 : Colors.grey.shade200,
               width: 1,
             ),
           ),
@@ -69,14 +67,14 @@ class _PhoneInputFieldState extends State<PhoneInputField> {
                   ),
                 ),
               ),
-              
+
               // Divider
               Container(
                 height: widget.responsive.getHeight(30),
                 width: 1,
                 color: Colors.grey.shade300,
               ),
-              
+
               // Phone input
               Expanded(
                 child: TextFormField(
@@ -125,7 +123,7 @@ class _PhoneInputFieldState extends State<PhoneInputField> {
             ],
           ),
         ),
-        
+
         // Error message
         if (_errorMessage != null)
           Padding(
@@ -141,7 +139,7 @@ class _PhoneInputFieldState extends State<PhoneInputField> {
               ),
             ),
           ),
-          
+
         // OTP field (visible only after OTP is sent)
         if (widget.otpSent) ...[
           SizedBox(height: widget.responsive.getHeight(20)),

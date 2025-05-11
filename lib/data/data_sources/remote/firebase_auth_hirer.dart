@@ -7,7 +7,6 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:hey_work/data/modals/hirer/hirer_modal.dart';
 import 'package:uuid/uuid.dart';
 
-
 class FirebaseService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -35,18 +34,19 @@ class FirebaseService {
   }
 
   // Verify OTP
-  Future<UserCredential> verifyOTP(String verificationId, String smsCode) async {
+  Future<UserCredential> verifyOTP(
+      String verificationId, String smsCode) async {
     try {
       PhoneAuthCredential credential = PhoneAuthProvider.credential(
         verificationId: verificationId,
         smsCode: smsCode,
       );
-      
+
       // Clear any previous login attempts
       if (_auth.currentUser != null) {
         await _auth.signOut();
       }
-      
+
       // Sign in with the credential
       return await _auth.signInWithCredential(credential);
     } catch (e) {
@@ -72,13 +72,15 @@ class FirebaseService {
 
   // Check if user exists
   Future<bool> checkIfUserExists(String userId) async {
-    DocumentSnapshot doc = await _firestore.collection('users').doc(userId).get();
+    DocumentSnapshot doc =
+        await _firestore.collection('users').doc(userId).get();
     return doc.exists;
   }
 
   // Get user data
   Future<UserModel?> getUserData(String userId) async {
-    DocumentSnapshot doc = await _firestore.collection('users').doc(userId).get();
+    DocumentSnapshot doc =
+        await _firestore.collection('users').doc(userId).get();
     if (doc.exists) {
       return UserModel.fromMap(doc.data() as Map<String, dynamic>);
     }
