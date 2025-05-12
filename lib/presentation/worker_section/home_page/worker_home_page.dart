@@ -19,18 +19,7 @@ class WorkerHomePage extends StatefulWidget {
 class _WorkerHomePageState extends State<WorkerHomePage> {
   final JobService _jobService = JobService();
   late Stream<List<JobModel>> _jobsStream;
-  late Stream<List<JobModel>> _allJobsStream;
-  final ScrollController _scrollController = ScrollController();
-  bool _showAllJobs = false;
-  bool _isNavigating = false;
-
-  // In _WorkerHomePageState class (paste-2.txt)
   String _workerLocation = 'Location';
-
-  // For smooth scrolling experience
-  final GlobalKey _homeContentKey = GlobalKey();
-  final GlobalKey _searchBarKey = GlobalKey();
-  double _searchBarInitialPosition = 0;
 
   @override
   void initState() {
@@ -50,17 +39,6 @@ class _WorkerHomePageState extends State<WorkerHomePage> {
 
     // Set initial jobs stream
     _jobsStream = _jobService.getJobs();
-
-    // Pre-fetch all jobs for instant navigation
-    _allJobsStream = _jobService.getAllJobs();
-
-    // Setup scroll listener for navigation
-    _scrollController.addListener(_handleScroll);
-
-    // Schedule measurement of search bar position after layout
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _measureSearchBarPosition();
-    });
   }
 
   void _fetchWorkerLocation() async {
@@ -81,39 +59,6 @@ class _WorkerHomePageState extends State<WorkerHomePage> {
     jobProvider.setCategories(categories);
   }
 
-  void _measureSearchBarPosition() {
-    if (_searchBarKey.currentContext != null) {
-      final RenderBox renderBox =
-          _searchBarKey.currentContext!.findRenderObject() as RenderBox;
-      final position = renderBox.localToGlobal(Offset.zero);
-      _searchBarInitialPosition = position.dy;
-    }
-  }
-
-  void _handleScroll() {
-    // Prevent triggering during animation
-    if (_isNavigating) return;
-
-    // Calculate if we should navigate to all jobs
-    if (!_showAllJobs &&
-        _scrollController.position.pixels >
-            _scrollController.position.maxScrollExtent - 100) {
-      _navigateToAllJobs(smooth: true);
-    }
-
-    // Calculate if we should navigate back to home
-    if (_showAllJobs && _scrollController.position.pixels <= 0) {
-      _navigateToHome(smooth: true);
-    }
-  }
-
-  @override
-  void dispose() {
-    _scrollController.removeListener(_handleScroll);
-    _scrollController.dispose();
-    super.dispose();
-  }
-
   void _onCategorySelected(String category) {
     final jobProvider = Provider.of<JobProvider>(context, listen: false);
     jobProvider.setSelectedCategory(category);
@@ -124,375 +69,235 @@ class _WorkerHomePageState extends State<WorkerHomePage> {
         // Use the actual worker location value for filtering
         _jobsStream = _jobService.getJobsByCategory(_workerLocation,
             workerLocation: _workerLocation);
-
-        // If we're in all jobs view, update that stream too
-        if (_showAllJobs) {
-          _allJobsStream = _jobService.getAllJobsByCategory(_workerLocation,
-              workerLocation: _workerLocation);
-        }
       } else {
         // Normal handling for other categories
         _jobsStream = _jobService.getJobsByCategory(category,
             workerLocation: _workerLocation);
-
-        // If we're in all jobs view, update that stream too
-        if (_showAllJobs) {
-          _allJobsStream = category == 'All Jobs'
-              ? _jobService.getAllJobs()
-              : _jobService.getAllJobsByCategory(category,
-                  workerLocation: _workerLocation);
-        }
       }
     });
   }
 
-  void _navigateToAllJobs({bool smooth = false}) {
-    if (_showAllJobs) return;
-
-    setState(() {
-      _isNavigating = true;
-      _showAllJobs = true;
-    });
-
-    if (smooth) {
-      // Scroll to top with animation
-      _scrollController
-          .animateTo(
-        0,
-        duration: const Duration(milliseconds: 500),
-        curve: Curves.easeInOut,
-      )
-          .then((_) {
-        setState(() {
-          _isNavigating = false;
-        });
-      });
-    } else {
-      _scrollController.jumpTo(0);
-      setState(() {
-        _isNavigating = false;
-      });
-    }
+  void _navigateToMoreJobs() {
+    // Get the current selected category
+    final jobProvider = Provider.of<JobProvider>(context, listen: false);
+    String category = jobProvider.selectedCategory;
+    
+    // Navigate to MoreJobsPage passing the category
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => MoreJobsPage(
+          category: category,
+          workerLocation: _workerLocation,
+        ),
+      ),
+    );
   }
 
-  void _navigateToHome({bool smooth = false}) {
-    if (!_showAllJobs) return;
-
-    setState(() {
-      _isNavigating = true;
-      _showAllJobs = false;
-    });
-
-    if (smooth) {
-      // Scroll to top with animation
-      _scrollController
-          .animateTo(
-        0,
-        duration: const Duration(milliseconds: 500),
-        curve: Curves.easeInOut,
-      )
-          .then((_) {
-        setState(() {
-          _isNavigating = false;
-        });
-      });
-    } else {
-      _scrollController.jumpTo(0);
-      setState(() {
-        _isNavigating = false;
-      });
-    }
+  // New method to navigate to search page
+  void _navigateToSearchPage() {
+    // Get the current selected category from provider
+    final jobProvider = Provider.of<JobProvider>(context, listen: false);
+    String category = jobProvider.selectedCategory;
+    
+    // Navigate to MoreJobsPage with current category and worker location
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => MoreJobsPage(
+          category: category,
+          workerLocation: _workerLocation,
+        ),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      body: _showAllJobs ? _buildAllJobsView() : _buildHomeView(),
-    );
-  }
-
-  Widget _buildHomeView() {
-    return SingleChildScrollView(
-      controller: _scrollController,
-      child: Column(
-        key: _homeContentKey,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Header section
-          Container(
-            color: Color(0xFF0000CC),
-            padding:
-                const EdgeInsets.only(top: 35, left: 20, right: 16, bottom: 5),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Top row with title and menu
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'HeyWork',
-                      style: GoogleFonts.roboto(
-                        color: Colors.white,
-                        fontSize: 25,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.menu, color: Colors.white),
-                      onPressed: () {},
-                    ),
-                  ],
-                ),
-
-                // Location row
-                Padding(
-                  padding: const EdgeInsets.only(top: 1, bottom: 10),
-                  child: Row(
+      body: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header section
+            Container(
+              color: Color(0xFF0000CC),
+              padding:
+                  const EdgeInsets.only(top: 35, left: 20, right: 16, bottom: 5),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Top row with title and menu
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Icon(
-                        Icons.location_on,
-                        color: Colors.white,
-                        size: 18,
-                      ),
-                      SizedBox(width: 4),
                       Text(
-                        _workerLocation,
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: Colors.white,
-                              fontSize: 12,
-                            ),
+                        'HeyWork',
+                        style: GoogleFonts.roboto(
+                          color: Colors.white,
+                          fontSize: 25,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.menu, color: Colors.white),
+                        onPressed: () {},
                       ),
                     ],
                   ),
-                ),
-              ],
-            ),
-          ),
 
-          // Search bar section with blue background
-          Stack(key: _searchBarKey, children: [
-            Container(
-              height: 150,
-              decoration: BoxDecoration(color: Color(0xFF0000CC)),
-            ),
-            const Padding(
-              padding: EdgeInsets.only(
-                top: 120,
-              ),
-              child: Center(child: SearchBarWidget()),
-            ),
-          ]),
-
-          SizedBox(
-            height: 10,
-          ),
-
-          // Categories Section Title
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0),
-            child: Text('Categories',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-          ),
-
-          // Categories List
-          Consumer<JobProvider>(
-            builder: (context, jobProvider, child) {
-              return CategoryListWidget(
-                categories: jobProvider.categories,
-                selectedCategory: jobProvider.selectedCategory,
-                onCategorySelected: _onCategorySelected,
-              );
-            },
-          ),
-
-          // Limited Jobs List (5-6 jobs)
-          StreamBuilder<List<JobModel>>(
-            stream: _jobsStream,
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return Container(
-                  height: 200,
-                  child: Center(child: CircularProgressIndicator()),
-                );
-              }
-
-              if (snapshot.hasError) {
-                return Container(
-                  height: 200,
-                  child: Center(child: Text('Error: ${snapshot.error}')),
-                );
-              }
-
-              if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                return Container(
-                  height: 200,
-                  child: Center(child: Text('No jobs available')),
-                );
-              }
-
-              // Show only first 5-6 jobs
-              final jobs = snapshot.data!.take(6).toList();
-              return Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  children: [
-                    ...jobs.map((job) => JobCardWidget(job: job)).toList(),
-                    // Indicate more jobs with a subtle hint
-                    Padding(
-                      padding: const EdgeInsets.only(top: 8.0, bottom: 16.0),
-                      child: MoreJobsIndicator(
-                        onPressed: () => _navigateToAllJobs(),
-                      ),
+                  // Location row
+                  Padding(
+                    padding: const EdgeInsets.only(top: 1, bottom: 10),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.location_on,
+                          color: Colors.white,
+                          size: 18,
+                        ),
+                        SizedBox(width: 4),
+                        Text(
+                          _workerLocation,
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                color: Colors.white,
+                                fontSize: 12,
+                              ),
+                        ),
+                      ],
                     ),
-                  ],
+                  ),
+                ],
+              ),
+            ),
+
+            // Search bar section with blue background
+            Stack(children: [
+              Container(
+                height: 150,
+                decoration: BoxDecoration(color: Color(0xFF0000CC)),
+              ),
+              Padding(
+                padding: const EdgeInsets.only(top: 120),
+                child: Center(
+                  child: GestureDetector(
+                    onTap: _navigateToSearchPage, // Using the new navigation method
+                    child: SearchBarWidget(),
+                  )
                 ),
-              );
-            },
-          ),
-        ],
+              ),
+            ]),
+
+            SizedBox(
+              height: 10,
+            ),
+
+            // Categories Section Title
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              child: Text('Categories',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+            ),
+
+            // Categories List
+            Consumer<JobProvider>(
+              builder: (context, jobProvider, child) {
+                return CategoryListWidget(
+                  categories: jobProvider.categories,
+                  selectedCategory: jobProvider.selectedCategory,
+                  onCategorySelected: _onCategorySelected,
+                );
+              },
+            ),
+
+            // Jobs List (10 jobs)
+            StreamBuilder<List<JobModel>>(
+              stream: _jobsStream,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return Container(
+                    height: 200,
+                    child: Center(child: CircularProgressIndicator()),
+                  );
+                }
+
+                if (snapshot.hasError) {
+                  return Container(
+                    height: 200,
+                    child: Center(child: Text('Error: ${snapshot.error}')),
+                  );
+                }
+
+                if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                  return Container(
+                    height: 200,
+                    child: Center(child: Text('No jobs available')),
+                  );
+                }
+
+                // Show only first 10 jobs
+                final jobs = snapshot.data!.take(10).toList();
+                return Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    children: [
+                      ...jobs.map((job) => JobCardWidget(job: job)).toList(),
+                      // View All Jobs button
+                      _buildViewAllJobsButton(),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ],
+        ),
       ),
     );
   }
-
-  // Get the current selected category
-  Widget _buildAllJobsView() {
-    // Get the current selected category
-    final jobProvider = Provider.of<JobProvider>(context, listen: false);
-
-    // Format the title based on the category
-    String title = jobProvider.selectedCategory;
-    if (title == 'All Jobs') {
-      title = 'All Jobs';
-    } else if (title == "Nearby Jobs") {
-      title = 'Jobs in Bengaluru';
-    } else if (title == 'Full-Time') {
-      title = 'Full-Time Jobs';
-    } else if (title == 'Part-Time') {
-      title = 'Part-Time Jobs';
-    }
-
-    return CustomScrollView(
-      controller: _scrollController,
-      slivers: [
-        // Fixed AppBar with search
-        SliverAppBar(
-          backgroundColor: Color(0xFF0000CC),
-          pinned: true,
-          expandedHeight: 110,
-          automaticallyImplyLeading: false,
-          title: Row(
-            children: [
-              IconButton(
-                icon: const Icon(
-                  Icons.arrow_back,
-                  color: Colors.white,
-                ),
-                onPressed: () => _navigateToHome(),
-              ),
-              Text(
-                title,
-                style: GoogleFonts.roboto(
-                  color: Colors.white,
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
-          ),
-          flexibleSpace: FlexibleSpaceBar(
-            background: Container(
-              color: Color(0xFF0000CC),
-              padding: const EdgeInsets.only(top: 85),
-              child: const Center(child: SearchBarWidget()),
+  
+  Widget _buildViewAllJobsButton() {
+    return GestureDetector(
+      onTap: _navigateToMoreJobs,
+      child: Container(
+        margin: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 4.0),
+        padding: const EdgeInsets.symmetric(vertical: 16.0),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 8,
+              spreadRadius: 0,
+              offset: Offset(0, 2),
             ),
-          ),
-          bottom: PreferredSize(
-            preferredSize: Size.fromHeight(10),
-            child: Container(),
-          ),
-        ),
-
-        // Categories
-        SliverToBoxAdapter(
-          child: Consumer<JobProvider>(
-            builder: (context, jobProvider, child) {
-              return CategoryListWidget(
-                categories: jobProvider.categories,
-                selectedCategory: jobProvider.selectedCategory,
-                onCategorySelected: _onCategorySelected,
-              );
-            },
+          ],
+          border: Border.all(
+            color: Color(0xFF0000CC).withOpacity(0.3),
+            width: 1,
           ),
         ),
-
-        // Jobs list
-        StreamBuilder<List<JobModel>>(
-          stream: _allJobsStream,
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return SliverFillRemaining(
-                child: Center(child: CircularProgressIndicator()),
-              );
-            }
-
-            if (snapshot.hasError) {
-              return SliverFillRemaining(
-                child: Center(child: Text('Error: ${snapshot.error}')),
-              );
-            }
-
-            if (!snapshot.hasData || snapshot.data!.isEmpty) {
-              return SliverFillRemaining(
-                child: Center(child: Text('No jobs available')),
-              );
-            }
-
-            final jobs = snapshot.data!;
-            return SliverPadding(
-              padding: const EdgeInsets.all(16.0),
-              sliver: SliverList(
-                delegate: SliverChildBuilderDelegate(
-                  (context, index) {
-                    if (index < jobs.length) {
-                      return JobCardWidget(job: jobs[index]);
-                    } else if (index == jobs.length) {
-                      return Padding(
-                        padding: const EdgeInsets.only(top: 10, bottom: 50),
-                        child: Center(
-                          child: Text(
-                            'No more jobs to display',
-                            style: TextStyle(
-                              color: AppColors.darkGrey,
-                              fontSize: 14,
-                            ),
-                          ),
-                        ),
-                      );
-                    }
-                    return null;
-                  },
-                  childCount: jobs.length + 1,
-                ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              'View All Jobs',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF0000CC),
               ),
-            );
-          },
+            ),
+            SizedBox(width: 8),
+            Icon(
+              Icons.arrow_forward,
+              color: Color(0xFF0000CC),
+              size: 20,
+            ),
+          ],
         ),
-      ],
+      ),
     );
-  }
-}
-
-// Change the name to something different
-extension JobServiceViewExtension on JobService {
-  Stream<List<JobModel>> getAllJobs() {
-    // Return all jobs without limitation
-    return getJobs();
-  }
-
-  Stream<List<JobModel>> getAllJobsByCategory(String category,
-      {String? workerLocation}) {
-    return getJobsByCategory(category, workerLocation: workerLocation);
   }
 }

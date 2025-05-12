@@ -3,7 +3,7 @@ import '../home_page/hirer_home_page.dart';
 import '../job_managment_screen/job_managment_screen.dart';
 import '../jobs/posted_jobs.dart';
 import '../notification_screen/notification.dart';
-import '../profile/profile.dart';
+import '../profile/hirer_profile.dart';
 
 // ==============================
 // APP ROUTES
@@ -15,7 +15,7 @@ class AppRoutes {
     '/jobs': (context) => const JobsPostedScreen(
           submittedJob: {},
         ),
-    '/profile': (context) => const JobPostingScreen(),
+    '/profile': (context) => const HirerProfilePage(),
   };
 }
 
@@ -37,7 +37,7 @@ class _MainScreenState extends State<MainScreen> {
     const HirerHomePage(),
     const NotificationPage(),
     const JobManagementScreen(),
-    const JobPostingScreen(),
+    const HirerProfilePage(),
   ];
 
   @override

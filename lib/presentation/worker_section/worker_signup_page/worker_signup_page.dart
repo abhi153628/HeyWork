@@ -952,21 +952,36 @@ class _WorkerSignupPageState extends State<WorkerSignupPage> {
 
       // Upload image if available
       String? imageUrl;
-      if (_selectedImage != null) {
-        try {
-          final uuid = Uuid();
-          String fileName = '${uuid.v4()}.jpg';
-          final storageRef =
-              FirebaseStorage.instance.ref().child('profile_images/$fileName');
-          final uploadTask = storageRef.putFile(_selectedImage!);
-          final snapshot = await uploadTask;
-          imageUrl = await snapshot.ref.getDownloadURL();
-          print('Image uploaded successfully: $imageUrl');
-        } catch (e) {
-          print('Error uploading image: $e');
-          // Continue without image if upload fails
-        }
-      }
+    // In _processUserData method - Fix image upload logic
+if (_selectedImage != null) {
+  try {
+    final uuid = Uuid();
+    String fileName = 'worker_${user.uid}_${uuid.v4()}.jpg';
+    final storageRef = FirebaseStorage.instance
+        .ref()
+        .child('profile_images/$fileName');
+    
+    // Use putFile with proper metadata
+    final metadata = SettableMetadata(
+      contentType: 'image/jpeg',
+      customMetadata: {'userId': user.uid},
+    );
+    final uploadTask = storageRef.putFile(_selectedImage!, metadata);
+    
+    // Monitor upload progress 
+    uploadTask.snapshotEvents.listen((TaskSnapshot snapshot) {
+      print('Upload progress: ${snapshot.bytesTransferred}/${snapshot.totalBytes}');
+    });
+    
+    // Get download URL after upload completes
+    final snapshot = await uploadTask.whenComplete(() => print('Upload completed'));
+    imageUrl = await snapshot.ref.getDownloadURL();
+    print('Image uploaded successfully: $imageUrl');
+  } catch (e) {
+    print('Error uploading image: $e');
+    // Continue without image if upload fails
+  }
+}
 
       // Create a comprehensive user data map with null checks
       Map<String, dynamic> userData = {
@@ -979,7 +994,7 @@ class _WorkerSignupPageState extends State<WorkerSignupPage> {
             : _locationController.text.isNotEmpty
                 ? _locationController.text.trim()
                 : "",
-        'phoneNumber': _phoneController.text.isNotEmpty
+        'loginPhoneNumber': _phoneController.text.isNotEmpty
             ? "+91${_phoneController.text.trim()}"
             : "",
         'userType': 'worker',
@@ -1112,40 +1127,51 @@ class _WorkerSignupPageState extends State<WorkerSignupPage> {
     return downloadUrl;
   }
 
-  Future<void> _saveUserData(User user, String? imageUrl) async {
-    try {
-      // Format phone number
-      String phoneNumber = _phoneController.text.trim();
-      if (!phoneNumber.startsWith('+')) {
-        phoneNumber = '+91$phoneNumber';
-      }
+// Improve the _saveUserData method to ensure proper data handling
+Future<void> _saveUserData(User user, String? imageUrl) async {
+  try {
+    // Create comprehensive user data with proper validation
+    Map<String, dynamic> userData = {
+      'id': user.uid,
+      'name': _nameController.text.trim().isNotEmpty 
+          ? _nameController.text.trim() 
+          : "Unnamed Worker",
+      'businessName': _businessNameController.text.trim(),
+      'location': _selectedLocation != null 
+          ? _selectedLocation 
+          : {'placeName': _locationController.text.trim()},
+      'loginPhoneNumber': _phoneController.text.trim().startsWith('+')
+          ? _phoneController.text.trim()
+          : '+91${_phoneController.text.trim()}',
+      'profileImage': imageUrl,
+      'userType': 'worker',
+      'createdAt': FieldValue.serverTimestamp(),
+      'lastUpdated': FieldValue.serverTimestamp(),
+    };
 
-      // Create user data map with null checks for all fields
-      Map<String, dynamic> userData = {
-        'id': user.uid,
-        'name': _nameController.text.isNotEmpty
-            ? _nameController.text.trim()
-            : "User",
-        'location': _selectedLocation != null
-            ? _selectedLocation!['placeName']
-            : _locationController.text.isNotEmpty
-                ? _locationController.text.trim()
-                : "",
-        'phoneNumber': phoneNumber,
-        'profileImage': imageUrl,
-        'createdAt': FieldValue.serverTimestamp(),
-        'userType': 'hirer',
-      };
-
-      print('Saving user data for UID ${user.uid}: $userData');
-
-      // First check database connectivity with proper error handling
-    } catch (e) {
-      print('Error saving user data: $e');
-      throw e; // Re-throw to handle in the calling method
-    }
+    // Try to write to both workers collection and users collection
+    await FirebaseFirestore.instance
+        .collection('workers')
+        .doc(user.uid)
+        .set(userData, SetOptions(merge: true));
+    
+    // Also save to a general users collection for easier auth checks
+    await FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .set({
+          'userType': 'worker', 
+          'profileImage': imageUrl,
+          'name': userData['name'],
+          'lastUpdated': FieldValue.serverTimestamp()
+        }, SetOptions(merge: true));
+    
+    print('Worker data saved successfully to both collections');
+  } catch (e) {
+    print('Error saving user data: $e');
+    throw e;
   }
-}
+}}
 
 // Main signup form widget
 class SignupForm extends StatelessWidget {

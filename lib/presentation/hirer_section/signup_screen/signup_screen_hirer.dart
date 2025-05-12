@@ -860,151 +860,109 @@ class _HirerSignupPageState extends State<HirerSignupPage> {
   }
 
   // Replace your _verifyOTP method with this one
-  Future<void> _verifyOTP() async {
-    if (_otpController.text.isEmpty) {
-      _showSnackBar('Please enter the OTP', isError: true);
-      return;
+  // 3. Simplify OTP verification to use the above method
+Future<void> _verifyOTP() async {
+  if (_otpController.text.isEmpty) {
+    _showSnackBar('Please enter the OTP', isError: true);
+    return;
+  }
+
+  setState(() {
+    _isLoading = true;
+  });
+
+  try {
+    // Better validation
+    if (_verificationId.isEmpty) {
+      throw Exception('Invalid verification session. Please request OTP again.');
     }
 
-    setState(() {
-      _isLoading = true;
-    });
+    // Create the credential
+    PhoneAuthCredential credential = PhoneAuthProvider.credential(
+      verificationId: _verificationId,
+      smsCode: _otpController.text.trim(),
+    );
 
-    try {
-      print('Verifying OTP: ${_otpController.text.trim()}');
-      print('Using verification ID: $_verificationId');
+    // Sign in with the credential
+    UserCredential userCredential = await FirebaseAuth.instance.signInWithCredential(credential);
+    User? user = userCredential.user;
 
-      // Check for empty verification ID
-      if (_verificationId.isEmpty) {
-        throw Exception(
-            'Invalid verification session. Please request OTP again.');
-      }
+    if (user == null) {
+      throw Exception('Failed to authenticate user');
+    }
 
-      // Create the credential
-      PhoneAuthCredential credential = PhoneAuthProvider.credential(
-        verificationId: _verificationId,
-        smsCode: _otpController.text.trim(),
+    // Process the user data
+    await _processUserData(user);
+    
+    if (mounted) {
+      setState(() {
+        _isLoading = false;
+      });
+      
+      _showSnackBar('Account created successfully!');
+      
+      // Navigate to home page
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => const MainScreen())
       );
-
-      // Sign in with the credential
-      UserCredential userCredential =
-          await FirebaseAuth.instance.signInWithCredential(credential);
-
-      // Get the user from the result
-      User? user = userCredential.user;
-
-      if (user == null) {
-        throw Exception('Failed to authenticate user: No user returned');
-      }
-
-      print('Successfully authenticated user: ${user.uid}');
-
-      // Process the user data directly after successful authentication
-      await _processUserData(user);
-    } catch (e) {
-      print('OTP verification error: $e');
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-        _showSnackBar('Invalid OTP or verification failed. Please try again.',
-            isError: true);
-      }
     }
-  } // Replace your _processUserData with this simplified version for debugging
+  } catch (e) {
+    if (mounted) {
+      setState(() {
+        _isLoading = false;
+      });
+      _showSnackBar('Verification failed: ${e.toString()}', isError: true);
+    }
+  }
+} // Replace your _processUserData with this simplified version for debugging
 
 // Fix 1: Process User Data Method
-  Future<void> _processUserData(User user) async {
+ // 2. Combine the user data processing into a single method
+Future<void> _processUserData(User user) async {
+  try {
+    // Upload image if available
+    String? imageUrl = _selectedImage != null ? await _uploadImage() : null;
+    
+    // Format phone number with proper validation
+    String phoneNumber = _phoneController.text.trim();
+    if (phoneNumber.isNotEmpty && !phoneNumber.startsWith('+')) {
+      phoneNumber = '+91$phoneNumber';
+    }
+    
+    // Create a comprehensive user data map with null checks
+    Map<String, dynamic> userData = {
+      'id': user.uid,
+      'name': _nameController.text.isEmpty ? "User" : _nameController.text.trim(),
+      'businessName': _businessNameController.text.isEmpty ? "" : _businessNameController.text.trim(),
+      'location': _selectedLocation != null ? 
+        _selectedLocation!['placeName'] : 
+        (_locationController.text.isEmpty ? "" : _locationController.text.trim()),
+      'loggedPhoneNumber': phoneNumber,
+      'profileImage': imageUrl, // This will be null or a URL
+      'createdAt': FieldValue.serverTimestamp(),
+      'userType': 'hirer',
+    };
+    
+    print('Saving user data: $userData');
+    
+    // Save to Firestore with better error handling
     try {
-      print('Processing data for user: ${user.uid}');
-
-      // Upload image if available
-      String? imageUrl;
-      if (_selectedImage != null) {
-        try {
-          final uuid = Uuid();
-          String fileName = '${uuid.v4()}.jpg';
-          final storageRef =
-              FirebaseStorage.instance.ref().child('profile_images/$fileName');
-          final uploadTask = storageRef.putFile(_selectedImage!);
-          final snapshot = await uploadTask;
-          imageUrl = await snapshot.ref.getDownloadURL();
-          print('Image uploaded successfully: $imageUrl');
-        } catch (e) {
-          print('Error uploading image: $e');
-          // Continue without image if upload fails
-        }
-      }
-
-      // Create a comprehensive user data map with null checks
-      Map<String, dynamic> userData = {
-        'id': user.uid,
-        'name': _nameController.text.isNotEmpty
-            ? _nameController.text.trim()
-            : "User",
-        'businessName': _businessNameController.text.isNotEmpty
-            ? _businessNameController.text.trim()
-            : "",
-        'location': _selectedLocation != null
-            ? _selectedLocation!['placeName']
-            : _locationController.text.isNotEmpty
-                ? _locationController.text.trim()
-                : "",
-        'phoneNumber': _phoneController.text.isNotEmpty
-            ? "+91${_phoneController.text.trim()}"
-            : "",
-        'userType': 'hirer',
-        'profileImage': imageUrl, // Add this line to include the image URL
-        'createdAt': FieldValue.serverTimestamp(),
-      };
-
-      print('Saving user data: $userData');
-
-      // Save to Firestore with better error handling
       await FirebaseFirestore.instance
           .collection('hirers')
           .doc(user.uid)
           .set(userData, SetOptions(merge: true));
-
+      
       print('User data saved successfully');
-
-      // Update UI state
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-
-        // Show success message
-        _showSnackBar('Account created successfully!');
-
-        // Navigate to home page
-        print('Navigating to home page');
-
-        if (mounted) {
-          // Use a try-catch to handle any potential navigation errors
-          try {
-            Navigator.of(context).pushReplacement(
-                MaterialPageRoute(builder: (_) => const HirerHomePage()));
-          } catch (e) {
-            print('Navigation error: $e');
-            _showSnackBar(
-                'Error navigating to home page. Please restart the app.',
-                isError: true);
-          }
-        }
-      }
-    } catch (e) {
-      print('Error processing user data: $e');
-      print(StackTrace.current);
-
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-        _showSnackBar('Error saving user data: $e', isError: true);
-      }
+      return; // Success
+    } catch (firestoreError) {
+      print('Firebase database error: $firestoreError');
+      throw Exception('Failed to save user data. Please try again.');
     }
+  } catch (e) {
+    print('Error in _processUserData: $e');
+    throw e;
   }
+}
 
   Future<void> _submitForm() async {
     if (!_formKey.currentState!.validate() || !_acceptedTerms) {
@@ -1096,21 +1054,37 @@ class _HirerSignupPageState extends State<HirerSignupPage> {
       }
     }
   }
+Future<String?> _uploadImage() async {
+  if (_selectedImage == null) {
+    return null; // Don't throw an exception, just return null
+  }
 
-  Future<String> _uploadImage() async {
-    if (_selectedImage == null) {
-      throw Exception('No image selected');
-    }
-
+  try {
     final uuid = Uuid();
     String fileName = '${uuid.v4()}.jpg';
-    final storageRef =
-        FirebaseStorage.instance.ref().child('profile_images/$fileName');
+    final storageRef = FirebaseStorage.instance.ref().child('profile_images/$fileName');
+    
+    // Add better upload task monitoring
     final uploadTask = storageRef.putFile(_selectedImage!);
+    
+    // Add progress tracking if needed
+    uploadTask.snapshotEvents.listen((TaskSnapshot snapshot) {
+      final progress = snapshot.bytesTransferred / snapshot.totalBytes;
+      print('Upload is $progress% complete');
+    }, onError: (e) {
+      print('Upload error: $e');
+    });
+    
     final snapshot = await uploadTask;
-    String downloadUrl = await snapshot.ref.getDownloadURL();
+    final downloadUrl = await snapshot.ref.getDownloadURL();
+    print('Image uploaded successfully: $downloadUrl');
     return downloadUrl;
+  } catch (e) {
+    print('Error uploading image: $e');
+    return null; // Return null instead of throwing an exception
   }
+}
+
 
   Future<void> _saveUserData(User user, String? imageUrl) async {
     try {
@@ -1134,7 +1108,7 @@ class _HirerSignupPageState extends State<HirerSignupPage> {
             : _locationController.text.isNotEmpty
                 ? _locationController.text.trim()
                 : "",
-        'phoneNumber': phoneNumber,
+        'loggedPhoneNumber': phoneNumber,
         'profileImage': imageUrl,
         'createdAt': FieldValue.serverTimestamp(),
         'userType': 'hirer',

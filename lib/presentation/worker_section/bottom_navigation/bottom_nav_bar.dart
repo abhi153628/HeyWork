@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:hey_work/presentation/worker_section/worker_profile_page/worker_profile_screenn.dart';
 import '../../hirer_section/home_page/hirer_home_page.dart';
 import '../../hirer_section/jobs/posted_jobs.dart';
 import '../../hirer_section/notification_screen/notification.dart';
-import '../../hirer_section/profile/profile.dart';
+import '../../hirer_section/profile/hirer_profile.dart';
 import '../home_page/worker_home_page.dart';
 import '../worker_application_screen/worker_applications_screen.dart';
 
@@ -16,7 +17,7 @@ class AppRoutes {
     '/jobs': (context) => const JobsPostedScreen(
           submittedJob: {},
         ),
-    '/profile': (context) => const JobPostingScreen(),
+    '/profile': (context) => const WorkerProfilePage(),
   };
 }
 
@@ -38,7 +39,7 @@ class _WorkerMainScreenState extends State<WorkerMainScreen> {
     const WorkerHomePage(),
     const NotificationPage(),
     const WorkerApplicationsScreen(),
-    const JobPostingScreen(),
+    const WorkerProfilePage(),
   ];
 
   @override
