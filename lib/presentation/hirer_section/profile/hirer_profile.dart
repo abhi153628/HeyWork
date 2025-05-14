@@ -119,16 +119,7 @@ class ProfileHeaderSection extends StatelessWidget {
           ),
           child: Stack(
             children: [
-              Positioned(
-                left: 115.w,
-                top: 115.h,
-                child: Container(
-                  width: 120.w,
-                  height: 120.w,
-                  decoration: BoxDecoration(
-                      shape: BoxShape.circle, color: Color(0xFFc4c4c4)),
-                ),
-              ),
+             
               // Background design elements - slightly transparent shapes
               Positioned(
                 left: -90.w,

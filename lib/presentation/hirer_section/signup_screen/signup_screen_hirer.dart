@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:hey_work/presentation/hirer_section/industry_selecction.dart';
 import '../common/bottom_nav_bar.dart';
 import '../home_page/hirer_home_page.dart';
 
@@ -903,7 +904,7 @@ Future<void> _verifyOTP() async {
       
       // Navigate to home page
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const MainScreen())
+        MaterialPageRoute(builder: (_) => IndustrySelectionScreen())
       );
     }
   } catch (e) {

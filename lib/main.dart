@@ -5,9 +5,14 @@ import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:hey_work/presentation/common_screens/hirer_or_worker.dart';
+import 'package:hey_work/presentation/common_screens/login_or_signup.dart';
+import 'package:hey_work/presentation/common_screens/splash_screen.dart';
+import 'package:hey_work/presentation/hirer_section/common/navigating_page.dart';
 import 'package:hey_work/presentation/hirer_section/signup_screen/signup_screen_hirer.dart';
 import 'package:hey_work/presentation/worker_section/home_page/worker_home_page.dart';
 import 'package:hey_work/presentation/worker_section/worker_signup_page/worker_signup_page.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'presentation/hirer_section/common/bottom_nav_bar.dart';
 import 'presentation/worker_section/bottom_navigation/bottom_nav_bar.dart';
 import 'presentation/worker_section/worker_application_screen/worker_applications_screen.dart';
@@ -23,10 +28,14 @@ import 'package:hey_work/firebase_options.dart';
 // Presentation
 
 
+
 void main() async {
   try {
     // Ensure Flutter binding is initialized
     WidgetsFlutterBinding.ensureInitialized();
+
+    // Initialize SharedPreferences
+    await SharedPreferences.getInstance();
 
     // Initialize Firebase
     await Firebase.initializeApp(
@@ -40,13 +49,14 @@ void main() async {
         statusBarIconBrightness: Brightness.dark,
       ),
     );
-    //flutt Initialize App Check
+    
+    // Initialize App Check
     await FirebaseAppCheck.instance.activate(
       // Use provider appropriate for your platform
-      // webProvider: ReCaptchaV3Provider('your-recaptcha-site-key'),
       androidProvider: AndroidProvider.playIntegrity,
       appleProvider: AppleProvider.appAttest,
     );
+    
     // Set preferred orientations
     await SystemChrome.setPreferredOrientations([
       DeviceOrientation.portraitUp,
@@ -78,7 +88,7 @@ class MyApp extends StatelessWidget {
             title: 'Hey Work',
             debugShowCheckedModeBanner: false,
             theme: AppTheme.lightTheme,
-            home: MainScreen(),
+            home: SplashScreen(), // Use our splash screen that handles auth
           ),
         );
       },

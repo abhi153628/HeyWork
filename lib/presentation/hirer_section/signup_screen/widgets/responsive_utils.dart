@@ -3,6 +3,10 @@ import 'package:flutter/material.dart';
 // lib/utils/debouncer.dart
 import 'dart:async';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+
+import 'package:google_fonts/google_fonts.dart';
+import 'package:hey_work/presentation/services/authentication_services.dart';
 
 class ResponsiveUtil {
   static late MediaQueryData _mediaQueryData;
@@ -45,7 +49,11 @@ class ResponsiveUtil {
 }
 
 // Add this class if it's missing in your code
+
+
+// Class to handle validation
 class FormValidator {
+  // Validate name
   static String? validateName(String? value) {
     if (value == null || value.isEmpty) {
       return 'Please enter your name';
@@ -56,20 +64,7 @@ class FormValidator {
     return null;
   }
 
-  static String? validateBusinessName(String? value) {
-    if (value == null || value.isEmpty) {
-      return 'Please enter your business name';
-    }
-    return null;
-  }
-
-  static String? validateLocation(String? value) {
-    if (value == null || value.isEmpty) {
-      return 'Please enter a location';
-    }
-    return null;
-  }
-
+  // Validate phone number
   static String? validatePhoneNumber(String? value) {
     if (value == null || value.isEmpty) {
       return 'Please enter your phone number';
@@ -77,18 +72,69 @@ class FormValidator {
     if (value.length != 10) {
       return 'Phone number must be 10 digits';
     }
+    if (!RegExp(r'^[0-9]+$').hasMatch(value)) {
+      return 'Phone number must contain only digits';
+    }
+    return null;
+  }
+
+  // Validate business name
+  static String? validateBusinessName(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'Please enter your business name';
+    }
+    if (value.length < 2) {
+      return 'Business name must be at least 2 characters';
+    }
+    return null;
+  }
+
+  // Validate location
+  static String? validateLocation(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'Please enter your location';
+    }
+    return null;
+  }
+
+  // Validate email
+  static String? validateEmail(String? value) {
+    if (value == null || value.isEmpty) {
+      return null; // Email is optional
+    }
+    // Basic email validation
+    bool emailValid = RegExp(
+      r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$',
+    ).hasMatch(value);
+    if (!emailValid) {
+      return 'Please enter a valid email address';
+    }
+    return null;
+  }
+
+  // Validate OTP
+  static String? validateOTP(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'Please enter the OTP';
+    }
+    if (value.length != 6) {
+      return 'OTP must be 6 digits';
+    }
+    if (!RegExp(r'^[0-9]+$').hasMatch(value)) {
+      return 'OTP must contain only digits';
+    }
     return null;
   }
 }
 
-// Add this class if it's missing in your code
+// A debouncer class to limit the frequency of actions
 class Debouncer {
   final int milliseconds;
   Timer? _timer;
 
   Debouncer({required this.milliseconds});
 
-  run(VoidCallback action) {
+  void run(VoidCallback action) {
     if (_timer != null) {
       _timer!.cancel();
     }
@@ -99,3 +145,5 @@ class Debouncer {
     _timer?.cancel();
   }
 }
+
+// Custom dialog for login type conflict
