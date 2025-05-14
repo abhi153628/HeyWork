@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:hey_work/core/services/database/jobs_service.dart';
+import 'package:hey_work/presentation/hirer_section/job_managment_screen/job_managment_screen.dart';
 import '../jobs/posted_jobs.dart';
 import 'package:intl/intl.dart';
 
@@ -365,14 +366,207 @@ class _JobDetailsScreenState extends State<JobDetailsScreen>
     );
   }
 
-  Widget _buildCategoryField() {
-    return Column(
+ Widget _buildCategoryField() {
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Padding(
+        padding: EdgeInsets.only(left: 8.w, bottom: 8.h),
+        child: Text(
+          'Job Category',
+          style: GoogleFonts.poppins(
+            fontSize: 16.sp,
+            fontWeight: FontWeight.w500,
+            color: Colors.black87,
+          ),
+        ),
+      ),
+      InkWell(
+        onTap: () => _showJobCategoryBottomSheet(),
+        child: Container(
+          padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
+          decoration: BoxDecoration(
+            color: Color(0xFFf6f5f8),
+            border: Border.all(color: Colors.grey.shade400),
+            borderRadius: BorderRadius.circular(12.r),
+          ),
+          child: Row(
+            children: [
+              Icon(
+                Icons.work_outline,
+                color: const Color(0xFF0011C9),
+                size: 24.sp,
+              ),
+              SizedBox(width: 12.w),
+              Expanded(
+                child: Text(
+                  _categoryController.text.isNotEmpty
+                      ? _categoryController.text
+                      : 'Select Job Category',
+                  style: GoogleFonts.poppins(
+                    fontSize: 16.sp,
+                    color: _categoryController.text.isNotEmpty
+                        ? Colors.black
+                        : Colors.grey,
+                  ),
+                ),
+              ),
+              Icon(
+                Icons.arrow_drop_down,
+                color: Colors.grey.shade700,
+                size: 24.sp,
+              ),
+            ],
+          ),
+        ),
+      ),
+    ],
+  );
+}
+
+ Widget _buildDescriptionField() {
+  return TextFormField(
+    controller: _descriptionController,
+    maxLines: 3,
+    decoration: InputDecoration(
+      fillColor: Color(0xFFf6f5f8),
+      filled: true,
+      labelText: 'Job Description',
+      hintText: 'Describe the job requirements',
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12.r),
+      ),
+      prefixIcon: const Icon(Icons.description_outlined),
+      alignLabelWithHint: true,
+    ),
+    validator: (value) {
+      if (value == null || value.isEmpty) {
+        return 'Please enter a job description';
+      }
+      return null;
+    },
+  );
+}
+// Updated _buildDateTimeSection method with consistent colors
+Widget _buildDateTimeSection() {
+  return Row(
+    children: [
+      // Date Picker
+      Expanded(
+        child: InkWell(
+          onTap: _pickDate,
+          child: Container(
+            padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
+            decoration: BoxDecoration(
+              color: Color(0xFFf6f5f8), // Match with other form fields
+              borderRadius: BorderRadius.circular(16.r),
+              border: Border.all(color: Colors.grey.shade200),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    _selectedDate != null
+                        ? DateFormat('MMM dd, yyyy').format(_selectedDate!)
+                        : 'Select Date',
+                    style: GoogleFonts.poppins(
+                      fontSize: 16.sp,
+                      color: _selectedDate != null ? Colors.black : Colors.grey,
+                      fontWeight: FontWeight.w400,
+                    ),
+                  ),
+                ),
+                Icon(
+                  Icons.calendar_today,
+                  color: Colors.grey.shade800,
+                  size: 24.sp,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+      SizedBox(width: 12.w),
+
+      // Time Picker
+      Expanded(
+        child: InkWell(
+          onTap: _pickTime,
+          child: Container(
+            padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
+            decoration: BoxDecoration(
+              color: Color(0xFFf6f5f8), // Match with other form fields
+              borderRadius: BorderRadius.circular(16.r),
+              border: Border.all(color: Colors.grey.shade200),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    _selectedTime != null
+                        ? _selectedTime!.format(context)
+                        : 'Select Time',
+                    style: GoogleFonts.poppins(
+                      fontSize: 16.sp,
+                      color: _selectedTime != null ? Colors.black : Colors.grey,
+                      fontWeight: FontWeight.w400,
+                    ),
+                  ),
+                ),
+                Icon(
+                  Icons.access_time,
+                  color: Colors.grey.shade800,
+                  size: 24.sp,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    ],
+  );
+} Widget _buildBudgetField() {
+  return Container(
+    height: 80.h, // Fixed height for animation
+    child: TextFormField(
+      controller: _budgetController,
+      keyboardType: TextInputType.number,
+      decoration: InputDecoration(
+        fillColor: Color(0xFFf6f5f8),
+        filled: true,
+        labelText: 'Budget (₹)',
+        hintText: 'Minimum ₹$_minimumBudget',
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12.r),
+        ),
+        prefixIcon: const Icon(Icons.monetization_on_outlined),
+      ),
+      validator: (value) {
+        if (value == null || value.isEmpty) {
+          return 'Please enter a budget amount';
+        }
+        if (int.tryParse(value) == null) {
+          return 'Please enter a valid number';
+        }
+        if (int.parse(value) < _minimumBudget) {
+          return 'Budget must be at least ₹$_minimumBudget';
+        }
+        return null;
+      },
+    ),
+  );
+}
+
+ Widget _buildSalaryRangeFields() {
+  return Container(
+    height: 120.h, // Fixed height for animation
+    child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
           padding: EdgeInsets.only(left: 8.w, bottom: 8.h),
           child: Text(
-            'Job Category',
+            'Salary Range (₹)',
             style: GoogleFonts.poppins(
               fontSize: 16.sp,
               fontWeight: FontWeight.w500,
@@ -380,255 +574,81 @@ class _JobDetailsScreenState extends State<JobDetailsScreen>
             ),
           ),
         ),
-        InkWell(
-          onTap: () => _showJobCategoryBottomSheet(),
-          child: Container(
-            padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
-            decoration: BoxDecoration(
-              border: Border.all(color: Colors.grey.shade400),
-              borderRadius: BorderRadius.circular(12.r),
-            ),
-            child: Row(
-              children: [
-                Icon(
-                  Icons.work_outline,
-                  color: const Color(0xFF0011C9),
-                  size: 24.sp,
-                ),
-                SizedBox(width: 12.w),
-                Expanded(
-                  child: Text(
-                    _categoryController.text.isNotEmpty
-                        ? _categoryController.text
-                        : 'Select Job Category',
-                    style: GoogleFonts.poppins(
-                      fontSize: 16.sp,
-                      color: _categoryController.text.isNotEmpty
-                          ? Colors.black
-                          : Colors.grey,
-                    ),
+        Row(
+          children: [
+            // Minimum Salary
+            Expanded(
+              child: TextFormField(
+                controller: _minSalaryController,
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(
+                  fillColor: Color(0xFFf6f5f8),
+                  filled: true,
+                  labelText: 'From',
+                  hintText: 'Min ₹$_minimumBudget',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12.r),
                   ),
+                  prefixIcon: const Icon(Icons.remove),
                 ),
-                Icon(
-                  Icons.arrow_drop_down,
-                  color: Colors.grey.shade700,
-                  size: 24.sp,
-                ),
-              ],
+                validator: (value) {
+                  if (_isFullTime) {
+                    if (value == null || value.isEmpty) {
+                      return 'Required';
+                    }
+                    if (int.tryParse(value) == null) {
+                      return 'Invalid';
+                    }
+                    if (int.parse(value) < _minimumBudget) {
+                      return 'Min ₹$_minimumBudget';
+                    }
+                  }
+                  return null;
+                },
+              ),
             ),
-          ),
+            SizedBox(width: 12.w),
+
+            // Maximum Salary
+            Expanded(
+              child: TextFormField(
+                controller: _maxSalaryController,
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(
+                  fillColor: Color(0xFFf6f5f8),
+                  filled: true,
+                  labelText: 'To',
+                  hintText: 'Max',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12.r),
+                  ),
+                  prefixIcon: const Icon(Icons.add),
+                ),
+                validator: (value) {
+                  if (_isFullTime) {
+                    if (value == null || value.isEmpty) {
+                      return 'Required';
+                    }
+                    if (int.tryParse(value) == null) {
+                      return 'Invalid';
+                    }
+                    // Validate that max is greater than min
+                    final min = int.tryParse(_minSalaryController.text) ?? 0;
+                    final max = int.tryParse(value) ?? 0;
+                    if (max <= min) {
+                      return 'Must be > min';
+                    }
+                  }
+                  return null;
+                },
+              ),
+            ),
+          ],
         ),
       ],
-    );
-  }
-
-  Widget _buildDescriptionField() {
-    return TextFormField(
-      controller: _descriptionController,
-      maxLines: 3,
-      decoration: InputDecoration(
-        labelText: 'Job Description',
-        hintText: 'Describe the job requirements',
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12.r),
-        ),
-        prefixIcon: const Icon(Icons.description_outlined),
-        alignLabelWithHint: true,
-      ),
-      validator: (value) {
-        if (value == null || value.isEmpty) {
-          return 'Please enter a job description';
-        }
-        return null;
-      },
-    );
-  }
-
-  Widget _buildDateTimeSection() {
-    return Row(
-      children: [
-        // Date Picker
-        Expanded(
-          child: InkWell(
-            onTap: _pickDate,
-            child: InputDecorator(
-              decoration: InputDecoration(
-                labelText: 'Date',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12.r),
-                ),
-                errorText: _selectedDate == null ? '' : null,
-                errorStyle:
-                    const TextStyle(height: 0, color: Colors.transparent),
-                prefixIcon: const Icon(Icons.calendar_today),
-                contentPadding:
-                    EdgeInsets.symmetric(horizontal: 12.w, vertical: 12.h),
-              ),
-              child: Text(
-                _selectedDate != null
-                    ? DateFormat('MMM dd, yyyy').format(_selectedDate!)
-                    : 'Select Date',
-                style: GoogleFonts.poppins(
-                  fontSize: 14.sp,
-                  color: _selectedDate != null ? Colors.black : Colors.grey,
-                ),
-              ),
-            ),
-          ),
-        ),
-        SizedBox(width: 12.w),
-
-        // Time Picker
-        Expanded(
-          child: InkWell(
-            onTap: _pickTime,
-            child: InputDecorator(
-              decoration: InputDecoration(
-                labelText: 'Time',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12.r),
-                ),
-                errorText: _selectedTime == null ? '' : null,
-                errorStyle:
-                    const TextStyle(height: 0, color: Colors.transparent),
-                prefixIcon: const Icon(Icons.access_time),
-                contentPadding:
-                    EdgeInsets.symmetric(horizontal: 12.w, vertical: 12.h),
-              ),
-              child: Text(
-                _selectedTime != null
-                    ? _selectedTime!.format(context)
-                    : 'Select Time',
-                style: GoogleFonts.poppins(
-                  fontSize: 14.sp,
-                  color: _selectedTime != null ? Colors.black : Colors.grey,
-                ),
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildBudgetField() {
-    return Container(
-      height: 80.h, // Fixed height for animation
-      child: TextFormField(
-        controller: _budgetController,
-        keyboardType: TextInputType.number,
-        decoration: InputDecoration(
-          labelText: 'Budget (₹)',
-          hintText: 'Minimum ₹$_minimumBudget',
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12.r),
-          ),
-          prefixIcon: const Icon(Icons.monetization_on_outlined),
-        ),
-        validator: (value) {
-          if (value == null || value.isEmpty) {
-            return 'Please enter a budget amount';
-          }
-          if (int.tryParse(value) == null) {
-            return 'Please enter a valid number';
-          }
-          if (int.parse(value) < _minimumBudget) {
-            return 'Budget must be at least ₹$_minimumBudget';
-          }
-          return null;
-        },
-      ),
-    );
-  }
-
-  Widget _buildSalaryRangeFields() {
-    return Container(
-      height: 120.h, // Fixed height for animation
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: EdgeInsets.only(left: 8.w, bottom: 8.h),
-            child: Text(
-              'Salary Range (₹)',
-              style: GoogleFonts.poppins(
-                fontSize: 16.sp,
-                fontWeight: FontWeight.w500,
-                color: Colors.black87,
-              ),
-            ),
-          ),
-          Row(
-            children: [
-              // Minimum Salary
-              Expanded(
-                child: TextFormField(
-                  controller: _minSalaryController,
-                  keyboardType: TextInputType.number,
-                  decoration: InputDecoration(
-                    labelText: 'From',
-                    hintText: 'Min ₹$_minimumBudget',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12.r),
-                    ),
-                    prefixIcon: const Icon(Icons.remove),
-                  ),
-                  validator: (value) {
-                    if (_isFullTime) {
-                      if (value == null || value.isEmpty) {
-                        return 'Required';
-                      }
-                      if (int.tryParse(value) == null) {
-                        return 'Invalid';
-                      }
-                      if (int.parse(value) < _minimumBudget) {
-                        return 'Min ₹$_minimumBudget';
-                      }
-                    }
-                    return null;
-                  },
-                ),
-              ),
-              SizedBox(width: 12.w),
-
-              // Maximum Salary
-              Expanded(
-                child: TextFormField(
-                  controller: _maxSalaryController,
-                  keyboardType: TextInputType.number,
-                  decoration: InputDecoration(
-                    labelText: 'To',
-                    hintText: 'Max',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12.r),
-                    ),
-                    prefixIcon: const Icon(Icons.add),
-                  ),
-                  validator: (value) {
-                    if (_isFullTime) {
-                      if (value == null || value.isEmpty) {
-                        return 'Required';
-                      }
-                      if (int.tryParse(value) == null) {
-                        return 'Invalid';
-                      }
-                      // Validate that max is greater than min
-                      final min = int.tryParse(_minSalaryController.text) ?? 0;
-                      final max = int.tryParse(value) ?? 0;
-                      if (max <= min) {
-                        return 'Must be > min';
-                      }
-                    }
-                    return null;
-                  },
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildSubmitButton() {
     return ElevatedButton(
@@ -701,161 +721,325 @@ class _JobDetailsScreenState extends State<JobDetailsScreen>
     }
   }
 
-  void _showJobCategoryBottomSheet() {
-    // Currently selected category for highlighting
-    final currentCategory = _categoryController.text;
+ // Updated _showJobCategoryBottomSheet method to fix the "attached is not true" error
+// Complete replacement for _showJobCategoryBottomSheet method and related functions
+void _showJobCategoryBottomSheet() {
+  // Currently selected category for highlighting
+  final currentCategory = _categoryController.text;
 
-    // Search text controller
-    final TextEditingController searchController = TextEditingController();
+  // Search text controller
+  final TextEditingController searchController = TextEditingController();
 
-    // Filtered jobs list - initially all jobs
-    List<Map<String, dynamic>> filteredJobs = _allJobs;
+  // Filtered jobs list - initially all jobs
+  List<Map<String, dynamic>> filteredJobs = [];
+  
+  // Make a defensive copy rather than directly referencing/modifying _allJobs
+  filteredJobs.addAll(_allJobs);
 
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setStateLocal) {
-            // Filter function
-            void filterJobs(String query) {
+  showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: Colors.transparent,
+    enableDrag: true,
+    builder: (BuildContext sheetContext) {
+      return StatefulBuilder(
+        builder: (context, setSheetState) {
+          // Filter function - uses setSheetState to update only within the bottom sheet
+          void filterJobs(String query) {
+            setSheetState(() {
               if (query.isEmpty) {
-                filteredJobs = _allJobs;
+                filteredJobs.clear();
+                filteredJobs.addAll(_allJobs);
               } else {
                 filteredJobs = _allJobs.where((job) {
                   return job['name']
-                          .toString()
-                          .toLowerCase()
-                          .contains(query.toLowerCase()) ||
+                      .toString()
+                      .toLowerCase()
+                      .contains(query.toLowerCase()) ||
                       job['category']
-                          .toString()
-                          .toLowerCase()
-                          .contains(query.toLowerCase());
+                      .toString()
+                      .toLowerCase()
+                      .contains(query.toLowerCase());
                 }).toList();
               }
-              setStateLocal(() {});
-            }
+            });
+          }
 
-            return Container(
-              height: MediaQuery.of(context).size.height * 0.75,
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.only(
-                  topLeft: Radius.circular(24),
-                  topRight: Radius.circular(24),
+          // Job category section builder
+          Widget buildCategorySection(String title, List<Map<String, dynamic>> jobs) {
+            if (jobs.isEmpty) return const SizedBox.shrink();
+
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(8, 16, 8, 8),
+                  child: Text(
+                    title,
+                    style: GoogleFonts.poppins(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: const Color(0xFF0011C9),
+                    ),
+                  ),
                 ),
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Handle and title
-                  Center(
+                ...jobs.map((job) {
+                  final isSelected = job['name'] == currentCategory;
+
+                  return InkWell(
+                    onTap: () {
+                      // First pop the bottom sheet
+                      Navigator.pop(context);
+                      
+                      // Then update the state after the sheet is closed
+                      Future.microtask(() {
+                        setState(() {
+                          _categoryController.text = job['name'];
+                        });
+                      });
+                    },
                     child: Container(
-                      margin: const EdgeInsets.only(top: 12),
-                      width: 36,
-                      height: 4,
+                      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                      margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF1E2B8E).withOpacity(0.5),
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
-                    child: Text(
-                      'Select Job Category',
-                      style: GoogleFonts.poppins(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.black,
-                      ),
-                    ),
-                  ),
-
-                  // Search bar
-                  Padding(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-                    child: TextField(
-                      controller: searchController,
-                      decoration: InputDecoration(
-                        hintText: 'Search job categories...',
-                        prefixIcon: const Icon(Icons.search),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
+                        color: isSelected
+                            ? const Color(0xFF0011C9).withOpacity(0.1)
+                            : Colors.white,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: isSelected
+                              ? const Color(0xFF0011C9)
+                              : Colors.grey.shade300,
+                          width: isSelected ? 1.5 : 1,
                         ),
-                        contentPadding:
-                            const EdgeInsets.symmetric(vertical: 12),
                       ),
-                      onChanged: filterJobs,
-                    ),
-                  ),
-
-                  // Job Categories List
-                  Expanded(
-                    child: filteredJobs.isEmpty
-                        ? Center(
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.work_outline,
+                            color: isSelected ? const Color(0xFF0011C9) : Colors.grey,
+                            size: 20,
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
                             child: Text(
-                              'No matching jobs found',
+                              job['name'],
                               style: GoogleFonts.poppins(
                                 fontSize: 16,
-                                color: Colors.grey,
+                                fontWeight:
+                                isSelected ? FontWeight.w600 : FontWeight.w400,
+                                color:
+                                isSelected ? const Color(0xFF0011C9) : Colors.black,
                               ),
                             ),
-                          )
-                        : ListView(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 16, vertical: 8),
-                            children: [
-                              // Currently selected job (if any)
-                              if (currentCategory.isNotEmpty)
-                                _buildJobCategorySection(
-                                  title: 'Selected',
-                                  jobs: _allJobs
-                                      .where((job) =>
-                                          job['name'] == currentCategory)
-                                      .toList(),
-                                  currentCategory: currentCategory,
-                                ),
+                          ),
+                          if (isSelected)
+                            const Icon(Icons.check_circle, color: Color(0xFF0011C9)),
+                        ],
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ],
+            );
+          }
 
-                              // General Jobs
-                              _buildJobCategorySection(
-                                title: 'General Jobs',
-                                jobs: filteredJobs
-                                    .where(
-                                        (job) => job['category'] == 'General')
+          return Container(
+            height: MediaQuery.of(context).size.height * 0.75,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(24.r),
+                topRight: Radius.circular(24.r),
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Handle at the top
+                Center(
+                  child: Container(
+                    margin: EdgeInsets.only(top: 12.h),
+                    width: 36.w,
+                    height: 4.h,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF1E2B8E).withOpacity(0.5),
+                      borderRadius: BorderRadius.circular(2.r),
+                    ),
+                  ),
+                ),
+                
+                // Title
+                Padding(
+                  padding: EdgeInsets.fromLTRB(24.w, 20.h, 24.w, 8.h),
+                  child: Text(
+                    'Select Job Category',
+                    style: GoogleFonts.poppins(
+                      fontSize: 20.sp,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.black,
+                    ),
+                  ),
+                ),
+                
+                // Search bar
+                Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 8.h),
+                  child: TextField(
+                    controller: searchController,
+                    autofocus: false,
+                    decoration: InputDecoration(
+                      fillColor: Color(0xFFf6f5f8),
+                      filled: true,
+                      hintText: 'Search job categories...',
+                      prefixIcon: const Icon(Icons.search),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12.r),
+                      ),
+                      contentPadding: EdgeInsets.symmetric(vertical: 12.h),
+                    ),
+                    onChanged: filterJobs,
+                  ),
+                ),
+                
+                // Categories list
+                Expanded(
+                  child: filteredJobs.isEmpty
+                      ? Center(
+                          child: Text(
+                            'No matching jobs found',
+                            style: GoogleFonts.poppins(
+                              fontSize: 16.sp,
+                              color: Colors.grey,
+                            ),
+                          ),
+                        )
+                      : ListView(
+                          padding: EdgeInsets.symmetric(horizontal: 16.w),
+                          children: [
+                            // Currently selected job (if any)
+                            if (currentCategory.isNotEmpty)
+                              buildCategorySection(
+                                'Selected',
+                                _allJobs
+                                    .where((job) => job['name'] == currentCategory)
                                     .toList(),
-                                currentCategory: currentCategory,
                               ),
 
-                              // Group by industry
-                              ..._getUniqueIndustries(filteredJobs)
-                                  .map((industry) {
-                                return _buildJobCategorySection(
-                                  title: industry,
-                                  jobs: filteredJobs
-                                      .where(
-                                          (job) => job['category'] == industry)
-                                      .toList(),
-                                  currentCategory: currentCategory,
-                                );
-                              }),
-                            ],
-                          ),
-                  )
-                ],
-              ),
-            );
+                            // General Jobs
+                            buildCategorySection(
+                              'General Jobs',
+                              filteredJobs
+                                  .where((job) => job['category'] == 'General')
+                                  .toList(),
+                            ),
+
+                            // Industry groups
+                            ..._getUniqueIndustries(filteredJobs).map((industry) {
+                              return buildCategorySection(
+                                industry,
+                                filteredJobs
+                                    .where((job) => job['category'] == industry)
+                                    .toList(),
+                              );
+                            }),
+                            
+                            // Extra space at bottom
+                            SizedBox(height: 24.h),
+                          ],
+                        ),
+                ),
+              ],
+            ),
+          );
+        },
+      );
+    },
+  ).then((_) {
+    // Dispose of controller when sheet is closed
+    searchController.dispose();
+  });
+}
+// Separate method for building job category section inside the bottom sheet
+Widget _buildJobCategorySectionForBottomSheet({
+  required BuildContext context,
+  required String title,
+  required List<Map<String, dynamic>> jobs,
+  required String currentCategory,
+}) {
+  if (jobs.isEmpty) return const SizedBox.shrink();
+
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Padding(
+        padding: const EdgeInsets.fromLTRB(8, 16, 8, 8),
+        child: Text(
+          title,
+          style: GoogleFonts.poppins(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+            color: const Color(0xFF0011C9),
+          ),
+        ),
+      ),
+      ...jobs.map((job) {
+        final isSelected = job['name'] == currentCategory;
+
+        return InkWell(
+          onTap: () {
+            // Use setState from the parent widget
+            setState(() {
+              _categoryController.text = job['name'];
+            });
+            // Close bottom sheet
+            Navigator.pop(context);
           },
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+            margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
+            decoration: BoxDecoration(
+              color: isSelected
+                  ? const Color(0xFF0011C9).withOpacity(0.1)
+                  : Colors.white,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: isSelected
+                    ? const Color(0xFF0011C9)
+                    : Colors.grey.shade300,
+                width: isSelected ? 1.5 : 1,
+              ),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.work_outline,
+                  color: isSelected ? const Color(0xFF0011C9) : Colors.grey,
+                  size: 20,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    job['name'],
+                    style: GoogleFonts.poppins(
+                      fontSize: 16,
+                      fontWeight:
+                          isSelected ? FontWeight.w600 : FontWeight.w400,
+                      color:
+                          isSelected ? const Color(0xFF0011C9) : Colors.black,
+                    ),
+                  ),
+                ),
+                if (isSelected)
+                  const Icon(Icons.check_circle, color: Color(0xFF0011C9)),
+              ],
+            ),
+          ),
         );
-      },
-    ).then((_) {
-      // Clean up
-      searchController.dispose();
-    });
-  }
+      }).toList(),
+    ],
+  );
+}
 
   List<String> _getUniqueIndustries(List<Map<String, dynamic>> jobs) {
     final Set<String> industries = {};
@@ -1070,7 +1254,7 @@ class _JobDetailsScreenState extends State<JobDetailsScreen>
             context,
             MaterialPageRoute(
               builder: (context) =>
-                  JobsPostedScreen(submittedJob: result['jobData']),
+                JobManagementScreen(),
             ),
           );
         }
@@ -1098,3 +1282,4 @@ class _JobDetailsScreenState extends State<JobDetailsScreen>
     }
   }
 }
+

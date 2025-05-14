@@ -14,8 +14,8 @@ class AppRoutes {
   static final Map<String, WidgetBuilder> routes = {
     '/': (context) => const WorkerMainScreen(),
     '/navigator': (context) => const NotificationPage(),
-    '/jobs': (context) => const JobsPostedScreen(
-          submittedJob: {},
+    '/jobs': (context) => const WorkerProfilePage(
+          
         ),
     '/profile': (context) => const WorkerProfilePage(),
   };

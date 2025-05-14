@@ -127,6 +127,24 @@ class _JobManagementScreenState extends State<JobManagementScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                   // Posted date
+                Row(
+                  children: [
+                    Icon(
+                      Icons.access_time,
+                      size: 16,
+                      color: Colors.grey.shade600,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      'Posted on ${_formatDate(job.createdAt)}',
+                      style: GoogleFonts.roboto(
+                        fontSize: 12,
+                        color: Colors.grey.shade600,
+                      ),
+                    ),
+                  ],
+                ),
                 // Job title and status
                 Row(
                   children: [
@@ -142,27 +160,25 @@ class _JobManagementScreenState extends State<JobManagementScreen> {
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
-                    Container(
+                     Container(
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 6,
+                        horizontal: 8,
+                        vertical: 4,
                       ),
                       decoration: BoxDecoration(
-                        color: isActive
-                            ? Colors.green.withOpacity(0.1)
-                            : Colors.red.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(
-                          color: isActive ? Colors.green : Colors.red,
-                          width: 1,
-                        ),
+                        color: job.jobType.toLowerCase() == 'full-time'
+                            ? AppColors.green.withOpacity(0.1)
+                            : Color(0xFF0000CC).withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(4),
                       ),
                       child: Text(
-                        job.status.toUpperCase(),
+                        job.jobType,
                         style: GoogleFonts.roboto(
                           fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: isActive ? Colors.green : Colors.red,
+                          color: job.jobType.toLowerCase() == 'full-time'
+                              ? AppColors.green
+                              : Color(0xFF0000CC),
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
                     ),
@@ -215,29 +231,8 @@ class _JobManagementScreenState extends State<JobManagementScreen> {
                 // Job type and budget
                 Row(
                   children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: job.jobType.toLowerCase() == 'full-time'
-                            ? AppColors.green.withOpacity(0.1)
-                            : Color(0xFF0000CC).withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Text(
-                        job.jobType,
-                        style: GoogleFonts.roboto(
-                          fontSize: 12,
-                          color: job.jobType.toLowerCase() == 'full-time'
-                              ? AppColors.green
-                              : Color(0xFF0000CC),
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
+                    
+                  
                     Icon(
                       Icons.currency_rupee,
                       size: 16,
@@ -256,24 +251,7 @@ class _JobManagementScreenState extends State<JobManagementScreen> {
                 ),
                 const SizedBox(height: 12),
 
-                // Posted date
-                Row(
-                  children: [
-                    Icon(
-                      Icons.access_time,
-                      size: 16,
-                      color: Colors.grey.shade600,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      'Posted on ${_formatDate(job.createdAt)}',
-                      style: GoogleFonts.roboto(
-                        fontSize: 12,
-                        color: Colors.grey.shade600,
-                      ),
-                    ),
-                  ],
-                ),
+             
               ],
             ),
           ),
@@ -336,33 +314,7 @@ class _JobManagementScreenState extends State<JobManagementScreen> {
                 ),
 
                 // Toggle Status button
-                Expanded(
-                  child: InkWell(
-                    onTap: () => _toggleJobStatus(job),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            isActive ? Icons.pause : Icons.play_arrow,
-                            size: 18,
-                            color: isActive ? Colors.orange : Colors.green,
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            isActive ? 'Pause Job' : 'Activate',
-                            style: GoogleFonts.roboto(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w500,
-                              color: isActive ? Colors.orange : Colors.green,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
+             
               ],
             ),
           ),
@@ -371,31 +323,7 @@ class _JobManagementScreenState extends State<JobManagementScreen> {
     );
   }
 
-  Future<void> _toggleJobStatus(JobModel job) async {
-    try {
-      final newStatus =
-          job.status.toLowerCase() == 'active' ? 'inactive' : 'active';
-
-      await FirebaseFirestore.instance
-          .collection('jobs')
-          .doc(job.id)
-          .update({'status': newStatus});
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Job status updated to ${newStatus.toUpperCase()}'),
-          backgroundColor: Colors.green,
-        ),
-      );
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error updating job status: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
-  }
+  
 
   String _formatDate(DateTime date) {
     final now = DateTime.now();
