@@ -1,10 +1,11 @@
 // lib/presentation/common_screens/login_or_signup.dart
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import 'package:hey_work/presentation/common_screens/hire_or_work.dart';
-import 'package:hey_work/presentation/common_screens/hirer_or_worker.dart';
+
 import 'package:hey_work/presentation/hirer_section/login_page/login_page.dart';
 
 import 'package:hey_work/presentation/hirer_section/signup_screen/signup_screen_hirer.dart';
@@ -26,287 +27,176 @@ class _LoginOrSignupState extends State<LoginOrSignup> {
   final AuthService _authService = AuthService();
   
   @override
+  void initState() {
+    super.initState();
+    // Set status bar to transparent with white icons
+    SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      statusBarIconBrightness: Brightness.light,
+      statusBarBrightness: Brightness.dark,
+    ));
+  }
+  
+  @override
   Widget build(BuildContext context) {
+    // Define the primary blue color from the image
+    final Color primaryBlue = Color(0xFF0037FF);
+    
     return Scaffold(
-      body: Container(
-        width: double.infinity,
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              Colors.blue.shade50,
-              Colors.white,
-            ],
-          ),
-        ),
-        child: SafeArea(
-          child: Column(
-            children: [
-              // App Bar with back button
-              Padding(
-                padding: EdgeInsets.symmetric(
-                  horizontal: 16.w,
-                  vertical: 12.h,
+      body: Stack(
+        children: [
+          // Background Image + Color
+          Container(
+            width: double.infinity,
+            height: double.infinity,
+            color: primaryBlue,
+            child: Column(
+              children: [
+                // Worker image takes up 70% of screen height
+                Expanded(
+                  flex: 7,
+                  child: Image.asset(
+                    widget.userType == 'worker' 
+                        ? 'asset/8.png' //  worker image
+                        : 'asset/8.png', //  image for hirers
+                    fit: BoxFit.cover,
+                    width: double.infinity,
+                  ),
                 ),
-                child: Row(
-                  children: [
-                    GestureDetector(
-                      onTap: () {
-                        Navigator.pushReplacement(
+                // Bottom space (will be covered by the white card)
+                Expanded(
+                  flex: 3,
+                  child: Container(),
+                ),
+              ],
+            ),
+          ),
+          
+          // White Card Container (stacked above the image)
+          Positioned(
+            bottom: 0,
+            left: 0,
+            right: 0,
+            child: Container(
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(30.r),
+                  topRight: Radius.circular(30.r),
+                ),
+              ),
+              padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 32.h),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  // Title Text
+                  Text(
+                    "Get Started Today",
+                    style: GoogleFonts.poppins(
+                      fontSize: 28.sp,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.black87,
+                    ),
+                  ),
+                  
+                  SizedBox(height: 24.h),
+                  
+                  // Create Account Button
+                  SizedBox(
+                    width: double.infinity,
+                    height: 56.h,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => HirerOrWorker(),
+                            builder: (context) => widget.userType == 'hirer'
+                                ? HirerSignupPage()
+                                : WorkerSignupPage(),
                           ),
                         );
                       },
-                      child: Container(
-                        padding: EdgeInsets.all(8.w),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(8.r),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.05),
-                              blurRadius: 8,
-                              offset: Offset(0, 2),
-                            ),
-                          ],
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: primaryBlue,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12.r),
                         ),
-                        child: Icon(
-                          Icons.arrow_back,
-                          size: 22.w,
-                          color: Colors.blue.shade800,
+                        elevation: 0,
+                      ),
+                      child: Text(
+                        "Create an account",
+                        style: GoogleFonts.poppins(
+                          fontSize: 16.sp,
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
                     ),
-                  ],
-                ),
-              ),
-              
-              // Body content
-              Expanded(
-                child: SingleChildScrollView(
-                  child: Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 24.w),
-                    child: Column(
-                      children: [
-                        SizedBox(height: 30.h),
-                        
-                        // App logo
-                        Container(
-                          width: 120.w,
-                          height: 120.w,
-                          decoration: BoxDecoration(
-                            color: Colors.blue.shade100,
-                            shape: BoxShape.circle,
-                          ),
-                          child: Icon(
-                            widget.userType == 'hirer' 
-                                ? Icons.person_outline 
-                                : Icons.work_outline,
-                            size: 60.w,
-                            color: Colors.blue.shade800,
-                          ),
-                        ),
-                        
-                        SizedBox(height: 24.h),
-                        
-                        // Title
-                        Text(
-                          widget.userType == 'hirer'
-                              ? "Hirer Account"
-                              : "Worker Account",
-                          style: GoogleFonts.poppins(
-                            fontSize: 28.sp,
-                            fontWeight: FontWeight.w700,
-                            color: Colors.blue.shade800,
-                          ),
-                        ),
-                        
-                        SizedBox(height: 8.h),
-                        
-                        // Subtitle
-                        Text(
-                          widget.userType == 'hirer'
-                              ? "Hire skilled workers for your needs"
-                              : "Find jobs that match your skills",
-                          style: GoogleFonts.poppins(
-                            fontSize: 16.sp,
-                            color: Colors.grey.shade700,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                        
-                        SizedBox(height: 60.h),
-                        
-                        // Login option
-                        Container(
-                          width: double.infinity,
-                          height: 160.h,
-                          padding: EdgeInsets.all(20.w),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(16.r),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.08),
-                                blurRadius: 20,
-                                offset: Offset(0, 10),
-                              ),
-                            ],
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                "Already have an account?",
-                                style: GoogleFonts.poppins(
-                                  fontSize: 18.sp,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.blue.shade800,
-                                ),
-                              ),
-                              
-                              SizedBox(height: 8.h),
-                              
-                              Text(
-                                "Log in with your registered phone number",
-                                style: GoogleFonts.poppins(
-                                  fontSize: 14.sp,
-                                  color: Colors.grey.shade600,
-                                ),
-                              ),
-                              
-                              SizedBox(height: 20.h),
-                              
-                              SizedBox(
-                                width: double.infinity,
-                                height: 48.h,
-                                child: ElevatedButton(
-                                  onPressed: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (context) => widget.userType == 'hirer'
-                                            ? HirerLoginScreen()
-                                            : WorkerLoginScreen(),
-                                      ),
-                                    );
-                                  },
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.blue.shade700,
-                                    foregroundColor: Colors.white,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(10.r),
-                                    ),
-                                    elevation: 0,
-                                  ),
-                                  child: Text(
-                                    "Login",
-                                    style: GoogleFonts.poppins(
-                                      fontSize: 16.sp,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        
-                        SizedBox(height: 24.h),
-                        
-                        // Signup option
-                        Container(
-                          width: double.infinity,
-                          height: 160.h,
-                          padding: EdgeInsets.all(20.w),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(16.r),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.08),
-                                blurRadius: 20,
-                                offset: Offset(0, 10),
-                              ),
-                            ],
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                "New to Hey Work?",
-                                style: GoogleFonts.poppins(
-                                  fontSize: 18.sp,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.blue.shade800,
-                                ),
-                              ),
-                              
-                              SizedBox(height: 8.h),
-                              
-                              Text(
-                                widget.userType == 'hirer'
-                                    ? "Create a hirer account and start hiring"
-                                    : "Create a worker account and find jobs",
-                                style: GoogleFonts.poppins(
-                                  fontSize: 14.sp,
-                                  color: Colors.grey.shade600,
-                                ),
-                              ),
-                              
-                              SizedBox(height: 20.h),
-                              
-                              SizedBox(
-                                width: double.infinity,
-                                height: 48.h,
-                                child: ElevatedButton(
-                                  onPressed: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (context) => widget.userType == 'hirer'
-                                            ? HirerSignupPage()
-                                            : WorkerSignupPage(),
-                                      ),
-                                    );
-                                  },
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.white,
-                                    foregroundColor: Colors.blue.shade700,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(10.r),
-                                      side: BorderSide(
-                                        color: Colors.blue.shade700,
-                                        width: 1.5,
-                                      ),
-                                    ),
-                                    elevation: 0,
-                                  ),
-                                  child: Text(
-                                    "Create Account",
-                                    style: GoogleFonts.poppins(
-                                      fontSize: 16.sp,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        
-                        SizedBox(height: 40.h),
-                      ],
+                  ),
+                  
+                  SizedBox(height: 20.h),
+                  
+                  // Already have an account text
+                  Text(
+                    "Already have an account?",
+                    style: GoogleFonts.poppins(
+                      fontSize: 16.sp,
+                      color: Colors.grey.shade600,
                     ),
                   ),
-                ),
+                  
+                  SizedBox(height: 16.h),
+                  
+                  // Sign in with Phone Number Button
+                  InkWell(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => widget.userType == 'hirer'
+                              ? HirerLoginScreen()
+                              : WorkerLoginScreen(),
+                        ),
+                      );
+                    },
+                    child: Container(
+                      width: double.infinity,
+                      height: 56.h,
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.grey.shade300, width: 1),
+                        borderRadius: BorderRadius.circular(12.r),
+                      ),
+                      child: Center(
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.phone,
+                              color: primaryBlue,
+                              size: 20.w,
+                            ),
+                            SizedBox(width: 8.w),
+                            Text(
+                              "Sign in with Phone number",
+                              style: GoogleFonts.poppins(
+                                fontSize: 16.sp,
+                                fontWeight: FontWeight.w500,
+                                color: primaryBlue,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  
+               
+                ],
               ),
-            ],
+            ),
           ),
-        ),
+        ],
       ),
     );
   }

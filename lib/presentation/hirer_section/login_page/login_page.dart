@@ -10,12 +10,14 @@ import 'package:hey_work/presentation/services/authentication_services.dart';
 
 class HirerLoginScreen extends StatefulWidget {
   const HirerLoginScreen({Key? key}) : super(key: key);
+  
 
   @override
   _HirerLoginScreenState createState() => _HirerLoginScreenState();
 }
 
 class _HirerLoginScreenState extends State<HirerLoginScreen> {
+  
   final _formKey = GlobalKey<FormState>();
   final AuthService _authService = AuthService();
   final TextEditingController _phoneController = TextEditingController();
@@ -150,6 +152,11 @@ class _HirerLoginScreenState extends State<HirerLoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+        SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      statusBarIconBrightness: Brightness.light,
+      statusBarBrightness: Brightness.dark,
+    ));
     // Initialize responsive util
     _responsive.init(context);
 

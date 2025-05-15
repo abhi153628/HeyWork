@@ -3,6 +3,9 @@ import 'dart:async';
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/material.dart';
+import 'package:hey_work/presentation/common_screens/hire_or_work.dart';
+import 'package:hey_work/presentation/common_screens/log_sign.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class AuthService {
@@ -52,6 +55,28 @@ class AuthService {
       return null;
     }
   }
+  // In AuthService class
+Future<void> signOutAndNavigateToLogin(BuildContext context) async {
+  try {
+    // Clear cached user type
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('user_type');
+    
+    await _auth.signOut();
+    
+    // Navigate to login screen
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (context) => HirerOrWorker()), // Use your actual login screen
+      (route) => false,
+    );
+  } catch (e) {
+    print('Error signing out: $e');
+    // Show error to user
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Logout failed: ${e.toString()}')),
+    );
+  }
+}
 
   // Sign out
   Future<void> signOut() async {

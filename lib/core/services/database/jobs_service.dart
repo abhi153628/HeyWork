@@ -22,7 +22,8 @@ class JobModel {
   final String hirerLocation;
   final String hirerIndustry;
   final String hirerBusinessName;
-  final String? timeFormatted; // Added field for formatted time
+  final String? timeFormatted;
+  final DateTime? expiryDate; // Added field for job expiration
 
   JobModel({
     required this.id,
@@ -44,7 +45,8 @@ class JobModel {
     required this.hirerLocation,
     required this.hirerIndustry,
     required this.hirerBusinessName,
-    this.timeFormatted, // Added to constructor
+    this.timeFormatted,
+    this.expiryDate, // Added to constructor
   });
 
   factory JobModel.fromFirestore(DocumentSnapshot doc) {
@@ -59,6 +61,16 @@ class JobModel {
         'min': data['min'] ?? 0,
         'max': data['max'] ?? 0,
       };
+    }
+
+    // Handle expiry date
+    DateTime? expiryDate;
+    if (data.containsKey('expiryDate')) {
+      expiryDate = (data['expiryDate'] as Timestamp).toDate();
+    } else if (data.containsKey('date')) {
+      // If expiryDate doesn't exist, calculate it as date + 20 days
+      final workDate = (data['date'] as Timestamp).toDate();
+      expiryDate = workDate.add(const Duration(days: 20));
     }
 
     return JobModel(
@@ -81,7 +93,8 @@ class JobModel {
       hirerLocation: data['hirerLocation'] ?? '',
       hirerIndustry: data['hirerIndustry'] ?? '',
       hirerBusinessName: data['hirerBusinessName'] ?? '',
-      timeFormatted: data['timeFormatted'], // Get formatted time from Firestore
+      timeFormatted: data['timeFormatted'],
+      expiryDate: expiryDate, // Add expiry date
     );
   }
 }
@@ -149,7 +162,10 @@ class JobService {
         .map((snapshot) {
       return snapshot.docs.map((doc) {
         try {
-          return JobModel.fromFirestore(doc);
+          final job = JobModel.fromFirestore(doc);
+          // Check if job should be auto-closed
+          _checkAndAutoCloseJob(job);
+          return job;
         } catch (e) {
           print('Error parsing job document ${doc.id}: $e');
           // Return a placeholder job model with error information
@@ -177,7 +193,53 @@ class JobService {
     });
   }
 
-// In JobService class (paste.txt)
+  // Auto-close jobs after 20 days since work date
+  void _checkAndAutoCloseJob(JobModel job) async {
+    // Only check active jobs
+    if (job.status.toLowerCase() != 'active') {
+      return;
+    }
+
+    // If the job has an expiry date and it's in the past
+    if (job.expiryDate != null && job.expiryDate!.isBefore(DateTime.now())) {
+      try {
+        await _firestore.collection('jobs').doc(job.id).update({
+          'status': 'closed',
+          'closedAt': FieldValue.serverTimestamp(),
+          'closureReason': 'Auto-closed after 20 days',
+        });
+        
+        print('Job ${job.id} auto-closed due to expiry');
+      } catch (e) {
+        print('Error auto-closing job ${job.id}: $e');
+      }
+    }
+  }
+
+  // Auto-delete jobs that were closed more than 20 days ago
+  Future<void> cleanUpOldJobs() async {
+    try {
+      final cutoffDate = DateTime.now().subtract(const Duration(days: 20));
+      final cutoffTimestamp = Timestamp.fromDate(cutoffDate);
+      
+      // Get jobs that were closed at least 20 days ago
+      final snapshot = await _firestore
+          .collection('jobs')
+          .where('status', isEqualTo: 'closed')
+          .where('closedAt', isLessThan: cutoffTimestamp)
+          .get();
+      
+      // Delete each job
+      for (final doc in snapshot.docs) {
+        await _firestore.collection('jobs').doc(doc.id).delete();
+        print('Deleted old job ${doc.id}');
+      }
+    } catch (e) {
+      print('Error cleaning up old jobs: $e');
+    }
+  }
+
+  // In JobService class
   Stream<List<JobModel>> getJobsByCategory(String category,
       {String? workerLocation}) {
     if (category == 'All Jobs') {
@@ -219,8 +281,6 @@ class JobService {
     return getJobs();
   }
 
-// Update extension methods
-
   // Get job by ID
   Future<JobModel?> getJobById(String jobId) async {
     try {
@@ -235,9 +295,7 @@ class JobService {
     }
   }
 
-  // Get predefined job categories - updated based on screenshot
-// In JobService class (paste.txt)
-// In JobService class (paste.txt)
+  // Get predefined job categories
   List<JobCategory> getJobCategories() {
     return [
       // Location category first - placeholder that will be updated
@@ -266,7 +324,7 @@ class JobService {
     ];
   }
 
-// New method to get worker's location
+  // Get worker's location
   Future<String> getWorkerLocation() async {
     final user = _auth.currentUser;
     if (user != null) {
@@ -283,7 +341,7 @@ class JobService {
     return 'Location';
   }
 
-// Stream to listen for location changes
+  // Stream to listen for location changes
   Stream<String> watchWorkerLocation() {
     final user = _auth.currentUser;
     if (user != null) {
@@ -297,8 +355,9 @@ class JobService {
       });
     }
     return Stream.value('Location');
-  } // Save job data to Firestore
+  }
 
+  // Save job data to Firestore
   Future<Map<String, dynamic>> saveJobData({
     required Map<String, dynamic> jobData,
     required BuildContext context,
@@ -329,6 +388,12 @@ class JobService {
           'max': jobData['max'],
         };
         // Keep the original fields too for backward compatibility
+      }
+
+      // Calculate expiry date (20 days after work date)
+      if (jobData.containsKey('date') && jobData['date'] is DateTime) {
+        final workDate = jobData['date'] as DateTime;
+        jobData['expiryDate'] = workDate.add(const Duration(days: 20));
       }
 
       // Get user data from hirers collection
@@ -403,6 +468,177 @@ class JobService {
       };
     }
   }
+
+  // New methods for job management
+
+  // Update job status (active/closed)
+  Future<bool> updateJobStatus(String jobId, String status) async {
+    try {
+      await _firestore.collection('jobs').doc(jobId).update({
+        'status': status,
+        'updatedAt': FieldValue.serverTimestamp(),
+        if (status == 'closed') 'closedAt': FieldValue.serverTimestamp(),
+      });
+      
+      // Also update in user's jobs collection
+      final user = _auth.currentUser;
+      if (user != null) {
+        await _firestore
+            .collection('hirers')
+            .doc(user.uid)
+            .collection('jobs')
+            .doc(jobId)
+            .update({
+          'status': status,
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
+      }
+      
+      return true;
+    } catch (e) {
+      print('Error updating job status: $e');
+      return false;
+    }
+  }
+
+  // Delete job
+  Future<bool> deleteJob(String jobId) async {
+    try {
+      // Delete job document
+      await _firestore.collection('jobs').doc(jobId).delete();
+      
+      // Delete from user's jobs collection
+      final user = _auth.currentUser;
+      if (user != null) {
+        await _firestore
+            .collection('hirers')
+            .doc(user.uid)
+            .collection('jobs')
+            .doc(jobId)
+            .delete();
+      }
+      
+      return true;
+    } catch (e) {
+      print('Error deleting job: $e');
+      return false;
+    }
+  }
 }
 
-// Update extension methods
+// JobApplicationService class to handle getting applications by status
+class JobApplicationService {
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
+  // Get all applications for a job
+  Stream<List<JobApplicationModel>> getJobApplications(String jobId) {
+    return _firestore
+        .collection('jobApplications')
+        .where('jobId', isEqualTo: jobId)
+        .orderBy('appliedAt', descending: true)
+        .snapshots()
+        .map((snapshot) {
+      return snapshot.docs
+          .map((doc) => JobApplicationModel.fromFirestore(doc))
+          .toList();
+    });
+  }
+
+  // Get applications by status
+  Stream<List<JobApplicationModel>> getJobApplicationsByStatus(String jobId, String status) {
+    return _firestore
+        .collection('jobApplications')
+        .where('jobId', isEqualTo: jobId)
+        .where('status', isEqualTo: status)
+        .orderBy('appliedAt', descending: true)
+        .snapshots()
+        .map((snapshot) {
+      return snapshot.docs
+          .map((doc) => JobApplicationModel.fromFirestore(doc))
+          .toList();
+    });
+  }
+
+  // Update application status
+  Future<Map<String, dynamic>> updateApplicationStatus(
+      String applicationId, String status) async {
+    try {
+      await _firestore.collection('jobApplications').doc(applicationId).update({
+        'status': status,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+      
+      return {
+        'success': true,
+        'message': 'Application ${status == "accepted" ? "accepted" : "rejected"} successfully',
+      };
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Error updating application: $e',
+      };
+    }
+  }
+
+  // Delete application
+  Future<Map<String, dynamic>> deleteApplication(String applicationId) async {
+    try {
+      await _firestore.collection('jobApplications').doc(applicationId).delete();
+      
+      return {
+        'success': true,
+        'message': 'Application deleted successfully',
+      };
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Error deleting application: $e',
+      };
+    }
+  }
+}
+
+// JobApplicationModel class
+class JobApplicationModel {
+  final String id;
+  final String jobId;
+  final String workerId;
+  final String workerName;
+  final String workerLocation;
+  final String workerPhone;
+  final String? workerProfileImage;
+  final DateTime appliedAt;
+  final String status;
+
+  JobApplicationModel({
+    required this.id,
+    required this.jobId,
+    required this.workerId,
+    required this.workerName,
+    required this.workerLocation,
+    required this.workerPhone,
+    this.workerProfileImage,
+    required this.appliedAt,
+    required this.status,
+  });
+
+  bool get isPending => status.toLowerCase() == 'pending';
+  bool get isAccepted => status.toLowerCase() == 'accepted';
+  bool get isRejected => status.toLowerCase() == 'rejected';
+
+  factory JobApplicationModel.fromFirestore(DocumentSnapshot doc) {
+    final data = doc.data() as Map<String, dynamic>;
+
+    return JobApplicationModel(
+      id: doc.id,
+      jobId: data['jobId'] ?? '',
+      workerId: data['workerId'] ?? '',
+      workerName: data['workerName'] ?? 'Unknown Worker',
+      workerLocation: data['workerLocation'] ?? 'Unknown Location',
+      workerPhone: data['workerPhone'] ?? '',
+      workerProfileImage: data['workerProfileImage'],
+      appliedAt: (data['appliedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      status: data['status'] ?? 'pending',
+    );
+  }
+}

@@ -5,12 +5,15 @@ import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:hey_work/presentation/common_screens/hirer_or_worker.dart';
-import 'package:hey_work/presentation/common_screens/login_or_signup.dart';
+import 'package:hey_work/presentation/common_screens/hire_or_work.dart';
+
+import 'package:hey_work/presentation/common_screens/log_sign.dart';
+
 import 'package:hey_work/presentation/common_screens/splash_screen.dart';
 import 'package:hey_work/presentation/hirer_section/common/navigating_page.dart';
 import 'package:hey_work/presentation/hirer_section/signup_screen/signup_screen_hirer.dart';
 import 'package:hey_work/presentation/worker_section/home_page/worker_home_page.dart';
+import 'package:hey_work/presentation/worker_section/worker_login_page/worker_login_page.dart';
 import 'package:hey_work/presentation/worker_section/worker_signup_page/worker_signup_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'presentation/hirer_section/common/bottom_nav_bar.dart';

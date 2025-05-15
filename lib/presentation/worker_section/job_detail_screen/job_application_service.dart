@@ -1,4 +1,4 @@
-// Create a new file: lib/core/services/job_application_service.dart
+// lib/core/services/job_application_service.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -128,7 +128,7 @@ class JobApplicationService {
   }
 
   // Get worker's applications
-  Stream<List<JobApplicationModel>> getWorkerApplications() {
+   Stream<List<JobApplicationModel>> getWorkerApplications() {
     if (currentUserId == null) {
       // Return empty stream if not logged in
       return Stream.value([]);
@@ -140,18 +140,47 @@ class JobApplicationService {
         .orderBy('appliedAt', descending: true)
         .snapshots()
         .map((snapshot) {
-      return snapshot.docs
-          .map((doc) => JobApplicationModel.fromFirestore(doc))
-          .toList();
+      try {
+        return snapshot.docs
+            .map((doc) {
+              try {
+                return JobApplicationModel.fromFirestore(doc);
+              } catch (e) {
+                print('Error parsing document ${doc.id}: $e');
+                // Return null for documents that couldn't be parsed
+                return null;
+              }
+            })
+            .where((model) => model != null) // Filter out null models
+            .cast<JobApplicationModel>() // Cast to the correct type
+            .toList();
+      } catch (e) {
+        print('Error processing job applications: $e');
+        return <JobApplicationModel>[];
+      }
     });
   }
 
   // Get applications for a specific job (for hirers)
   Stream<List<JobApplicationModel>> getJobApplications(String jobId) {
     return _firestore
-        .collection('jobs')
-        .doc(jobId)
-        .collection('applications')
+        .collection('jobApplications')
+        .where('jobId', isEqualTo: jobId)
+        .orderBy('appliedAt', descending: true)
+        .snapshots()
+        .map((snapshot) {
+      return snapshot.docs
+          .map((doc) => JobApplicationModel.fromFirestore(doc))
+          .toList();
+    });
+  }
+
+  // ADDED METHOD: Get applications for a specific job filtered by status
+  Stream<List<JobApplicationModel>> getJobApplicationsByStatus(String jobId, String status) {
+    return _firestore
+        .collection('jobApplications')
+        .where('jobId', isEqualTo: jobId)
+        .where('status', isEqualTo: status)
         .orderBy('appliedAt', descending: true)
         .snapshots()
         .map((snapshot) {
@@ -231,6 +260,59 @@ class JobApplicationService {
       return {
         'success': false,
         'message': 'Error updating application status: $e',
+      };
+    }
+  }
+  
+  // ADDED METHOD: Delete application
+  Future<Map<String, dynamic>> deleteApplication(String applicationId) async {
+    try {
+      // Parse the composite ID to get jobId and workerId
+      final parts = applicationId.split('_');
+      if (parts.length != 2) {
+        return {
+          'success': false,
+          'message': 'Invalid application ID',
+        };
+      }
+
+      final jobId = parts[0];
+      final workerId = parts[1];
+
+      // Use batch write to delete all copies of the application
+      final batch = _firestore.batch();
+
+      // Delete from jobApplications collection
+      final appRef = _firestore.collection('jobApplications').doc(applicationId);
+      batch.delete(appRef);
+
+      // Delete from worker's applications subcollection
+      final workerAppRef = _firestore
+          .collection('workers')
+          .doc(workerId)
+          .collection('applications')
+          .doc(jobId);
+      batch.delete(workerAppRef);
+
+      // Delete from job's applications subcollection
+      final jobAppRef = _firestore
+          .collection('jobs')
+          .doc(jobId)
+          .collection('applications')
+          .doc(workerId);
+      batch.delete(jobAppRef);
+
+      // Commit the batch
+      await batch.commit();
+
+      return {
+        'success': true,
+        'message': 'Application deleted successfully',
+      };
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Error deleting application: $e',
       };
     }
   }

@@ -1,4 +1,3 @@
-// Create a new file: lib/presentation/hirer_section/jobs/job_management_screen.dart
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -14,8 +13,21 @@ class JobManagementScreen extends StatefulWidget {
   _JobManagementScreenState createState() => _JobManagementScreenState();
 }
 
-class _JobManagementScreenState extends State<JobManagementScreen> {
+class _JobManagementScreenState extends State<JobManagementScreen> with SingleTickerProviderStateMixin {
   final JobService _jobService = JobService();
+  late TabController _tabController;
+  
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 3, vsync: this);
+  }
+  
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -31,74 +43,25 @@ class _JobManagementScreenState extends State<JobManagementScreen> {
         ),
         backgroundColor: Colors.white,
         elevation: 0,
+        bottom: TabBar(
+          controller: _tabController,
+          labelColor: Color(0xFF0000CC),
+          unselectedLabelColor: Colors.grey,
+          indicatorColor: Color(0xFF0000CC),
+          tabs: const [
+            Tab(text: 'All'),
+            Tab(text: 'Active'),
+            Tab(text: 'Closed'),
+          ],
+        ),
       ),
-      body: StreamBuilder<QuerySnapshot>(
-        stream: FirebaseFirestore.instance
-            .collection('jobs')
-            .where('hirerId', isEqualTo: FirebaseAuth.instance.currentUser?.uid)
-            .orderBy('createdAt', descending: true)
-            .snapshots(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          if (snapshot.hasError) {
-            return Center(
-              child: Text(
-                'Error: ${snapshot.error}',
-                style: TextStyle(color: Colors.red),
-              ),
-            );
-          }
-
-          final jobDocs = snapshot.data?.docs ?? [];
-
-          if (jobDocs.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.work_off,
-                    size: 80,
-                    color: Colors.grey.shade400,
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'No jobs posted yet',
-                    style: GoogleFonts.roboto(
-                      fontSize: 18,
-                      color: Colors.grey.shade600,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Create a job to see it here',
-                    style: GoogleFonts.roboto(
-                      fontSize: 14,
-                      color: Colors.grey.shade500,
-                    ),
-                  ),
-                ],
-              ),
-            );
-          }
-
-          // Convert docs to JobModel
-          final jobs =
-              jobDocs.map((doc) => JobModel.fromFirestore(doc)).toList();
-
-          return ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: jobs.length,
-            itemBuilder: (context, index) {
-              final job = jobs[index];
-              return _buildJobCard(job);
-            },
-          );
-        },
+      body: TabBarView(
+        controller: _tabController,
+        children: [
+          _buildJobList(null), // All jobs
+          _buildJobList('active'), // Active jobs
+          _buildJobList('closed'), // Closed jobs
+        ],
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
@@ -109,6 +72,91 @@ class _JobManagementScreenState extends State<JobManagementScreen> {
         child: const Icon(Icons.add),
       ),
     );
+  }
+  
+  Widget _buildJobList(String? status) {
+    return StreamBuilder<QuerySnapshot>(
+      stream: _getJobsStream(status),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        if (snapshot.hasError) {
+          return Center(
+            child: Text(
+              'Error: ${snapshot.error}',
+              style: TextStyle(color: Colors.red),
+            ),
+          );
+        }
+
+        final jobDocs = snapshot.data?.docs ?? [];
+
+        if (jobDocs.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.work_off,
+                  size: 80,
+                  color: Colors.grey.shade400,
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  status == null 
+                    ? 'No jobs posted yet' 
+                    : status == 'active' 
+                      ? 'No active jobs' 
+                      : 'No closed jobs',
+                  style: GoogleFonts.roboto(
+                    fontSize: 18,
+                    color: Colors.grey.shade600,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  status == null || status == 'active'
+                    ? 'Create a job to see it here'
+                    : 'Jobs you close will appear here',
+                  style: GoogleFonts.roboto(
+                    fontSize: 14,
+                    color: Colors.grey.shade500,
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+
+        // Convert docs to JobModel
+        final jobs = jobDocs.map((doc) => JobModel.fromFirestore(doc)).toList();
+
+        return ListView.builder(
+          padding: const EdgeInsets.all(16),
+          itemCount: jobs.length,
+          itemBuilder: (context, index) {
+            final job = jobs[index];
+            return _buildJobCard(job);
+          },
+        );
+      },
+    );
+  }
+
+  Stream<QuerySnapshot> _getJobsStream(String? status) {
+    var query = FirebaseFirestore.instance
+      .collection('jobs')
+      .where('hirerId', isEqualTo: FirebaseAuth.instance.currentUser?.uid)
+      .orderBy('createdAt', descending: true);
+
+    if (status != null) {
+      query = query.where('status', isEqualTo: status);
+    }
+
+    return query.snapshots();
   }
 
   Widget _buildJobCard(JobModel job) {
@@ -127,20 +175,34 @@ class _JobManagementScreenState extends State<JobManagementScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                   // Posted date
+                // Posted date
                 Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Icon(
-                      Icons.access_time,
-                      size: 16,
-                      color: Colors.grey.shade600,
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.access_time,
+                          size: 16,
+                          color: Colors.grey.shade600,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Posted on ${_formatDate(job.createdAt)}',
+                          style: GoogleFonts.roboto(
+                            fontSize: 12,
+                            color: Colors.grey.shade600,
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: 4),
-                    Text(
-                      'Posted on ${_formatDate(job.createdAt)}',
-                      style: GoogleFonts.roboto(
-                        fontSize: 12,
-                        color: Colors.grey.shade600,
+                    // Delete button
+                    GestureDetector(
+                      onTap: () => _showDeleteConfirmation(job),
+                      child: Icon(
+                        Icons.delete,
+                        size: 20,
+                        color: Colors.red.shade400,
                       ),
                     ),
                   ],
@@ -160,7 +222,7 @@ class _JobManagementScreenState extends State<JobManagementScreen> {
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
-                     Container(
+                    Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 8,
                         vertical: 4,
@@ -231,8 +293,6 @@ class _JobManagementScreenState extends State<JobManagementScreen> {
                 // Job type and budget
                 Row(
                   children: [
-                    
-                  
                     Icon(
                       Icons.currency_rupee,
                       size: 16,
@@ -247,11 +307,32 @@ class _JobManagementScreenState extends State<JobManagementScreen> {
                         fontWeight: FontWeight.w500,
                       ),
                     ),
+                    
+                    // Status indicator
+                    const Spacer(),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: isActive 
+                            ? Colors.green.withOpacity(0.1)
+                            : Colors.red.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        isActive ? 'Active' : 'Closed',
+                        style: GoogleFonts.roboto(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                          color: isActive ? Colors.green : Colors.red,
+                        ),
+                      ),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 12),
-
-             
               ],
             ),
           ),
@@ -313,8 +394,63 @@ class _JobManagementScreenState extends State<JobManagementScreen> {
                   color: Colors.grey.shade300,
                 ),
 
-                // Toggle Status button
-             
+                // Toggle Status button (Close/Reopen job)
+                if (isActive)
+                  Expanded(
+                    child: InkWell(
+                      onTap: () => _closeJob(job.id),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.close,
+                              size: 18,
+                              color: Colors.red,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Close Job',
+                              style: GoogleFonts.roboto(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500,
+                                color: Colors.red,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  )
+                else
+                  Expanded(
+                    child: InkWell(
+                      onTap: () => _reopenJob(job.id),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.refresh,
+                              size: 18,
+                              color: Colors.green,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Reactivate',
+                              style: GoogleFonts.roboto(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500,
+                                color: Colors.green,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
               ],
             ),
           ),
@@ -323,7 +459,106 @@ class _JobManagementScreenState extends State<JobManagementScreen> {
     );
   }
 
-  
+  void _showDeleteConfirmation(JobModel job) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(
+          'Delete Job',
+          style: GoogleFonts.roboto(
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        content: Text(
+          'Are you sure you want to delete this job? This action cannot be undone.',
+          style: GoogleFonts.roboto(),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(
+              'Cancel',
+              style: GoogleFonts.roboto(
+                color: Colors.grey.shade700,
+              ),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _deleteJob(job.id);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+            ),
+            child: Text(
+              'Delete',
+              style: GoogleFonts.roboto(
+                color: Colors.white,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _deleteJob(String jobId) async {
+    try {
+      await _jobService.deleteJob(jobId);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Job deleted successfully'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error deleting job: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  Future<void> _closeJob(String jobId) async {
+    try {
+      await _jobService.updateJobStatus(jobId, 'closed');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Job closed successfully'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error closing job: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  Future<void> _reopenJob(String jobId) async {
+    try {
+      await _jobService.updateJobStatus(jobId, 'active');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Job reactivated successfully'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error reactivating job: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
 
   String _formatDate(DateTime date) {
     final now = DateTime.now();

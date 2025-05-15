@@ -1,7 +1,15 @@
+import 'dart:developer';
+
 import 'package:flutter/material.dart';
+import 'package:hey_work/presentation/common_screens/log_sign.dart';
+import 'package:hey_work/presentation/common_screens/privacy.dart';
+import 'package:hey_work/presentation/common_screens/terms.dart';
+import 'package:hey_work/presentation/hirer_section/profile/hirer_profile.dart';
+import 'package:hey_work/presentation/services/authentication_services.dart';
 
 class SettingsScreen extends StatelessWidget {
-  const SettingsScreen({Key? key}) : super(key: key);
+  SettingsScreen({Key? key}) : super(key: key);
+  AuthService service = AuthService();
 
   @override
   Widget build(BuildContext context) {
@@ -65,6 +73,7 @@ class SettingsScreen extends StatelessWidget {
                 iconSize: iconSize,
                 normalFontSize: normalFontSize,
                 smallFontSize: smallFontSize,
+                authService: service,
               ),
             ],
           ),
@@ -83,6 +92,7 @@ class SettingsOptionsList extends StatelessWidget {
   final double iconSize;
   final double normalFontSize;
   final double smallFontSize;
+  final AuthService authService;
 
   const SettingsOptionsList({
     Key? key,
@@ -94,6 +104,7 @@ class SettingsOptionsList extends StatelessWidget {
     required this.iconSize,
     required this.normalFontSize,
     required this.smallFontSize,
+    required this.authService,
   }) : super(key: key);
 
   @override
@@ -111,18 +122,7 @@ class SettingsOptionsList extends StatelessWidget {
           borderRadius: borderRadius,
           iconSize: iconSize,
           normalFontSize: normalFontSize,
-          onTap: () => navigateToPage(
-              context,
-              PersonalInfoPage(
-                horizontalPadding: horizontalPadding,
-                verticalPadding: verticalPadding,
-                standardSpacing: standardSpacing,
-                smallSpacing: smallSpacing,
-                borderRadius: borderRadius,
-                iconSize: iconSize,
-                normalFontSize: normalFontSize,
-                smallFontSize: smallFontSize,
-              )),
+          onTap: () => navigateToPage(context, HirerProfilePage()),
         ),
 
         SettingsOption(
@@ -135,42 +135,7 @@ class SettingsOptionsList extends StatelessWidget {
           borderRadius: borderRadius,
           iconSize: iconSize,
           normalFontSize: normalFontSize,
-          onTap: () => navigateToPage(
-              context,
-              PrivacySecurityPage(
-                horizontalPadding: horizontalPadding,
-                verticalPadding: verticalPadding,
-                standardSpacing: standardSpacing,
-                smallSpacing: smallSpacing,
-                borderRadius: borderRadius,
-                iconSize: iconSize,
-                normalFontSize: normalFontSize,
-                smallFontSize: smallFontSize,
-              )),
-        ),
-
-        SettingsOption(
-          icon: Icons.description_outlined,
-          title: "Raise BBPS dispute",
-          iconColor: Colors.blue,
-          horizontalPadding: horizontalPadding,
-          verticalPadding: verticalPadding,
-          smallSpacing: smallSpacing,
-          borderRadius: borderRadius,
-          iconSize: iconSize,
-          normalFontSize: normalFontSize,
-          onTap: () => navigateToPage(
-              context,
-              RaiseDisputePage(
-                horizontalPadding: horizontalPadding,
-                verticalPadding: verticalPadding,
-                standardSpacing: standardSpacing,
-                smallSpacing: smallSpacing,
-                borderRadius: borderRadius,
-                iconSize: iconSize,
-                normalFontSize: normalFontSize,
-                smallFontSize: smallFontSize,
-              )),
+          onTap: () => navigateToPage(context, PrivacyPolicyPage()),
         ),
 
         // Divider
@@ -220,20 +185,6 @@ class SettingsOptionsList extends StatelessWidget {
           normalFontSize: normalFontSize,
           onTap: () =>
               _showLogoutDialog(context, normalFontSize, smallFontSize),
-        ),
-
-        SettingsOption(
-          icon: Icons.power_settings_new_rounded,
-          title: "Close account",
-          iconColor: Colors.blue,
-          horizontalPadding: horizontalPadding,
-          verticalPadding: verticalPadding,
-          smallSpacing: smallSpacing,
-          borderRadius: borderRadius,
-          iconSize: iconSize,
-          normalFontSize: normalFontSize,
-          onTap: () =>
-              _showCloseAccountDialog(context, normalFontSize, smallFontSize),
         ),
       ],
     );
@@ -285,25 +236,22 @@ class SettingsOptionsList extends StatelessWidget {
                 ),
               ),
             ),
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Logged out successfully'),
-                    duration: Duration(seconds: 2),
-                  ),
-                );
-              },
-              child: Text(
-                "Log Out",
-                style: TextStyle(
-                  fontSize: normalFontSize,
-                  color: Colors.red,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
+ TextButton(
+  onPressed: () {
+    // Close the dialog first
+    Navigator.pop(context);
+    // Then sign out and navigate
+    authService.signOutAndNavigateToLogin(context);
+  },
+  child: Text(
+    "Log Out",
+    style: TextStyle(
+      fontSize: normalFontSize,
+      color: Colors.red,
+      fontWeight: FontWeight.bold,
+    ),
+  ),
+),
           ],
         );
       },

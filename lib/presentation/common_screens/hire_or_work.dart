@@ -1,173 +1,72 @@
 // lib/presentation/common_screens/hirer_or_worker.dart
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:hey_work/presentation/common_screens/log_sign.dart';
-import 'package:hey_work/presentation/common_screens/login_or_signup.dart';
+
 
 class HirerOrWorker extends StatelessWidget {
   const HirerOrWorker({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
+    // Set status bar to transparent with white icons
+    SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      statusBarIconBrightness: Brightness.light,
+      statusBarBrightness: Brightness.dark,
+    ));
+    
     return Scaffold(
-      body: Container(
-        width: double.infinity,
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              Colors.blue.shade50,
-              Colors.white,
-            ],
+      body: Stack(
+        children: [
+          // Blue background that covers the entire screen
+          Container(
+            width: double.infinity,
+            height: double.infinity,
+            color: Color(0xFF0e18ff),
           ),
-        ),
-        child: SafeArea(
-          child: SingleChildScrollView(
-            child: Padding(
-              padding: EdgeInsets.symmetric(horizontal: 24.w),
+          
+          // This will be the image of 3 people (to be added by user)
+          // It takes up the entire screen height
+          Positioned.fill(
+            child: Image.asset(
+              'asset/Rectangle 24928.png', // Replace with your actual image path
+              fit: BoxFit.cover,
+            ),
+          ),
+          
+          // Bottom container that overlaps with the image
+          Positioned(
+            bottom: 0,
+            left: 0,
+            right: 0,
+            child: Container(
+              padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 32.h),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(30.r),
+                  topRight: Radius.circular(30.r),
+                ),
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  SizedBox(height: 40.h),
-                  
-                  // App logo
-                  Container(
-                    width: 120.w,
-                    height: 120.w,
-                    decoration: BoxDecoration(
-                      color: Colors.blue.shade100,
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(
-                      Icons.work_outline,
-                      size: 60.w,
-                      color: Colors.blue.shade800,
-                    ),
-                  ),
-                  
-                  SizedBox(height: 24.h),
-                  
-                  // App name
+                  // "What are you looking for?" text
                   Text(
-                    "Hey Work",
+                    "What are you looking for?",
                     style: GoogleFonts.poppins(
-                      fontSize: 32.sp,
+                      fontSize: 23.sp,
                       fontWeight: FontWeight.w700,
-                      color: Colors.blue.shade800,
+                      color: Colors.black,
                     ),
                   ),
                   
-                  SizedBox(height: 8.h),
+                  SizedBox(height: 32.h),
                   
-                  // Tagline
-                  Text(
-                    "Connect workers with opportunities",
-                    style: GoogleFonts.poppins(
-                      fontSize: 16.sp,
-                      color: Colors.grey.shade700,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  
-                  SizedBox(height: 60.h),
-                  
-                  // Choose account type text
-                  Text(
-                    "Choose account type",
-                    style: GoogleFonts.poppins(
-                      fontSize: 20.sp,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.grey.shade800,
-                    ),
-                  ),
-                  
-                  SizedBox(height: 24.h),
-                  
-                  // Hirer option
-                  GestureDetector(
-                    onTap: () {
-                      Navigator.push(
-                        context, 
-                        MaterialPageRoute(
-                          builder: (context) => LoginOrSignup(userType: 'hirer'),
-                        ),
-                      );
-                    },
-                    child: Container(
-                      width: double.infinity,
-                      padding: EdgeInsets.all(20.w),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(16.r),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.08),
-                            blurRadius: 20,
-                            offset: Offset(0, 10),
-                          ),
-                        ],
-                      ),
-                      child: Row(
-                        children: [
-                          // Hirer icon
-                          Container(
-                            width: 60.w,
-                            height: 60.w,
-                            decoration: BoxDecoration(
-                              color: Colors.blue.shade50,
-                              shape: BoxShape.circle,
-                            ),
-                            child: Icon(
-                              Icons.person_outline,
-                              size: 30.w,
-                              color: Colors.blue.shade700,
-                            ),
-                          ),
-                          
-                          SizedBox(width: 16.w),
-                          
-                          // Hirer text
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  "I want to hire",
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 18.sp,
-                                    fontWeight: FontWeight.w600,
-                                    color: Colors.blue.shade800,
-                                  ),
-                                ),
-                                
-                                SizedBox(height: 4.h),
-                                
-                                Text(
-                                  "Post jobs and hire workers for your needs",
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 14.sp,
-                                    color: Colors.grey.shade600,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          
-                          Icon(
-                            Icons.arrow_forward_ios,
-                            size: 18.w,
-                            color: Colors.grey.shade500,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  
-                  SizedBox(height: 20.h),
-                  
-                  // Worker option
+                  // "I want to work" button
                   GestureDetector(
                     onTap: () {
                       Navigator.push(
@@ -179,80 +78,63 @@ class HirerOrWorker extends StatelessWidget {
                     },
                     child: Container(
                       width: double.infinity,
-                      padding: EdgeInsets.all(20.w),
+                      padding: EdgeInsets.symmetric(vertical: 16.h),
                       decoration: BoxDecoration(
                         color: Colors.white,
-                        borderRadius: BorderRadius.circular(16.r),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.08),
-                            blurRadius: 20,
-                            offset: Offset(0, 10),
-                          ),
-                        ],
+                        border: Border.all(color: Color(0xFF0e18ff), width: 2),
+                        borderRadius: BorderRadius.circular(12.r),
                       ),
-                      child: Row(
-                        children: [
-                          // Worker icon
-                          Container(
-                            width: 60.w,
-                            height: 60.w,
-                            decoration: BoxDecoration(
-                              color: Colors.blue.shade50,
-                              shape: BoxShape.circle,
-                            ),
-                            child: Icon(
-                              Icons.work_outline,
-                              size: 30.w,
-                              color: Colors.blue.shade700,
-                            ),
+                      child: Center(
+                        child: Text(
+                          "I want to work",
+                          style: GoogleFonts.poppins(
+                            fontSize: 18.sp,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF0e18ff),
                           ),
-                          
-                          SizedBox(width: 16.w),
-                          
-                          // Worker text
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  "I want to work",
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 18.sp,
-                                    fontWeight: FontWeight.w600,
-                                    color: Colors.blue.shade800,
-                                  ),
-                                ),
-                                
-                                SizedBox(height: 4.h),
-                                
-                                Text(
-                                  "Find jobs that match your skills",
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 14.sp,
-                                    color: Colors.grey.shade600,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          
-                          Icon(
-                            Icons.arrow_forward_ios,
-                            size: 18.w,
-                            color: Colors.grey.shade500,
-                          ),
-                        ],
+                        ),
                       ),
                     ),
                   ),
                   
-                  SizedBox(height: 40.h),
+                  SizedBox(height: 16.h),
+                  
+                  // "I want to Hire" button
+                  GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context, 
+                        MaterialPageRoute(
+                          builder: (context) => LoginOrSignup(userType: 'hirer'),
+                        ),
+                      );
+                    },
+                    child: Container(
+                      width: double.infinity,
+                      padding: EdgeInsets.symmetric(vertical: 16.h),
+                      decoration: BoxDecoration(
+                        color: Color(0xFF0e18ff),
+                        borderRadius: BorderRadius.circular(12.r),
+                      ),
+                      child: Center(
+                        child: Text(
+                          "I want to Hire",
+                          style: GoogleFonts.poppins(
+                            fontSize: 18.sp,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  
+                  SizedBox(height: 16.h),
                 ],
               ),
             ),
           ),
-        ),
+        ],
       ),
     );
   }

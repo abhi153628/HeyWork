@@ -529,7 +529,7 @@ class _HirerHomePageState extends State<HirerHomePage> {
             ),
             onPressed: () {
               Navigator.of(context).push(MaterialPageRoute(
-                builder: (context) => const SettingsScreen(),
+                builder: (context) =>  SettingsScreen(),
               ));
             },
           ),

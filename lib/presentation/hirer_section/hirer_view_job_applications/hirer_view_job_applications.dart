@@ -1,6 +1,4 @@
-// Create a new file: lib/presentation/hirer_section/applications/application_list_screen.dart
 import 'package:flutter/material.dart';
-
 import 'package:google_fonts/google_fonts.dart';
 import 'package:hey_work/core/theme/app_colors.dart';
 import '../../worker_section/job_detail_screen/job_application_modal.dart';
@@ -20,8 +18,21 @@ class ApplicationListScreen extends StatefulWidget {
   _ApplicationListScreenState createState() => _ApplicationListScreenState();
 }
 
-class _ApplicationListScreenState extends State<ApplicationListScreen> {
+class _ApplicationListScreenState extends State<ApplicationListScreen> with SingleTickerProviderStateMixin {
   final JobApplicationService _applicationService = JobApplicationService();
+  late TabController _tabController;
+  
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 4, vsync: this);
+  }
+  
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -38,68 +49,110 @@ class _ApplicationListScreenState extends State<ApplicationListScreen> {
         backgroundColor: Colors.white,
         elevation: 0,
         iconTheme: IconThemeData(color: Colors.black),
+        bottom: TabBar(
+          controller: _tabController,
+          labelColor: Color(0xFF0000CC),
+          unselectedLabelColor: Colors.grey,
+          indicatorColor: Color(0xFF0000CC),
+          tabs: const [
+            Tab(text: 'All'),
+            Tab(text: 'Active'),
+            Tab(text: 'Closed'),
+            Tab(text: 'Hired'),
+          ],
+        ),
       ),
-      body: StreamBuilder<List<JobApplicationModel>>(
-        stream: _applicationService.getJobApplications(widget.jobId),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          if (snapshot.hasError) {
-            return Center(
-              child: Text(
-                'Error: ${snapshot.error}',
-                style: TextStyle(color: Colors.red),
-              ),
-            );
-          }
-
-          final applications = snapshot.data ?? [];
-
-          if (applications.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.person_search,
-                    size: 80,
-                    color: Colors.grey.shade400,
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'No applications yet',
-                    style: GoogleFonts.roboto(
-                      fontSize: 18,
-                      color: Colors.grey.shade600,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Check back later for applicants',
-                    style: GoogleFonts.roboto(
-                      fontSize: 14,
-                      color: Colors.grey.shade500,
-                    ),
-                  ),
-                ],
-              ),
-            );
-          }
-
-          return ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: applications.length,
-            itemBuilder: (context, index) {
-              final application = applications[index];
-              return _buildApplicationCard(application);
-            },
-          );
-        },
+      body: TabBarView(
+        controller: _tabController,
+        children: [
+          _buildApplicationList(null),           // All applications
+          _buildApplicationList('pending'),      // Active applications
+          _buildApplicationList('rejected'),     // Closed applications
+          _buildApplicationList('accepted'),     // Hired applications
+        ],
       ),
     );
+  }
+
+  Widget _buildApplicationList(String? status) {
+    return StreamBuilder<List<JobApplicationModel>>(
+      stream: _getFilteredApplications(status),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        if (snapshot.hasError) {
+          return Center(
+            child: Text(
+              'Error: ${snapshot.error}',
+              style: TextStyle(color: Colors.red),
+            ),
+          );
+        }
+
+        final applications = snapshot.data ?? [];
+
+        if (applications.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.person_search,
+                  size: 80,
+                  color: Colors.grey.shade400,
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  status == null
+                      ? 'No applications yet'
+                      : status == 'pending'
+                          ? 'No pending applications'
+                          : status == 'rejected'
+                              ? 'No rejected applications'
+                              : 'No hired workers yet',
+                  style: GoogleFonts.roboto(
+                    fontSize: 18,
+                    color: Colors.grey.shade600,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  status == null || status == 'pending'
+                      ? 'Check back later for applicants'
+                      : status == 'rejected'
+                          ? 'Rejected applications will appear here'
+                          : 'Hired workers will appear here',
+                  style: GoogleFonts.roboto(
+                    fontSize: 14,
+                    color: Colors.grey.shade500,
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+
+        return ListView.builder(
+          padding: const EdgeInsets.all(16),
+          itemCount: applications.length,
+          itemBuilder: (context, index) {
+            final application = applications[index];
+            return _buildApplicationCard(application);
+          },
+        );
+      },
+    );
+  }
+
+  Stream<List<JobApplicationModel>> _getFilteredApplications(String? status) {
+    if (status == null) {
+      return _applicationService.getJobApplications(widget.jobId);
+    } else {
+      return _applicationService.getJobApplicationsByStatus(widget.jobId, status);
+    }
   }
 
   Widget _buildApplicationCard(JobApplicationModel application) {
@@ -246,7 +299,7 @@ class _ApplicationListScreenState extends State<ApplicationListScreen> {
               ],
             ),
             const SizedBox(height: 16),
-            // Action buttons (only if pending)
+            // Action buttons
             if (application.isPending)
               Row(
                 children: [
@@ -285,11 +338,45 @@ class _ApplicationListScreenState extends State<ApplicationListScreen> {
                         ),
                       ),
                       child: Text(
-                        'Accept',
+                        'Hire',
                         style: GoogleFonts.roboto(
                           fontWeight: FontWeight.w500,
                           color: Colors.white,
                         ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            // Delete button for applications (for any status)
+            if (!application.isPending)
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => _deleteApplication(application.id),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.red,
+                        side: const BorderSide(color: Colors.red),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.delete,
+                            size: 18,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Delete',
+                            style: GoogleFonts.roboto(
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
@@ -324,6 +411,75 @@ class _ApplicationListScreenState extends State<ApplicationListScreen> {
           ),
         );
       }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  Future<void> _deleteApplication(String applicationId) async {
+    try {
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text(
+            'Delete Application',
+            style: GoogleFonts.roboto(
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          content: Text(
+            'Are you sure you want to delete this application? This action cannot be undone.',
+            style: GoogleFonts.roboto(),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(
+                'Cancel',
+                style: GoogleFonts.roboto(
+                  color: Colors.grey.shade700,
+                ),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                Navigator.pop(context);
+                final result = await _applicationService.deleteApplication(applicationId);
+                
+                if (result['success']) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Application deleted successfully'),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Error: ${result['message']}'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+              ),
+              child: Text(
+                'Delete',
+                style: GoogleFonts.roboto(
+                  color: Colors.white,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(

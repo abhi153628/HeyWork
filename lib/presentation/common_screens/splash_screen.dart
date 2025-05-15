@@ -5,7 +5,6 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:hey_work/presentation/common_screens/hire_or_work.dart';
 
-import 'package:hey_work/presentation/common_screens/hirer_or_worker.dart';
 import 'package:hey_work/presentation/hirer_section/common/bottom_nav_bar.dart';
 import 'package:hey_work/presentation/services/authentication_services.dart';
 import 'package:hey_work/presentation/worker_section/bottom_navigation/bottom_nav_bar.dart';
@@ -102,7 +101,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Color(0xFF0000CC),
       body: Center(
         child: AnimatedBuilder(
           animation: _animationController,
@@ -115,7 +114,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Image.asset(
-                      'assets/logo.png', // Make sure to add your logo
+                      'asset/image.png', // Make sure to add your logo
                       width: 150.w,
                       height: 150.w,
                     ),
@@ -125,7 +124,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                       style: TextStyle(
                         fontSize: 28.sp,
                         fontWeight: FontWeight.bold,
-                        color: Theme.of(context).primaryColor,
+                        color: Colors.white,
                       ),
                     ),
                     SizedBox(height: 40.h),

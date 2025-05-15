@@ -3,6 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:hey_work/presentation/common_screens/privacy.dart';
+import 'package:hey_work/presentation/common_screens/terms.dart';
+import 'package:hey_work/presentation/worker_section/worker_login_page/worker_login_page.dart';
 import '../../hirer_section/common/bottom_nav_bar.dart';
 import '../../hirer_section/home_page/hirer_home_page.dart';
 
@@ -229,7 +232,7 @@ class _PhoneInputFieldState extends State<PhoneInputField> {
                   "Resend OTP",
                   style: GoogleFonts.roboto(
                     fontSize: widget.responsive.getFontSize(14),
-                    color: Colors.blue.shade700,
+                    color: const Color(0xFF0033FF),
                     fontWeight: FontWeight.w500,
                   ),
                 ),
@@ -292,6 +295,11 @@ class _WorkerSignupPageState extends State<WorkerSignupPage> {
     super.initState();
     // Add +91 as default country code for India
     _phoneController.text = '';
+    SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
+  // statusBarColor: Colors.black,
+  statusBarIconBrightness: Brightness.dark,
+  statusBarBrightness: Brightness.dark,
+));
   }
 
   @override
@@ -311,7 +319,7 @@ class _WorkerSignupPageState extends State<WorkerSignupPage> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor: isError ? Colors.red.shade800 : Colors.blue.shade700,
+        backgroundColor: isError ? Colors.red.shade800 : const Color(0xFF0033FF),
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(10),
@@ -339,7 +347,7 @@ class _WorkerSignupPageState extends State<WorkerSignupPage> {
         child: _isLoading
             ? const Center(
                 child: CircularProgressIndicator(
-                  color: Colors.blue,
+                  color: const Color(0xFF0033FF),
                   strokeWidth: 3,
                 ),
               )
@@ -1240,7 +1248,7 @@ class SignupForm extends StatelessWidget {
                   style: GoogleFonts.roboto(
                     fontSize: responsive.getFontSize(28),
                     fontWeight: FontWeight.w700,
-                    color: Colors.blue.shade700,
+                    color: const Color(0xFF0033FF),
                   ),
                 ),
               ),
@@ -1300,63 +1308,65 @@ class SignupForm extends StatelessWidget {
               SizedBox(height: responsive.getHeight(24)),
 
               // Terms and Privacy
-              Row(
-                children: [
-                  SizedBox(
-                    width: responsive.getWidth(24),
-                    height: responsive.getWidth(24),
-                    child: Checkbox(
-                      value: acceptedTerms,
-                      onChanged: (value) => onTermsChanged(value ?? false),
-                      activeColor: Colors.blue.shade700,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                    ),
-                  ),
-                  SizedBox(width: responsive.getWidth(8)),
-                  Text(
-                    "I agree with ",
-                    style: GoogleFonts.roboto(
-                      fontSize: responsive.getFontSize(14),
-                      color: Colors.grey.shade800,
-                    ),
-                  ),
-                  GestureDetector(
-                    onTap: () {
-                      // Navigate to Terms page
-                    },
-                    child: Text(
-                      "Terms",
-                      style: GoogleFonts.roboto(
-                        fontSize: responsive.getFontSize(14),
-                        color: Colors.blue.shade700,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ),
-                  Text(
-                    " and ",
-                    style: GoogleFonts.roboto(
-                      fontSize: responsive.getFontSize(14),
-                      color: Colors.grey.shade800,
-                    ),
-                  ),
-                  GestureDetector(
-                    onTap: () {
-                      // Navigate to Privacy page
-                    },
-                    child: Text(
-                      "Privacy",
-                      style: GoogleFonts.roboto(
-                        fontSize: responsive.getFontSize(14),
-                        color: Colors.blue.shade700,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+            Row(
+  children: [
+    SizedBox(
+      width: responsive.getWidth(24),
+      height: responsive.getWidth(24),
+      child: Checkbox(
+        value: acceptedTerms,
+        onChanged: (value) => onTermsChanged(value ?? false),
+        activeColor: const Color(0xFF0033FF),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(4),
+        ),
+      ),
+    ),
+    SizedBox(width: responsive.getWidth(8)),
+    Text(
+      "I agree with ",
+      style: GoogleFonts.roboto(
+        fontSize: responsive.getFontSize(14),
+        color: Colors.grey.shade800,
+      ),
+    ),
+    GestureDetector(
+      onTap: () {
+        // Navigate to Terms page
+        LegalNavigator.navigateToTerms(context);
+      },
+      child: Text(
+        "Terms",
+        style: GoogleFonts.roboto(
+          fontSize: responsive.getFontSize(14),
+          color: const Color(0xFF0033FF),
+          fontWeight: FontWeight.w500,
+        ),
+      ),
+    ),
+    Text(
+      " and ",
+      style: GoogleFonts.roboto(
+        fontSize: responsive.getFontSize(14),
+        color: Colors.grey.shade800,
+      ),
+    ),
+    GestureDetector(
+      onTap: () {
+        // Navigate to Privacy Policy page
+        LegalNavigator.navigateToPrivacyPolicy(context);
+      },
+      child: Text(
+        "Privacy",
+        style: GoogleFonts.roboto(
+          fontSize: responsive.getFontSize(14),
+          color: const Color(0xFF0033FF),
+          fontWeight: FontWeight.w500,
+        ),
+      ),
+    ),
+  ],
+),
               SizedBox(height: responsive.getHeight(32)),
 
               // Submit Button
@@ -1366,7 +1376,7 @@ class SignupForm extends StatelessWidget {
                 child: ElevatedButton(
                   onPressed: onSubmit,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue.shade700,
+                    backgroundColor: const Color(0xFF0033FF),
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10),
@@ -1398,13 +1408,13 @@ class SignupForm extends StatelessWidget {
                     ),
                     GestureDetector(
                       onTap: () {
-                        // Navigate to login page
+                       Navigator.of(context).push(MaterialPageRoute(builder: (context)=> WorkerLoginScreen()));
                       },
                       child: Text(
                         "Log in",
                         style: GoogleFonts.roboto(
                           fontSize: responsive.getFontSize(14),
-                          color: Colors.blue.shade700,
+                          color: const Color(0xFF0033FF),
                           fontWeight: FontWeight.w500,
                         ),
                       ),
@@ -1416,6 +1426,24 @@ class SignupForm extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+  
+}
+class LegalNavigator {
+  /// Navigate to the Terms and Conditions page
+  static void navigateToTerms(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const TermsPage()),
+    );
+  }
+
+  /// Navigate to the Privacy Policy page
+  static void navigateToPrivacyPolicy(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const PrivacyPolicyPage()),
     );
   }
 }
@@ -1502,12 +1530,12 @@ class ProfileImageSelector extends StatelessWidget {
                   leading: Container(
                     padding: EdgeInsets.all(responsive.getWidth(8)),
                     decoration: BoxDecoration(
-                      color: Colors.blue.shade50,
+                      color: const Color(0xFF0033FF).withOpacity(0.1),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Icon(
                       Icons.photo_library,
-                      color: Colors.blue.shade700,
+                      color: const Color(0xFF0033FF),
                     ),
                   ),
                   title: Text(
@@ -1531,12 +1559,12 @@ class ProfileImageSelector extends StatelessWidget {
                   leading: Container(
                     padding: EdgeInsets.all(responsive.getWidth(8)),
                     decoration: BoxDecoration(
-                      color: Colors.blue.shade50,
+                      color: const Color(0xFF0033FF).withOpacity(0.1),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Icon(
                       Icons.camera_alt,
-                      color: Colors.blue.shade700,
+                      color: const Color(0xFF0033FF),
                     ),
                   ),
                   title: Text(
@@ -1621,7 +1649,7 @@ class CustomTextField extends StatelessWidget {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
-          borderSide: BorderSide(color: Colors.blue.shade400, width: 1.5),
+          borderSide: BorderSide(color: const Color(0xFF0033FF), width: 1.5),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
@@ -1755,7 +1783,7 @@ class _LocationSelectorState extends State<LocationSelector> {
                       width: widget.responsive.getWidth(16),
                       child: CircularProgressIndicator(
                         strokeWidth: 2,
-                        color: Colors.blue.shade700,
+                        color: const Color(0xFF0033FF),
                       ),
                     ),
                   )
@@ -1779,7 +1807,7 @@ class _LocationSelectorState extends State<LocationSelector> {
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
-              borderSide: BorderSide(color: Colors.blue.shade400, width: 1.5),
+              borderSide: BorderSide(color: const Color(0xFF0033FF), width: 1.5),
             ),
             errorBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
@@ -1846,7 +1874,7 @@ class _LocationSelectorState extends State<LocationSelector> {
                         Icon(
                           Icons.location_on,
                           size: widget.responsive.getWidth(20),
-                          color: Colors.blue.shade700,
+                          color: const Color(0xFF0033FF),
                         ),
                         SizedBox(width: widget.responsive.getWidth(12)),
                         Expanded(

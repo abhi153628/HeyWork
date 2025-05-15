@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:hey_work/core/services/database/jobs_service.dart';
 import 'package:hey_work/core/theme/app_colors.dart';
+import 'package:hey_work/presentation/hirer_section/settings_screen/settings_page.dart';
 import 'more_jobs_page.dart';
 import 'search_bar_widget.dart';
 import 'widgets/catogory_list.dart';
@@ -53,7 +54,7 @@ class _WorkerHomePageState extends State<WorkerHomePage> {
     categories[0] = JobCategory(
       id: 'location',
       name: "Nearby Jobs",
-      iconPath: 'assets/icons/location.png',
+      iconPath: 'asset/Rectangle 24928.png',
       isSelected: categories[0].isSelected,
     );
     jobProvider.setCategories(categories);
@@ -114,80 +115,166 @@ class _WorkerHomePageState extends State<WorkerHomePage> {
 
   @override
   Widget build(BuildContext context) {
+      SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle(
+   
+      statusBarIconBrightness: Brightness.light,
+      statusBarBrightness: Brightness.dark,
+    ));
     return Scaffold(
       backgroundColor: Colors.white,
       body: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header section
-            Container(
-              color: Color(0xFF0000CC),
-              padding:
-                  const EdgeInsets.only(top: 35, left: 20, right: 16, bottom: 5),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Top row with title and menu
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'HeyWork',
-                        style: GoogleFonts.roboto(
-                          color: Colors.white,
-                          fontSize: 25,
-                          fontWeight: FontWeight.bold,
+              Padding(
+              padding: const EdgeInsets.only(top: 29,left: 20),
+                child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Heywork',
+                          style: GoogleFonts.roboto(
+                            color: Color(0xFF0000CC),
+                            fontSize: 28,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.menu, color: Colors.white),
-                        onPressed: () {},
-                      ),
-                    ],
-                  ),
+                        IconButton(
+                          icon: const Icon(Icons.menu, color: Color(0xFF0000CC)),
+                          onPressed: () {Navigator.of(context).push(MaterialPageRoute(
+                builder: (context) =>  SettingsScreen(),
+              ));},
+                        ),
+                      ],
+                    ),
+              ),
 
                   // Location row
                   Padding(
-                    padding: const EdgeInsets.only(top: 1, bottom: 10),
+                    padding: const EdgeInsets.only(bottom: 16,left: 20),
                     child: Row(
                       children: [
                         Icon(
                           Icons.location_on,
-                          color: Colors.white,
-                          size: 18,
+                          color: Colors.black54,
+                          size: 20,
                         ),
                         SizedBox(width: 4),
                         Text(
                           _workerLocation,
                           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                color: Colors.white,
-                                fontSize: 12,
+                                color: Colors.black87,
+                                fontSize: 14,
                               ),
                         ),
                       ],
                     ),
                   ),
+                
+              
+            
+                    Container(
+              height: 180,
+              margin: EdgeInsets.symmetric(horizontal: 16),
+              decoration: BoxDecoration(
+                color: Color(0xFF0000CC),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Stack(
+                children: [
+                  Positioned(
+                    left: 20,
+                    top: 30,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Find Part-Time',
+                          style: GoogleFonts.roboto(
+                            color: Colors.white,
+                            fontSize: 28,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        Text(
+                          'Jobs Near Me',
+                          style: GoogleFonts.roboto(
+                            color: Colors.white,
+                            fontSize: 28,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Positioned(
+                    right: 2,
+                    bottom: 0,
+                    child: Image.asset(
+                      'asset/Rectangle 24928.png', // Make sure this image exists
+                      height: 200,
+                    ),
+                  ),
                 ],
               ),
             ),
-
-            // Search bar section with blue background
-            Stack(children: [
-              Container(
-                height: 150,
-                decoration: BoxDecoration(color: Color(0xFF0000CC)),
-              ),
+            SizedBox(height: 20,),
               Padding(
-                padding: const EdgeInsets.only(top: 120),
-                child: Center(
-                  child: GestureDetector(
-                    onTap: _navigateToSearchPage, // Using the new navigation method
-                    child: SearchBarWidget(),
-                  )
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: GestureDetector(
+                onTap: _navigateToSearchPage,
+                child: Container(
+                  height: 50,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(50),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.1),
+                        blurRadius: 10,
+                        spreadRadius: 0,
+                        offset: Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      SizedBox(width: 16),
+                      Icon(Icons.search, color: Colors.grey),
+                      SizedBox(width: 8),
+                      Text(
+                        'Search here...',
+                        style: TextStyle(
+                          color: Colors.grey,
+                          fontSize: 16,
+                        ),
+                      ),
+                      Spacer(),
+                      Container(
+                        margin: EdgeInsets.all(5),
+                        padding: EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade200,
+                          borderRadius: BorderRadius.circular(40),
+                        ),
+                        child: Icon(
+                          Icons.tune,
+                          color: Colors.grey,
+                          size: 20,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            ]),
+            ),
+
+            SizedBox(height: 20),
+            // Header section
+            
+
+            // Search bar section with blue background
+        
 
             SizedBox(
               height: 10,

@@ -1,12 +1,10 @@
-// Create a new file: lib/presentation/worker_section/applications/worker_applications_screen.dart
+// lib/presentation/worker_section/applications/worker_applications_screen.dart
 import 'package:flutter/material.dart';
-
 import 'package:google_fonts/google_fonts.dart';
 import 'package:hey_work/core/theme/app_colors.dart';
-import '../job_detail_screen/job_application_modal.dart';
-import '../job_detail_screen/job_application_service.dart';
 
-import '../job_detail_screen/job_application_service.dart';
+import 'package:hey_work/presentation/worker_section/job_detail_screen/job_application_modal.dart';
+import 'package:hey_work/presentation/worker_section/job_detail_screen/job_application_service.dart'; // Updated import
 
 class WorkerApplicationsScreen extends StatefulWidget {
   const WorkerApplicationsScreen({Key? key}) : super(key: key);
@@ -24,7 +22,8 @@ class _WorkerApplicationsScreenState extends State<WorkerApplicationsScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    // Changed from 3 tabs to 2 tabs (removed Pending)
+    _tabController = TabController(length: 2, vsync: this);
   }
 
   @override
@@ -54,7 +53,6 @@ class _WorkerApplicationsScreenState extends State<WorkerApplicationsScreen>
           indicatorColor: Color(0xFF0000CC),
           tabs: const [
             Tab(text: 'All'),
-            Tab(text: 'Pending'),
             Tab(text: 'Accepted'),
           ],
         ),
@@ -109,8 +107,6 @@ class _WorkerApplicationsScreenState extends State<WorkerApplicationsScreen>
             );
           }
 
-          final pendingApplications =
-              allApplications.where((app) => app.isPending).toList();
           final acceptedApplications =
               allApplications.where((app) => app.isAccepted).toList();
 
@@ -119,11 +115,6 @@ class _WorkerApplicationsScreenState extends State<WorkerApplicationsScreen>
             children: [
               // All applications
               _buildApplicationsList(allApplications),
-
-              // Pending applications
-              pendingApplications.isEmpty
-                  ? _buildEmptyState('No pending applications')
-                  : _buildApplicationsList(pendingApplications),
 
               // Accepted applications
               acceptedApplications.isEmpty

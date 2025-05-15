@@ -30,10 +30,10 @@ class _MoreJobsPageState extends State<MoreJobsPage> {
   @override
   void initState() {
     super.initState();
-    
+
     // Initialize jobs stream based on category
     _initJobsStream();
-    
+
     // Set the selected category in the provider
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final jobProvider = Provider.of<JobProvider>(context, listen: false);
@@ -54,7 +54,7 @@ class _MoreJobsPageState extends State<MoreJobsPage> {
   void _onSearchChanged() {
     setState(() {
       _searchQuery = _searchController.text;
-      
+
       // If there's search text, we'll let the local filter handle it
       // We don't need to refresh the Firestore query for every keystroke
     });
@@ -80,7 +80,7 @@ class _MoreJobsPageState extends State<MoreJobsPage> {
   void _onCategorySelected(String category) {
     final jobProvider = Provider.of<JobProvider>(context, listen: false);
     jobProvider.setSelectedCategory(category);
-    
+
     setState(() {
       // Update the stream based on the new category
       if (category == "Nearby Jobs") {
@@ -119,20 +119,21 @@ class _MoreJobsPageState extends State<MoreJobsPage> {
         children: [
           // Fixed header with AppBar and Search
           Container(
-            color: Color(0xFF0000CC),
+            color: Colors.white,
             child: SafeArea(
               bottom: false,
               child: Column(
                 children: [
                   // AppBar
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 12.0),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 8.0, vertical: 12.0),
                     child: Row(
                       children: [
                         IconButton(
                           icon: const Icon(
                             Icons.arrow_back,
-                            color: Colors.white,
+                            color: Colors.black,
                           ),
                           onPressed: () => Navigator.pop(context),
                         ),
@@ -140,7 +141,7 @@ class _MoreJobsPageState extends State<MoreJobsPage> {
                           child: Text(
                             title,
                             style: GoogleFonts.roboto(
-                              color: Colors.white,
+                              color: Colors.black,
                               fontSize: 20,
                               fontWeight: FontWeight.bold,
                             ),
@@ -149,39 +150,69 @@ class _MoreJobsPageState extends State<MoreJobsPage> {
                       ],
                     ),
                   ),
-                  
+
                   // Search Bar - Now fixed in position
                   Padding(
-                    padding: const EdgeInsets.only(left: 16.0, right: 16.0, bottom: 16.0),
+                    padding: const EdgeInsets.only(
+                        left: 16.0, right: 16.0, bottom: 16.0),
                     child: Container(
-                      height: 50,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(25),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black12,
-                            blurRadius: 5,
-                            offset: Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: TextField(
-                        controller: _searchController,
-                        decoration: InputDecoration(
-                          hintText: 'Search by title, company, industry, or job category...',
-                          prefixIcon: Icon(Icons.search, color: AppColors.darkGrey),
-                          border: InputBorder.none,
-                          contentPadding: EdgeInsets.symmetric(vertical: 15),
+                        height: 50,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(25),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black12,
+                              blurRadius: 5,
+                              offset: Offset(0, 2),
+                            ),
+                          ],
                         ),
-                      ),
-                    ),
+                        child: TextField(
+                          controller: _searchController,
+                          decoration: InputDecoration(
+                            hintText: 'Search jobs...',
+                            hintStyle: TextStyle(
+                              color: Colors.grey[700],
+                              fontSize: 14,
+                            ),
+                            prefixIcon: Icon(
+                              Icons.search,
+                              color: Colors.grey[900],
+                              size: 20,
+                            ),
+                            suffixIcon: _searchController.text.isNotEmpty
+                                ? IconButton(
+                                    icon: Icon(Icons.clear,
+                                        size: 18, color: Colors.grey[600]),
+                                    onPressed: () => _searchController.clear(),
+                                  )
+                                : null,
+                            border: InputBorder.none,
+                            contentPadding: EdgeInsets.symmetric(
+                                vertical: 12, horizontal: 8),
+                            fillColor: Colors.white,
+                            filled: true,
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(25),
+                              borderSide: BorderSide(color: Colors.transparent),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(25),
+                              borderSide: BorderSide(color: Colors.grey[300]!),
+                            ),
+                          ),
+                          style: TextStyle(fontSize: 14),
+                          cursorColor: Color(0xFF0000CC),
+                          cursorWidth: 1,
+                          textAlignVertical: TextAlignVertical.center,
+                        )),
                   ),
                 ],
               ),
             ),
           ),
-          
+
           // Categories (fixed position below search bar)
           Container(
             color: Colors.white,
@@ -195,7 +226,7 @@ class _MoreJobsPageState extends State<MoreJobsPage> {
               },
             ),
           ),
-          
+
           // Scrollable content (job listings)
           Expanded(
             child: StreamBuilder<List<JobModel>>(
@@ -215,25 +246,29 @@ class _MoreJobsPageState extends State<MoreJobsPage> {
 
                 // Filter jobs based on search query
                 final allJobs = snapshot.data!;
-                
+
                 // Enhanced filtering functionality that combines everything into one search
                 final filteredJobs = _searchQuery.isEmpty
                     ? allJobs
                     : allJobs.where((job) {
                         final query = _searchQuery.toLowerCase();
-                        
+
                         // Check all possible fields for matches
                         return job.title.toLowerCase().contains(query) ||
-                               job.company.toLowerCase().contains(query) ||
-                               job.location.toLowerCase().contains(query) ||
-                               job.hirerIndustry.toLowerCase().contains(query) ||
-                               job.jobCategory.toLowerCase().contains(query) ||
-                               job.description.toLowerCase().contains(query) ||
-                               // Additional match for prefix search like "industry:tech" or "category:delivery"
-                               (query.startsWith("industry:") && 
-                                  job.hirerIndustry.toLowerCase().contains(query.substring(9).trim())) ||
-                               (query.startsWith("category:") && 
-                                  job.jobCategory.toLowerCase().contains(query.substring(9).trim()));
+                            job.company.toLowerCase().contains(query) ||
+                            job.location.toLowerCase().contains(query) ||
+                            job.hirerIndustry.toLowerCase().contains(query) ||
+                            job.jobCategory.toLowerCase().contains(query) ||
+                            job.description.toLowerCase().contains(query) ||
+                            // Additional match for prefix search like "industry:tech" or "category:delivery"
+                            (query.startsWith("industry:") &&
+                                job.hirerIndustry
+                                    .toLowerCase()
+                                    .contains(query.substring(9).trim())) ||
+                            (query.startsWith("category:") &&
+                                job.jobCategory
+                                    .toLowerCase()
+                                    .contains(query.substring(9).trim()));
                       }).toList();
 
                 if (filteredJobs.isEmpty) {
@@ -291,6 +326,7 @@ class _MoreJobsPageState extends State<MoreJobsPage> {
     );
   }
 }
+
 // Extension for JobService - simplified
 extension JobServiceExtension on JobService {
   Stream<List<JobModel>> getAllJobs() {
@@ -298,12 +334,10 @@ extension JobServiceExtension on JobService {
     return getJobs();
   }
 
-  Stream<List<JobModel>> getAllJobsByCategory(
-    String category, 
-    {String? workerLocation}
-  ) {
+  Stream<List<JobModel>> getAllJobsByCategory(String category,
+      {String? workerLocation}) {
     return getJobsByCategory(
-      category, 
+      category,
       workerLocation: workerLocation,
     );
   }

@@ -11,6 +11,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:hey_work/presentation/hirer_section/settings_screen/settings_page.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:uuid/uuid.dart';
@@ -187,10 +188,14 @@ class ProfileHeaderSection extends StatelessWidget {
                             fontWeight: FontWeight.bold,
                           ),
                         ),
-                        Icon(
-                          Icons.menu,
-                          color: Colors.white,
-                          size: 28.sp,
+                        GestureDetector(onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                builder: (context) =>  SettingsScreen(),
+              )),
+                          child: Icon(
+                            Icons.menu,
+                            color: Colors.white,
+                            size: 28.sp,
+                          ),
                         ),
                       ],
                     ),

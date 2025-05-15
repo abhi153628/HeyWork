@@ -58,7 +58,7 @@ class JobCardWidget extends StatelessWidget {
             ),
           ],
           border: Border.all(
-            color: AppColors.mediumGrey.withOpacity(0.3),
+            color: AppColors.black.withOpacity(0.3),
             width: 1,
           ),
         ),
@@ -229,6 +229,8 @@ class JobCardWidget extends StatelessWidget {
                           ),
                         ),
                 ),
+                //Todo: Icon Button
+                Icon(Icons.share)
               ],
             ),
           ],
