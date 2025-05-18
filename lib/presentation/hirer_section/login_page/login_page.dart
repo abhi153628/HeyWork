@@ -282,7 +282,7 @@ class _HirerLoginScreenState extends State<HirerLoginScreen> {
                 Positioned(
                   bottom: 0,
                   left: 0,
-                  right: 0,
+                  right: 1,
                   child: Container(
                     height: _otpSent ? screenHeight * 0.5 : screenHeight * 0.4, // Adjust height based on OTP state
                     decoration: const BoxDecoration(
