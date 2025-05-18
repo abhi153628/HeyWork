@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../home_page/hirer_home_page.dart';
 import '../job_managment_screen/job_managment_screen.dart';
 import '../jobs/posted_jobs.dart';
-import '../notification_screen/notification.dart';
+import '../notification_screen/notification.dart'; // Keep import for future use
 import '../profile/hirer_profile.dart';
 
 // ==============================
@@ -11,10 +11,9 @@ import '../profile/hirer_profile.dart';
 class AppRoutes {
   static final Map<String, WidgetBuilder> routes = {
     '/': (context) => const MainScreen(),
-    '/navigator': (context) => const NotificationPage(),
-    '/jobs': (context) => const JobManagementScreen(
-          
-        ),
+    // Notification route commented for future use
+    // '/notification': (context) => const NotificationPage(),
+    '/jobs': (context) => const JobManagementScreen(),
     '/profile': (context) => const HirerProfilePage(),
   };
 }
@@ -35,7 +34,8 @@ class _MainScreenState extends State<MainScreen> {
   // List of all screens accessible from bottom navigation
   final List<Widget> _screens = [
     const HirerHomePage(),
-    const NotificationPage(),
+    // Notification page commented out for future use
+    // const NotificationPage(),
     const JobManagementScreen(),
     const HirerProfilePage(),
   ];
@@ -96,6 +96,7 @@ class BottomNavBar extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
+          // Home item
           BottomNavItem(
             icon: Icons.home,
             title: 'Home',
@@ -103,6 +104,9 @@ class BottomNavBar extends StatelessWidget {
             onTap: () => onTap(0),
             activeColor: secondaryBlue,
           ),
+          
+          // Notification item - commented out for future use
+          /*
           BottomNavItem(
             icon: Icons.notifications_outlined,
             title: 'Notification',
@@ -110,18 +114,23 @@ class BottomNavBar extends StatelessWidget {
             onTap: () => onTap(1),
             activeColor: secondaryBlue,
           ),
+          */
+          
+          // Jobs item - fixed index to match current structure
           BottomNavItem(
             icon: Icons.work_outline,
             title: 'Jobs',
-            isActive: currentIndex == 2,
-            onTap: () => onTap(2),
+            isActive: currentIndex == 1, // Changed from 1 to match actual index
+            onTap: () => onTap(1),       // Changed from 2 to match actual index
             activeColor: secondaryBlue,
           ),
+          
+          // Profile item - fixed index to match current structure
           BottomNavItem(
             icon: Icons.person,
             title: 'Profile',
-            isActive: currentIndex == 3,
-            onTap: () => onTap(3),
+            isActive: currentIndex == 2, // Changed from 2 to match actual index
+            onTap: () => onTap(2),       // Changed from 3 to match actual index
             activeColor: secondaryBlue,
           ),
         ],
@@ -176,3 +185,41 @@ class BottomNavItem extends StatelessWidget {
     );
   }
 }
+
+// ==============================
+// Notification Page - Commented out for future use
+// Below is a basic template you can use when you're ready
+// ==============================
+/*
+class NotificationPage extends StatefulWidget {
+  const NotificationPage({Key? key}) : super(key: key);
+
+  @override
+  State<NotificationPage> createState() => _NotificationPageState();
+}
+
+class _NotificationPageState extends State<NotificationPage> {
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Notifications'),
+      ),
+      body: ListView.builder(
+        itemCount: 10, // Example count - replace with your actual notification list
+        itemBuilder: (context, index) {
+          return ListTile(
+            leading: const Icon(Icons.notifications),
+            title: Text('Notification ${index + 1}'),
+            subtitle: Text('This is a placeholder notification description'),
+            trailing: Text('${DateTime.now().hour}:${DateTime.now().minute}'),
+            onTap: () {
+              // Handle notification tap
+            },
+          );
+        },
+      ),
+    );
+  }
+}
+*/

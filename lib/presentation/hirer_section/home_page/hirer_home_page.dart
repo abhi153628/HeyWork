@@ -3,23 +3,18 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:hey_work/core/theme/app_colors.dart';
 import 'package:hey_work/presentation/hirer_section/job_managment_screen/job_managment_screen.dart';
-
+import 'package:hey_work/core/services/database/jobs_service.dart';
 import '../common/floating_action_button.dart';
 import '../job_catogory.dart';
 import '../settings_screen/settings_page.dart';
 import '../widgets/category_chips.dart';
 import '../widgets/worker_type_bottom_sheet.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
-
 import '../jobs_posted/job_detail_screen.dart';
 import '../jobs/posted_jobs.dart';
-
+import '../hirer_view_job_applications/hirer_view_job_applications.dart';
 
 //! S E A R C H  B A R  W I D G E T
 class SearchBar extends StatelessWidget {
@@ -215,7 +210,7 @@ class _JobCategoriesSearchSheetState extends State<JobCategoriesSearchSheet> {
                 children: [
                   Text(
                     'Search Jobs',
-                    style: GoogleFonts.poppins(
+                    style: GoogleFonts.roboto(
                       fontSize: 20.sp,
                       fontWeight: FontWeight.w600,
                       color: Colors.black,
@@ -232,7 +227,7 @@ class _JobCategoriesSearchSheetState extends State<JobCategoriesSearchSheet> {
             
             // Search input
             Padding(
-              padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 8.h),
+              padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 8.h),
               child: TextField(
                 controller: _searchController,
                 autofocus: true,
@@ -265,7 +260,7 @@ class _JobCategoriesSearchSheetState extends State<JobCategoriesSearchSheet> {
                       ? Center(
                           child: Text(
                             'No jobs found',
-                            style: GoogleFonts.poppins(
+                            style: GoogleFonts.roboto(
                               fontSize: 16.sp,
                               color: Colors.grey,
                             ),
@@ -321,7 +316,7 @@ class _JobCategoriesSearchSheetState extends State<JobCategoriesSearchSheet> {
           padding: EdgeInsets.symmetric(vertical: 8.h),
           child: Text(
             title,
-            style: GoogleFonts.poppins(
+            style: GoogleFonts.roboto(
               fontSize: 16.sp,
               fontWeight: FontWeight.w600,
               color: const Color(0xFF0011C9),
@@ -376,7 +371,7 @@ class _JobCategoriesSearchSheetState extends State<JobCategoriesSearchSheet> {
             Expanded(
               child: Text(
                 job['name'],
-                style: GoogleFonts.poppins(
+                style: GoogleFonts.roboto(
                   fontSize: 16.sp,
                   fontWeight: FontWeight.w500,
                 ),
@@ -405,7 +400,7 @@ class CategoriesHeader extends StatelessWidget {
       children: [
         Text(
           'Popular Categories',
-          style: GoogleFonts.poppins(
+          style: GoogleFonts.roboto(
             fontSize: 18.sp,
             fontWeight: FontWeight.w600,
             color: Colors.black,
@@ -423,7 +418,7 @@ class CategoriesHeader extends StatelessWidget {
           },
           child: Text(
             'See All',
-            style: GoogleFonts.poppins(
+            style: GoogleFonts.roboto(
               fontSize: 14.sp,
               fontWeight: FontWeight.w500,
               color: const Color(0xFF0011C9),
@@ -436,8 +431,6 @@ class CategoriesHeader extends StatelessWidget {
 }
 
 //! M A I N  H O M E  P A G E
-
-
 class HirerHomePage extends StatefulWidget {
   const HirerHomePage({Key? key}) : super(key: key);
 
@@ -504,7 +497,7 @@ class _HirerHomePageState extends State<HirerHomePage> {
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
-    final horizontalPadding = screenWidth * 0.05;
+    final horizontalPadding = screenWidth * 0.03;
     final searchBarPadding = screenWidth * 0.03;
 
     return Scaffold(
@@ -514,9 +507,9 @@ class _HirerHomePageState extends State<HirerHomePage> {
         backgroundColor: Colors.white,
         elevation: 0,
         title: Text(
-          'heywork',
+          'Heywork',
           style: Theme.of(context).textTheme.displayLarge?.copyWith(
-              fontSize: 28,
+              fontSize: 33,
               fontWeight: FontWeight.bold,
               color: const Color(0xFF2020F0)),
         ),
@@ -558,7 +551,7 @@ class _HirerHomePageState extends State<HirerHomePage> {
                             Padding(
                               padding: EdgeInsets.only(bottom: 16.h),
                               child: Text(
-                                'Jobs for $_selectedIndustry',
+                                'Related Jobs',
                                 style: TextStyle(
                                   fontSize: 18.sp,
                                   fontWeight: FontWeight.bold,
@@ -569,11 +562,8 @@ class _HirerHomePageState extends State<HirerHomePage> {
                             //! J O B  C A T E G O R I E S
                             _buildJobCategoriesSection(),
 
-                            SizedBox(height: 24.h),
-
-                            //! L A T E S T  J O B S  S E C T I O N
-                            // Replace CategoryChips with LatestJobsSection
-                            const LatestJobsSection(),
+                            //! My Jobs Section (Replaced LatestJobsSection)
+                            const MyJobsSection(),
 
                             SizedBox(height: 72.h), // Space for FAB
                           ]),
@@ -596,7 +586,6 @@ class _HirerHomePageState extends State<HirerHomePage> {
                 ],
               ),
             ),
-
     );
   }
 
@@ -710,77 +699,18 @@ class _HirerHomePageState extends State<HirerHomePage> {
     );
   }
 }
-//! L A T E S T  J O B S  S E C T I O N
-class LatestJobsSection extends StatefulWidget {
-  const LatestJobsSection({Key? key}) : super(key: key);
+
+//! M Y  J O B S  S E C T I O N - New component that replaces LatestJobsSection
+class MyJobsSection extends StatefulWidget {
+  const MyJobsSection({Key? key}) : super(key: key);
 
   @override
-  State<LatestJobsSection> createState() => _LatestJobsSectionState();
+  State<MyJobsSection> createState() => _MyJobsSectionState();
 }
 
-class _LatestJobsSectionState extends State<LatestJobsSection> {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final FirebaseAuth _auth = FirebaseAuth.instance;
-  
-  bool _isLoading = true;
-  List<Map<String, dynamic>> _latestJobs = [];
-  
-  @override
-  void initState() {
-    super.initState();
-    _loadLatestJobs();
-  }
-  
-  // Load latest jobs posted by the hirer
-  Future<void> _loadLatestJobs() async {
-    setState(() {
-      _isLoading = true;
-    });
-    
-    try {
-      final userId = _auth.currentUser?.uid;
-      if (userId == null) {
-        throw Exception('No user logged in');
-      }
-      
-      // Query latest 3 jobs by the current user
-      final snapshot = await _firestore
-          .collection('jobs')
-          .where('hirerId', isEqualTo: userId)
-          .orderBy('createdAt', descending: true)
-          .limit(3)
-          .get();
-      
-      final List<Map<String, dynamic>> loadedJobs = [];
-      
-      for (var doc in snapshot.docs) {
-        final data = doc.data();
-        data['jobId'] = doc.id; // Add document ID to the job data
-        
-        // Convert Firestore timestamps to DateTime
-        if (data['createdAt'] != null) {
-          data['createdAt'] = (data['createdAt'] as Timestamp).toDate();
-        }
-        
-        if (data['date'] != null) {
-          data['date'] = (data['date'] as Timestamp).toDate();
-        }
-        
-        loadedJobs.add(data);
-      }
-      
-      setState(() {
-        _latestJobs = loadedJobs;
-        _isLoading = false;
-      });
-    } catch (e) {
-      print('Error loading latest jobs: $e');
-      setState(() {
-        _isLoading = false;
-      });
-    }
-  }
-  
+class _MyJobsSectionState extends State<MyJobsSection> {
+  final JobService _jobService = JobService();
+
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -789,12 +719,8 @@ class _LatestJobsSectionState extends State<LatestJobsSection> {
         _buildSectionHeader(),
         SizedBox(height: 12.h),
         
-        // Jobs list or loading indicator
-        _isLoading 
-            ? _buildLoadingIndicator()
-            : _latestJobs.isEmpty
-                ? _buildEmptyState()
-                : _buildJobsList(),
+        // Jobs list using the same UI as JobManagementScreen
+        _buildJobList(),
       ],
     );
   }
@@ -805,8 +731,8 @@ class _LatestJobsSectionState extends State<LatestJobsSection> {
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(
-          'Your Latest Jobs',
-          style: GoogleFonts.poppins(
+          'My Jobs',
+          style: GoogleFonts.roboto(
             fontSize: 18.sp,
             fontWeight: FontWeight.w600,
             color: Colors.black,
@@ -823,7 +749,7 @@ class _LatestJobsSectionState extends State<LatestJobsSection> {
           },
           child: Text(
             'See All',
-            style: GoogleFonts.poppins(
+            style: GoogleFonts.roboto(
               fontSize: 14.sp,
               fontWeight: FontWeight.w500,
               color: const Color(0xFF0011C9),
@@ -834,290 +760,342 @@ class _LatestJobsSectionState extends State<LatestJobsSection> {
     );
   }
   
-  // Build loading indicator
-  Widget _buildLoadingIndicator() {
-    return Container(
-      height: 150.h,
-      alignment: Alignment.center,
-      child: const CircularProgressIndicator(
-        color: Color(0xFF0011C9),
-      ),
-    );
-  }
-  
-  // Build empty state when no jobs are available
-  Widget _buildEmptyState() {
-    return Container(
-      height: 150.h,
-      decoration: BoxDecoration(
-        color: Colors.grey.shade100,
-        borderRadius: BorderRadius.circular(12.r),
-        border: Border.all(color: Colors.grey.shade300),
-      ),
-      alignment: Alignment.center,
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.work_off_outlined,
-            size: 36.sp,
-            color: Colors.grey.shade400,
-          ),
-          SizedBox(height: 8.h),
-          Text(
-            'No jobs posted yet',
-            style: GoogleFonts.poppins(
-              fontSize: 14.sp,
-              color: Colors.grey.shade700,
-            ),
-          ),
-          SizedBox(height: 8.h),
-          TextButton.icon(
-            onPressed: () {
-              Navigator.push(
-                context, 
-                MaterialPageRoute(
-                  builder: (context) => const JobDetailsScreen(
-                    jobCategory: '',
-                    jobType: 'part-time',
-                  ),
-                ),
-              );
-            },
-            icon: const Icon(Icons.add, size: 16),
-            label: Text(
-              'Create Job',
-              style: GoogleFonts.poppins(fontSize: 12.sp),
-            ),
-            style: TextButton.styleFrom(
-              foregroundColor: const Color(0xFF0011C9),
-              backgroundColor: const Color(0xFF0011C9).withOpacity(0.1),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8.r),
+  //! J O B - L I S T - Same as in JobManagementScreen
+  Widget _buildJobList() {
+    return SizedBox(
+      // Set a fixed height to limit the number of jobs shown
+      height: 890.h,
+      child: StreamBuilder<QuerySnapshot>(
+        stream: _getJobsStream(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          if (snapshot.hasError) {
+            return Center(
+              child: Text(
+                'Error: ${snapshot.error}',
+                style: TextStyle(color: Colors.red),
               ),
-              padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-  
-  // Build the list of latest jobs
-  Widget _buildJobsList() {
-    return Column(
-      children: _latestJobs.map((job) => _buildJobCard(job)).toList(),
-    );
-  }
-  
-  // Build a job card
-  Widget _buildJobCard(Map<String, dynamic> job) {
-    final bool isFullTime = job['jobType'] == 'full-time';
-    final String jobCategory = job['jobCategory'] ?? 'Unknown';
-    final DateTime? date = job['date'];
-    final bool hasDescription = job['description'] != null && job['description'].toString().isNotEmpty;
-    
-    return Container(
-      margin: EdgeInsets.only(bottom: 12.h),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12.r),
-        border: Border.all(color: Colors.grey.shade300),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 5,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: InkWell(
-        onTap: () {
-          // Navigate to edit job screen when tapped
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => JobDetailsScreen(
-                jobCategory: job['jobCategory'] ?? '',
-                jobType: job['jobType'] ?? 'part-time',
-                existingJob: job,
-                isEditing: true,
-                jobId: job['jobId'],
-              ),
-            ),
-          ).then((_) {
-            // Reload jobs when returning
-            _loadLatestJobs();
-          });
-        },
-        borderRadius: BorderRadius.circular(12.r),
-        child: Padding(
-          padding: EdgeInsets.all(12.w),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Job Type and Category
-              Row(
+            );
+          }
+
+          final jobDocs = snapshot.data?.docs ?? [];
+
+          if (jobDocs.isEmpty) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  // Job Type Badge
-                  Container(
-                    padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
-                    decoration: BoxDecoration(
-                      color: isFullTime
-                          ? const Color(0xFF0011C9).withOpacity(0.1)
-                          : Colors.orange.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(4.r),
-                    ),
-                    child: Text(
-                      isFullTime ? 'FULL TIME' : 'PART TIME',
-                      style: GoogleFonts.poppins(
-                        fontSize: 10.sp,
-                        fontWeight: FontWeight.w600,
-                        color: isFullTime
-                            ? const Color(0xFF0011C9)
-                            : Colors.orange.shade800,
-                      ),
+                  Icon(
+                    Icons.work_off,
+                    size: 80,
+                    color: Colors.grey.shade400,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'No jobs posted yet',
+                    style: GoogleFonts.roboto(
+                      fontSize: 18,
+                      color: Colors.grey.shade600,
+                      fontWeight: FontWeight.w500,
                     ),
                   ),
-                  SizedBox(width: 8.w),
-                  
-                  // Job Category
-                  Expanded(
-                    child: Text(
-                      jobCategory,
-                      style: GoogleFonts.poppins(
-                        fontSize: 16.sp,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.black87,
-                      ),
-                      overflow: TextOverflow.ellipsis,
+                  const SizedBox(height: 8),
+                  Text(
+                    'Create a job to see it here',
+                    style: GoogleFonts.roboto(
+                      fontSize: 14,
+                      color: Colors.grey.shade500,
                     ),
                   ),
                 ],
               ),
-              
-              // Budget/Salary
-              if (isFullTime && job.containsKey('salaryRange'))
-                Padding(
-                  padding: EdgeInsets.only(top: 8.h),
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.monetization_on_outlined,
-                        size: 16.sp,
-                        color: Colors.green.shade700,
-                      ),
-                      SizedBox(width: 4.w),
-                      Text(
-                        '₹${job['salaryRange']['min']} - ₹${job['salaryRange']['max']}/month',
-                        style: GoogleFonts.poppins(
-                          fontSize: 14.sp,
-                          fontWeight: FontWeight.w500,
-                          color: Colors.green.shade700,
-                        ),
-                      ),
-                    ],
-                  ),
-                )
-              else if (job.containsKey('budget'))
-                Padding(
-                  padding: EdgeInsets.only(top: 8.h),
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.monetization_on_outlined,
-                        size: 16.sp,
-                        color: Colors.green.shade700,
-                      ),
-                      SizedBox(width: 4.w),
-                      Text(
-                        '₹${job['budget']}',
-                        style: GoogleFonts.poppins(
-                          fontSize: 14.sp,
-                          fontWeight: FontWeight.w500,
-                          color: Colors.green.shade700,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              
-              // Date if available
-              if (date != null)
-                Padding(
-                  padding: EdgeInsets.only(top: 4.h),
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.calendar_today,
-                        size: 14.sp,
-                        color: Colors.grey.shade600,
-                      ),
-                      SizedBox(width: 4.w),
-                      Text(
-                        DateFormat('MMM dd, yyyy').format(date),
-                        style: GoogleFonts.poppins(
-                          fontSize: 12.sp,
-                          color: Colors.grey.shade600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              
-              // Description if available (truncated)
-              if (hasDescription)
-                Padding(
-                  padding: EdgeInsets.only(top: 8.h),
-                  child: Text(
-                    job['description'],
-                    style: GoogleFonts.poppins(
-                      fontSize: 12.sp,
-                      color: Colors.black87,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-                
-              // Status if available
-              if (job['status'] != null)
-                Padding(
-                  padding: EdgeInsets.only(top: 8.h),
-                  child: Container(
-                    padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 2.h),
-                    decoration: BoxDecoration(
-                      color: _getStatusColor(job['status'].toString()).withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(4.r),
-                    ),
-                    child: Text(
-                      job['status'].toString().toUpperCase(),
-                      style: GoogleFonts.poppins(
-                        fontSize: 10.sp,
-                        fontWeight: FontWeight.w600,
-                        color: _getStatusColor(job['status'].toString()),
-                      ),
-                    ),
-                  ),
-                ),
-            ],
-          ),
-        ),
+            );
+          }
+
+          // Convert docs to JobModel
+          final jobs = jobDocs.map((doc) => JobModel.fromFirestore(doc)).toList();
+
+          // Limit to latest 5 jobs (or fewer if less are available)
+          final limitedJobs = jobs.length > 5 ? jobs.sublist(0, 5) : jobs;
+
+          return ListView.builder(
+            padding: EdgeInsets.zero, // Remove padding to match design
+            physics: NeverScrollableScrollPhysics(), // Disable scrolling
+            shrinkWrap: true,
+            itemCount: limitedJobs.length,
+            itemBuilder: (context, index) {
+              final job = limitedJobs[index];
+              return _buildJobCard(job);
+            },
+          );
+        },
       ),
     );
   }
+
+  //! D A T A - F E T C H - Same as in JobManagementScreen
+  Stream<QuerySnapshot> _getJobsStream() {
+    var query = FirebaseFirestore.instance
+      .collection('jobs')
+      .where('hirerId', isEqualTo: FirebaseAuth.instance.currentUser?.uid)
+      .orderBy('createdAt', descending: true)
+      .limit(5); // Limit to 5 most recent jobs
+
+    return query.snapshots();
+  }
+
+  //! J O B - C A R D - Same as in JobManagementScreen
+  Widget _buildJobCard(JobModel job) {
+    final isFullTime = job.jobType.toLowerCase() == 'full-time';
+    final jobTypeColor = isFullTime ? AppColors.green : Color(0xFF0000CC);
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            spreadRadius: 0,
+            offset: Offset(0, 2),
+          ),
+        ],
+        border: Border.all(
+          color: AppColors.black.withOpacity(0.3),
+          width: 1,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Posted date and job type
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Padding(
+               padding: const EdgeInsets.only(left: 3),
+                child: Text(
+                  'Posted ${_formatDate(job.createdAt)}',
+                  style: GoogleFonts.roboto(
+                    fontSize: 12,
+                    color: AppColors.darkGrey,
+                  ),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: jobTypeColor,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  job.jobType,
+                  style: GoogleFonts.roboto(
+                    fontSize: 12,
+                    color: Colors.white,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 2),
+
+          // Job title
+          Padding(
+           padding: const EdgeInsets.only(left: 3),
+            child: Text(
+              job.jobCategory,
+              style: GoogleFonts.roboto(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: Colors.black,
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+
+          const SizedBox(height: 8),
+
+          // Scheduled job date
+          Row(
+            children: [
+              Icon(
+                Icons.calendar_today,
+                size: 16,
+                color: AppColors.darkGrey,
+              ),
+              const SizedBox(width: 4),
+              Text(
+                'Scheduled for ${_formatScheduledDate(job.date)}',
+                style: GoogleFonts.roboto(
+                  fontSize: 14,
+                  color: AppColors.darkGrey,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 6),
+
+          // Location
+          Row(
+            children: [
+              Icon(
+                Icons.location_on_outlined,
+                size: 16,
+                color: AppColors.darkGrey,
+              ),
+              const SizedBox(width: 4),
+              Expanded(
+                child: Text(
+                  job.location,
+                  style: GoogleFonts.roboto(
+                    fontSize: 14,
+                    color: AppColors.darkGrey,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 6),
+
+          // Budget information
+          Row(
+            children: [
+              Icon(
+                Icons.currency_rupee,
+                size: 16,
+                color: AppColors.darkGrey,
+              ),
+              const SizedBox(width: 4),
+              Text(
+                isFullTime
+                    ? 'Rs. ${job.budget} per month'
+                    : 'Rs. ${job.budget} per day',
+                style: GoogleFonts.roboto(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: AppColors.darkGrey,
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 12),
+
+          //! A C T I O N - B U T T O N S
+          Padding(
+            padding: const EdgeInsets.only(left: 3),
+            child: Container(
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: Color(0xFF0000CC),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: InkWell(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => ApplicationListScreen(
+                        jobId: job.id,
+                        jobTitle: job.jobCategory,
+                      ),
+                    ),
+                  );
+                },
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.people,
+                        size: 18,
+                        color: Colors.white,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Applications',
+                        style: GoogleFonts.roboto(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  //! D A T E - F O R M A T T I N G - Same as in JobManagementScreen
+  String _formatDate(DateTime date) {
+    final now = DateTime.now();
+    final difference = now.difference(date);
+    
+    if (difference.inMinutes < 60) {
+      return difference.inMinutes == 1 
+          ? '1 minute ago' 
+          : '${difference.inMinutes} minutes ago';
+    } else if (difference.inHours < 24) {
+      return difference.inHours == 1 
+          ? '1 hour ago' 
+          : '${difference.inHours} hours ago';
+    } else if (difference.inDays < 30) {
+      return difference.inDays == 1 
+          ? '1 day ago' 
+          : '${difference.inDays} days ago';
+    } else {
+      return '${date.day}/${date.month}/${date.year}';
+    }
+  }
   
-  // Get color based on job status
-  Color _getStatusColor(String status) {
-    switch (status.toLowerCase()) {
-      case 'active':
-        return Colors.green.shade700;
-      case 'closed':
-        return Colors.red.shade700;
-      case 'pending':
-        return Colors.orange.shade700;
-      default:
-        return Colors.blue.shade700;
+  //! S C H E D U L E D - D A T E - F O R M A T T I N G - Same as in JobManagementScreen
+  String _formatScheduledDate(DateTime date) {
+    // Get day with ordinal suffix (1st, 2nd, 3rd, etc.)
+    String dayWithSuffix = _getDayWithSuffix(date.day);
+    
+    // Get month name
+    List<String> months = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+    String monthName = months[date.month - 1];
+    
+    // Format the date as "1st May 2024"
+    return '$dayWithSuffix $monthName ${date.year}';
+  }
+  
+  //! O R D I N A L - S U F F I X - Same as in JobManagementScreen
+  String _getDayWithSuffix(int day) {
+    if (day >= 11 && day <= 13) {
+      return '${day}th'; // 11th, 12th, 13th
+    }
+    
+    switch (day % 10) {
+      case 1: return '${day}st';
+      case 2: return '${day}nd';
+      case 3: return '${day}rd';
+      default: return '${day}th';
     }
   }
 }

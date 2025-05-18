@@ -1,8 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:hey_work/core/theme/app_colors.dart';
-import '../../worker_section/job_detail_screen/job_application_modal.dart';
+import 'package:hey_work/presentation/hirer_section/worker_detail_screen/worker_detail_screen.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:cached_network_image/cached_network_image.dart'; // Import for cached images
 import '../../worker_section/job_detail_screen/job_application_service.dart';
+import '../../worker_section/job_detail_screen/job_application_modal.dart';
+
 
 class ApplicationListScreen extends StatefulWidget {
   final String jobId;
@@ -20,12 +25,15 @@ class ApplicationListScreen extends StatefulWidget {
 
 class _ApplicationListScreenState extends State<ApplicationListScreen> with SingleTickerProviderStateMixin {
   final JobApplicationService _applicationService = JobApplicationService();
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   late TabController _tabController;
+  // Map to cache worker locations
+  final Map<String, String> _workerLocations = {};
   
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this);
+    _tabController = TabController(length: 2, vsync: this);
   }
   
   @override
@@ -33,7 +41,54 @@ class _ApplicationListScreenState extends State<ApplicationListScreen> with Sing
     _tabController.dispose();
     super.dispose();
   }
+  
+  Future<void> _updateApplicationStatus(
+      String applicationId, String status) async {
+    try {
+      // For 'accepted' status, use the confirmation flow
+      if (status == 'accepted') {
+        final application = await _firestore.collection('jobApplications').doc(applicationId).get();
+        if (application.exists) {
+          final applicationData = application.data() as Map<String, dynamic>;
+          final JobApplicationModel model = JobApplicationModel.fromFirestore(
+            application,
+          );
+          _showHireConfirmation(context, model);
+        }
+        return;
+      }
+      
+      // For other statuses (like rejected)
+      final result = await _applicationService.updateApplicationStatus(
+        applicationId,
+        status,
+      );
 
+      if (result['success']) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result['message']),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result['message']),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+  
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -56,8 +111,6 @@ class _ApplicationListScreenState extends State<ApplicationListScreen> with Sing
           indicatorColor: Color(0xFF0000CC),
           tabs: const [
             Tab(text: 'All'),
-            Tab(text: 'Active'),
-            Tab(text: 'Closed'),
             Tab(text: 'Hired'),
           ],
         ),
@@ -66,8 +119,6 @@ class _ApplicationListScreenState extends State<ApplicationListScreen> with Sing
         controller: _tabController,
         children: [
           _buildApplicationList(null),           // All applications
-          _buildApplicationList('pending'),      // Active applications
-          _buildApplicationList('rejected'),     // Closed applications
           _buildApplicationList('accepted'),     // Hired applications
         ],
       ),
@@ -107,11 +158,7 @@ class _ApplicationListScreenState extends State<ApplicationListScreen> with Sing
                 Text(
                   status == null
                       ? 'No applications yet'
-                      : status == 'pending'
-                          ? 'No pending applications'
-                          : status == 'rejected'
-                              ? 'No rejected applications'
-                              : 'No hired workers yet',
+                      : 'No hired workers yet',
                   style: GoogleFonts.roboto(
                     fontSize: 18,
                     color: Colors.grey.shade600,
@@ -120,11 +167,9 @@ class _ApplicationListScreenState extends State<ApplicationListScreen> with Sing
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  status == null || status == 'pending'
+                  status == null
                       ? 'Check back later for applicants'
-                      : status == 'rejected'
-                          ? 'Rejected applications will appear here'
-                          : 'Hired workers will appear here',
+                      : 'Hired workers will appear here',
                   style: GoogleFonts.roboto(
                     fontSize: 14,
                     color: Colors.grey.shade500,
@@ -140,7 +185,7 @@ class _ApplicationListScreenState extends State<ApplicationListScreen> with Sing
           itemCount: applications.length,
           itemBuilder: (context, index) {
             final application = applications[index];
-            return _buildApplicationCard(application);
+            return _buildWorkerProfileCard(application);
           },
         );
       },
@@ -155,209 +200,185 @@ class _ApplicationListScreenState extends State<ApplicationListScreen> with Sing
     }
   }
 
-  Widget _buildApplicationCard(JobApplicationModel application) {
-    final statusColor = application.isPending
-        ? Colors.orange
-        : application.isAccepted
-            ? Colors.green
-            : Colors.red;
-
-    return Card(
-      margin: const EdgeInsets.only(bottom: 16),
-      elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                // Worker profile image
-                Container(
-                  width: 60,
-                  height: 60,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: Colors.grey.shade200,
-                    image: application.workerProfileImage != null
-                        ? DecorationImage(
-                            image:
-                                NetworkImage(application.workerProfileImage!),
-                            fit: BoxFit.cover,
-                          )
-                        : null,
-                  ),
-                  child: application.workerProfileImage == null
-                      ? const Icon(
-                          Icons.person,
-                          color: Colors.grey,
-                          size: 30,
-                        )
-                      : null,
-                ),
-                const SizedBox(width: 16),
-                // Worker info
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        application.workerName,
-                        style: GoogleFonts.roboto(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black87,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.location_on,
-                            size: 16,
-                            color: Colors.grey.shade600,
-                          ),
-                          const SizedBox(width: 4),
-                          Expanded(
-                            child: Text(
-                              application.workerLocation,
-                              style: GoogleFonts.roboto(
-                                fontSize: 14,
-                                color: Colors.grey.shade600,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.phone,
-                            size: 16,
-                            color: Colors.grey.shade600,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            application.workerPhone,
-                            style: GoogleFonts.roboto(
-                              fontSize: 14,
-                              color: Colors.grey.shade600,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+  Widget _buildWorkerProfileCard(JobApplicationModel application) {
+    // Fetch the worker's current location
+    _fetchCurrentWorkerLocation(application.workerId);
+    
+    return GestureDetector(
+      onTap: () {
+        // Navigate to the worker details page when card is tapped
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => WorkerDetailsPage(
+              application: application,
             ),
-            const SizedBox(height: 16),
-            const Divider(),
-            const SizedBox(height: 8),
-            // Application status
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: statusColor.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                      color: statusColor,
-                      width: 1,
-                    ),
-                  ),
-                  child: Text(
-                    application.status.toUpperCase(),
-                    style: GoogleFonts.roboto(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: statusColor,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    'Applied on ${_formatDate(application.appliedAt)}',
-                    style: GoogleFonts.roboto(
-                      fontSize: 12,
-                      color: Colors.grey.shade600,
-                    ),
-                    textAlign: TextAlign.right,
-                  ),
-                ),
-              ],
+          ),
+        );
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              spreadRadius: 0,
+              offset: Offset(0, 2),
             ),
-            const SizedBox(height: 16),
-            // Action buttons
-            if (application.isPending)
+          ],
+          border: Border.all(
+            color: AppColors.black.withOpacity(0.3),
+            width: 1,
+          ),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
               Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () => _updateApplicationStatus(
-                        application.id,
-                        'rejected',
-                      ),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: Colors.red,
-                        side: const BorderSide(color: Colors.red),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
-                      child: Text(
-                        'Reject',
-                        style: GoogleFonts.roboto(
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
+                  // Worker profile image with CachedNetworkImage
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(10),
+                    child: Container(
+                      width: 90,
+                      height: 90,
+                      child: application.workerProfileImage != null
+                          ? CachedNetworkImage(
+                              imageUrl: application.workerProfileImage!,
+                              fit: BoxFit.cover,
+                              placeholder: (context, url) => Container(
+                                color: Colors.grey[300],
+                                child: Center(
+                                  child: CircularProgressIndicator(
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                      const Color(0xFF414ce4),
+                                    ),
+                                    strokeWidth: 2.0,
+                                  ),
+                                ),
+                              ),
+                              errorWidget: (context, url, error) => Container(
+                                color: Colors.grey[200],
+                                child: Icon(
+                                  Icons.person,
+                                  color: Colors.grey,
+                                  size: 30,
+                                ),
+                              ),
+                            )
+                          : Container(
+                              color: Colors.grey[200],
+                              child: Icon(
+                                Icons.person,
+                                color: Colors.grey,
+                                size: 30,
+                              ),
+                            ),
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 16),
+                  // Worker info
                   Expanded(
-                    child: ElevatedButton(
-                      onPressed: () => _updateApplicationStatus(
-                        application.id,
-                        'accepted',
-                      ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Color(0xFF0000CC),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Text(
+                              application.workerName,
+                              style: GoogleFonts.roboto(
+                                fontSize: 22,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.black87,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            // Verified badge
+                            Container(
+                              padding: EdgeInsets.all(2),
+                              decoration: BoxDecoration(
+                                color: Colors.green,
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(
+                                Icons.check,
+                                size: 16,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ],
                         ),
-                      ),
-                      child: Text(
-                        'Hire',
-                        style: GoogleFonts.roboto(
-                          fontWeight: FontWeight.w500,
-                          color: Colors.white,
+                        const SizedBox(height: 4),
+                        // Using StreamBuilder for real-time location updates
+                        _buildLocationText(application.workerId, application.workerLocation),
+                        const SizedBox(height: 12),
+                        // Works done count
+                        Row(
+                          children: [
+                            Container(
+                              width: 8,
+                              height: 8,
+                              decoration: BoxDecoration(
+                                color: Colors.green,
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            FutureBuilder<int>(
+                              future: _getWorkerCompletedJobsCount(application.workerId),
+                              builder: (context, snapshot) {
+                                final count = snapshot.data ?? 0;
+                                return Text(
+                                  'Works done: $count',
+                                  style: GoogleFonts.roboto(
+                                    fontSize: 15,
+                                    color: Colors.grey.shade600,
+                                  ),
+                                );
+                              },
+                            ),
+                          ],
                         ),
-                      ),
+                      ],
                     ),
                   ),
                 ],
               ),
-            // Delete button for applications (for any status)
-            if (!application.isPending)
+              const SizedBox(height: 20),
+              
+              // Contact buttons
               Row(
                 children: [
+                  // Show Number button
                   Expanded(
-                    child: OutlinedButton(
-                      onPressed: () => _deleteApplication(application.id),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: Colors.red,
-                        side: const BorderSide(color: Colors.red),
+                    child: ElevatedButton(
+                      onPressed: () async {
+                        final Uri phoneUri = Uri(
+                          scheme: 'tel',
+                          path: application.workerPhone,
+                        );
+                        if (await canLaunchUrl(phoneUri)) {
+                          await launchUrl(phoneUri);
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Could not launch phone dialer'),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Color(0xFF00A81E),
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        padding: EdgeInsets.symmetric(vertical: 12),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(8),
                         ),
@@ -365,14 +386,59 @@ class _ApplicationListScreenState extends State<ApplicationListScreen> with Sing
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(
-                            Icons.delete,
-                            size: 18,
-                          ),
-                          const SizedBox(width: 8),
+                          Icon(Icons.phone, size: 20, color: Colors.white),
+                          SizedBox(width: 8),
                           Text(
-                            'Delete',
+                            'Show Number',
                             style: GoogleFonts.roboto(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  SizedBox(width: 12),
+                  // WhatsApp button
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () async {
+                        final phoneNumber = application.workerPhone.replaceAll(RegExp(r'[^0-9]'), '');
+                        final whatsappUrl = Uri.parse('https://wa.me/$phoneNumber');
+                        
+                        if (await canLaunchUrl(whatsappUrl)) {
+                          await launchUrl(whatsappUrl, mode: LaunchMode.externalApplication);
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('WhatsApp is not installed on your device'),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                        }
+                      },
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.black87,
+                        side: BorderSide(color: Color(0xFF00A81E)),
+                        padding: EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Image.asset(
+                            'asset/images-removebg-preview (1).png',
+                            width: 20,
+                            height: 20,
+                          ),
+                          SizedBox(width: 8),
+                          Text(
+                            'WhatsApp',
+                            style: GoogleFonts.roboto(
+                              fontSize: 16,
                               fontWeight: FontWeight.w500,
                             ),
                           ),
@@ -382,24 +448,374 @@ class _ApplicationListScreenState extends State<ApplicationListScreen> with Sing
                   ),
                 ],
               ),
-          ],
+              
+              // Show accept/reject buttons for pending applications
+              if (application.status.toLowerCase() == 'pending')
+                Padding(
+                  padding: const EdgeInsets.only(top: 16),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: () => _showHireConfirmation(context, application),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.green,
+                            foregroundColor: Colors.white,
+                            elevation: 0,
+                            padding: EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          child: Text('Hire'),
+                        ),
+                      ),
+                      SizedBox(width: 12),
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () => _updateApplicationStatus(application.id, 'rejected'),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: Colors.red,
+                            side: BorderSide(color: Colors.red),
+                            padding: EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          child: Text('Reject'),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              
+              // Show hired badge if worker was hired
+              if (application.status.toLowerCase() == 'accepted')
+                Padding(
+                  padding: const EdgeInsets.only(top: 16),
+                  child: Container(
+                    width: double.infinity,
+                    padding: EdgeInsets.symmetric(vertical: 10),
+                    decoration: BoxDecoration(
+                      color: Colors.green.shade50,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.green.shade300),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.check_circle,
+                          color: Colors.green,
+                          size: 18,
+                        ),
+                        SizedBox(width: 8),
+                        Text(
+                          'HIRED',
+                          style: GoogleFonts.roboto(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.green,
+                            letterSpacing: 1.2,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  Future<void> _updateApplicationStatus(
-      String applicationId, String status) async {
+  // Widget to display location with real-time updates
+  Widget _buildLocationText(String workerId, String fallbackLocation) {
+    return StreamBuilder<DocumentSnapshot>(
+      stream: _firestore.collection('workers').doc(workerId).snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.hasData && snapshot.data!.exists) {
+          final data = snapshot.data!.data() as Map<String, dynamic>?;
+          final location = data?['location'];
+          
+          // Handle different location formats
+          String locationText = fallbackLocation;
+          if (location != null) {
+            if (location is Map) {
+              // If location is stored as a Map, extract just the place name
+              locationText = location['placeName']?.toString() ?? location.values.first?.toString() ?? fallbackLocation;
+            } else {
+              // If location is a simple string
+              locationText = location.toString();
+            }
+          }
+          
+          if (locationText.isNotEmpty) {
+            return Row(
+              children: [
+                Icon(
+                  Icons.location_on,
+                  size: 16,
+                  color: Colors.grey.shade600,
+                ),
+                SizedBox(width: 4),
+                Flexible(
+                  child: Text(
+                    locationText,
+                    style: GoogleFonts.roboto(
+                      fontSize: 14,
+                      color: Colors.grey.shade600,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            );
+          }
+        }
+        
+        // Use cached location or fallback
+        return Row(
+          children: [
+            Icon(
+              Icons.location_on,
+              size: 16,
+              color: Colors.grey.shade600,
+            ),
+            SizedBox(width: 4),
+            Flexible(
+              child: Text(
+                _workerLocations[workerId] ?? fallbackLocation,
+                style: GoogleFonts.roboto(
+                  fontSize: 14,
+                  color: Colors.grey.shade600,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // Get count of completed jobs for a worker
+  Future<int> _getWorkerCompletedJobsCount(String workerId) async {
     try {
-      final result = await _applicationService.updateApplicationStatus(
-        applicationId,
-        status,
+      final QuerySnapshot snapshot = await _firestore
+          .collection('jobApplications')
+          .where('workerId', isEqualTo: workerId)
+          .where('status', isEqualTo: 'accepted')
+          .get();
+          
+      return snapshot.docs.length;
+    } catch (e) {
+      print('Error fetching worker completed jobs count: $e');
+      return 0;
+    }
+  }
+
+  // Fetch and cache worker location
+  void _fetchCurrentWorkerLocation(String workerId) async {
+    // Skip if we already have this worker's location
+    if (_workerLocations.containsKey(workerId)) return;
+    
+    try {
+      final workerDoc = await _firestore.collection('workers').doc(workerId).get();
+      if (workerDoc.exists) {
+        final workerData = workerDoc.data() ?? {};
+        
+        // Handle different location formats
+        final currentLocation = workerData['location'];
+        String locationText = '';
+        
+        if (currentLocation != null) {
+          if (currentLocation is Map) {
+            // If location is stored as a Map, extract just the place name
+            locationText = currentLocation['placeName']?.toString() ?? 
+                          currentLocation.values.first?.toString() ?? '';
+          } else {
+            // If location is a simple string
+            locationText = currentLocation.toString();
+          }
+        }
+        
+        if (locationText.isNotEmpty) {
+          setState(() {
+            _workerLocations[workerId] = locationText;
+          });
+        }
+      }
+    } catch (e) {
+      print('Error fetching worker location for $workerId: $e');
+    }
+  }
+
+  void _showHireConfirmation(BuildContext context, JobApplicationModel application) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom,
+        ),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.only(
+            topLeft: Radius.circular(20),
+            topRight: Radius.circular(20),
+          ),
+        ),
+        child: Padding(
+          padding: EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Handle bar
+              Center(
+                child: Container(
+                  width: 50,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+              ),
+              SizedBox(height: 20),
+              
+              // Icon
+              Container(
+                width: 70,
+                height: 70,
+                decoration: BoxDecoration(
+                  color: Color(0xFF414ce4).withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.person_add,
+                  color: Color(0xFF414ce4),
+                  size: 40,
+                ),
+              ),
+              
+              SizedBox(height: 20),
+              
+              // Title
+              Text(
+                'Hire this Worker?',
+                style: GoogleFonts.roboto(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
+                ),
+              ),
+              
+              SizedBox(height: 16),
+              
+              // Message
+              Text(
+                'You are about to hire ${application.workerName} for this job. This action cannot be undone.',
+                textAlign: TextAlign.center,
+                style: GoogleFonts.roboto(
+                  fontSize: 16,
+                  color: Colors.grey.shade700,
+                ),
+              ),
+              
+              SizedBox(height: 24),
+              
+              // Buttons
+              Row(
+                children: [
+                  // Cancel button
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.pop(context),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.grey.shade700,
+                        side: BorderSide(color: Colors.grey.shade400),
+                        padding: EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: Text(
+                        'Cancel',
+                        style: GoogleFonts.roboto(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ),
+                  SizedBox(width: 12),
+                  
+                  // Confirm button
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () {
+                        Navigator.pop(context);
+                        _confirmHiring(application.id);
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Color(0xFF414ce4),
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        padding: EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: Text(
+                        'Confirm Hire',
+                        style: GoogleFonts.roboto(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+  
+  Future<void> _confirmHiring(String applicationId) async {
+    try {
+      // Show loading indicator
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => Center(
+          child: CircularProgressIndicator(
+            valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF414ce4)),
+          ),
+        ),
       );
 
+      // Update application status to accepted
+      final result = await _applicationService.updateApplicationStatus(
+        applicationId,
+        'accepted',
+      );
+
+      // Close loading dialog
+      Navigator.pop(context);
+      
+      // Show success/error message
       if (result['success']) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(result['message']),
+            content: Text('Worker hired successfully!'),
             backgroundColor: Colors.green,
           ),
         );
@@ -412,78 +828,13 @@ class _ApplicationListScreenState extends State<ApplicationListScreen> with Sing
         );
       }
     } catch (e) {
+      // Close loading dialog if open
+      Navigator.pop(context);
+      
+      // Show error message
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Error: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
-  }
-
-  Future<void> _deleteApplication(String applicationId) async {
-    try {
-      showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: Text(
-            'Delete Application',
-            style: GoogleFonts.roboto(
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          content: Text(
-            'Are you sure you want to delete this application? This action cannot be undone.',
-            style: GoogleFonts.roboto(),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text(
-                'Cancel',
-                style: GoogleFonts.roboto(
-                  color: Colors.grey.shade700,
-                ),
-              ),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                Navigator.pop(context);
-                final result = await _applicationService.deleteApplication(applicationId);
-                
-                if (result['success']) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Application deleted successfully'),
-                      backgroundColor: Colors.green,
-                    ),
-                  );
-                } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Error: ${result['message']}'),
-                      backgroundColor: Colors.red,
-                    ),
-                  );
-                }
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red,
-              ),
-              child: Text(
-                'Delete',
-                style: GoogleFonts.roboto(
-                  color: Colors.white,
-                ),
-              ),
-            ),
-          ],
-        ),
-      );
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error: $e'),
+          content: Text('Error hiring worker: $e'),
           backgroundColor: Colors.red,
         ),
       );

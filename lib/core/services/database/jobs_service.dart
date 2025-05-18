@@ -153,45 +153,7 @@ class JobService {
   String? get currentUserId => _auth.currentUser?.uid;
 
   // Fetch all jobs
-  Stream<List<JobModel>> getJobs() {
-    return _firestore
-        .collection('jobs')
-        .where('status', isEqualTo: 'active')
-        .orderBy('createdAt', descending: true)
-        .snapshots()
-        .map((snapshot) {
-      return snapshot.docs.map((doc) {
-        try {
-          final job = JobModel.fromFirestore(doc);
-          // Check if job should be auto-closed
-          _checkAndAutoCloseJob(job);
-          return job;
-        } catch (e) {
-          print('Error parsing job document ${doc.id}: $e');
-          // Return a placeholder job model with error information
-          return JobModel(
-            id: doc.id,
-            title: 'Error parsing job',
-            company: 'Error',
-            location: 'Error',
-            description: 'Error parsing job: $e',
-            budget: 0,
-            jobType: 'unknown',
-            jobCategory: 'unknown',
-            createdAt: DateTime.now(),
-            date: DateTime.now(),
-            status: 'error',
-            hirerId: '',
-            hirerName: '',
-            hirerPhone: '',
-            hirerLocation: '',
-            hirerIndustry: '',
-            hirerBusinessName: '',
-          );
-        }
-      }).toList();
-    });
-  }
+ 
 
   // Auto-close jobs after 20 days since work date
   void _checkAndAutoCloseJob(JobModel job) async {
@@ -280,6 +242,234 @@ class JobService {
     // Default return all jobs
     return getJobs();
   }
+  Stream<List<JobModel>> getJobs() {
+    return _firestore
+        .collection('jobs')
+        .where('status', isEqualTo: 'active')
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .map((snapshot) {
+      return snapshot.docs.map((doc) {
+        try {
+          final job = JobModel.fromFirestore(doc);
+          // Check if job should be auto-deleted
+          _checkAndDeleteExpiredJob(job);
+          return job;
+        } catch (e) {
+          print('Error parsing job document ${doc.id}: $e');
+          // Return a placeholder job model with error information
+          return JobModel(
+            id: doc.id,
+            title: 'Error parsing job',
+            company: 'Error',
+            location: 'Error',
+            description: 'Error parsing job: $e',
+            budget: 0,
+            jobType: 'unknown',
+            jobCategory: 'unknown',
+            createdAt: DateTime.now(),
+            date: DateTime.now(),
+            status: 'error',
+            hirerId: '',
+            hirerName: '',
+            hirerPhone: '',
+            hirerLocation: '',
+            hirerIndustry: '',
+            hirerBusinessName: '',
+          );
+        }
+      }).toList();
+    });
+  }
+
+  // Auto-delete jobs 20 days after the scheduled work date
+  void _checkAndDeleteExpiredJob(JobModel job) async {
+    // Calculate the deletion date (20 days after the scheduled work date)
+    final deletionDate = job.date.add(const Duration(days: 20));
+    
+    // If current date is past the deletion date, delete the job
+    if (DateTime.now().isAfter(deletionDate)) {
+      try {
+        // Delete the job document
+        await _firestore.collection('jobs').doc(job.id).delete();
+        
+        // Also delete from user's jobs collection
+        final user = _auth.currentUser;
+        if (user != null) {
+          await _firestore
+              .collection('hirers')
+              .doc(job.hirerId)
+              .collection('jobs')
+              .doc(job.id)
+              .delete();
+        }
+        
+        print('Job ${job.id} auto-deleted 20 days after scheduled date');
+      } catch (e) {
+        print('Error auto-deleting job ${job.id}: $e');
+      }
+    }
+  }
+
+  // Save job data to Firestore
+  Future<Map<String, dynamic>> saveJobData({
+    required Map<String, dynamic> jobData,
+    required BuildContext context,
+    bool isEditing = false,
+    String? jobId,
+  }) async {
+    try {
+      // Check if user is logged in
+      final user = _auth.currentUser;
+      if (user == null) {
+        throw Exception('No user logged in');
+      }
+
+      // Process TimeOfDay object before saving
+      if (jobData.containsKey('time') && jobData['time'] is TimeOfDay) {
+        final TimeOfDay timeOfDay = jobData['time'];
+        // Remove the TimeOfDay object
+        jobData.remove('time');
+        // Add processed time data
+        jobData['timeInMinutes'] = timeOfDay.hour * 60 + timeOfDay.minute;
+        jobData['timeFormatted'] = timeOfDay.format(context);
+      }
+
+      // Handle salary range if provided as min/max values
+      if (jobData.containsKey('min') && jobData.containsKey('max')) {
+        jobData['salaryRange'] = {
+          'min': jobData['min'],
+          'max': jobData['max'],
+        };
+        // Keep the original fields too for backward compatibility
+      }
+
+      // Get user data from hirers collection
+      final userDoc = await _firestore.collection('hirers').doc(user.uid).get();
+      final userData = userDoc.data() ?? {};
+
+      // Check if industry data exists in jobData and save it to hirer document
+      if (jobData.containsKey('industry')) {
+        // Update hirer document with industry information
+        await _firestore.collection('hirers').doc(user.uid).update({
+          'industry': jobData['industry'],
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
+      }
+
+      // Create job document with both job and user data
+      final completeJobData = {
+        ...jobData,
+        'hirerId': user.uid,
+        'hirerName': userData['name'] ?? 'User',
+        'hirerBusinessName': userData['businessName'] ?? '',
+        'hirerLocation': userData['location'] ?? '',
+        'hirerPhone': userData['phoneNumber'] ?? '',
+        'hirerProfileImage': userData['profileImage'] ?? '',
+        'hirerIndustry': userData['industry'] ?? jobData['industry'] ?? '',
+        'createdAt': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
+        'status': 'active',
+      };
+
+      DocumentReference jobRef;
+
+      if (isEditing && jobId != null) {
+        // Update existing job
+        jobRef = _firestore.collection('jobs').doc(jobId);
+        await jobRef.update(completeJobData);
+      } else {
+        // Create new job
+        jobRef = _firestore.collection('jobs').doc();
+        completeJobData['jobId'] = jobRef.id;
+        await jobRef.set(completeJobData);
+
+        // Also update user's jobs collection with more complete data
+        await _firestore
+            .collection('hirers')
+            .doc(user.uid)
+            .collection('jobs')
+            .doc(jobRef.id)
+            .set({
+          'jobId': jobRef.id,
+          'createdAt': FieldValue.serverTimestamp(),
+          'jobCategory': jobData['jobCategory'],
+          'jobType': jobData['jobType'],
+          'budget': jobData['budget'],
+          'description': jobData['description'],
+          'salaryRange': jobData['salaryRange'],
+          'industry': jobData['industry'] ?? userData['industry'] ?? '',
+          'status': 'active',
+        });
+      }
+
+      return {
+        'success': true,
+        'jobId': jobRef.id,
+        'jobData': completeJobData,
+      };
+    } catch (e) {
+      print('Error saving job data: $e');
+      return {
+        'success': false,
+        'error': e.toString(),
+      };
+    }
+  }
+
+  // Update job status (active/closed)
+  Future<bool> updateJobStatus(String jobId, String status) async {
+    try {
+      await _firestore.collection('jobs').doc(jobId).update({
+        'status': status,
+        'updatedAt': FieldValue.serverTimestamp(),
+        if (status == 'closed') 'closedAt': FieldValue.serverTimestamp(),
+      });
+      
+      // Also update in user's jobs collection
+      final user = _auth.currentUser;
+      if (user != null) {
+        await _firestore
+            .collection('hirers')
+            .doc(user.uid)
+            .collection('jobs')
+            .doc(jobId)
+            .update({
+          'status': status,
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
+      }
+      
+      return true;
+    } catch (e) {
+      print('Error updating job status: $e');
+      return false;
+    }
+  }
+
+  // Delete job
+  Future<bool> deleteJob(String jobId) async {
+    try {
+      // Delete job document
+      await _firestore.collection('jobs').doc(jobId).delete();
+      
+      // Delete from user's jobs collection
+      final user = _auth.currentUser;
+      if (user != null) {
+        await _firestore
+            .collection('hirers')
+            .doc(user.uid)
+            .collection('jobs')
+            .doc(jobId)
+            .delete();
+      }
+      
+      return true;
+    } catch (e) {
+      print('Error deleting job: $e');
+      return false;
+    }
+  }
 
   // Get job by ID
   Future<JobModel?> getJobById(String jobId) async {
@@ -358,173 +548,7 @@ class JobService {
   }
 
   // Save job data to Firestore
-  Future<Map<String, dynamic>> saveJobData({
-    required Map<String, dynamic> jobData,
-    required BuildContext context,
-    bool isEditing = false,
-    String? jobId,
-  }) async {
-    try {
-      // Check if user is logged in
-      final user = _auth.currentUser;
-      if (user == null) {
-        throw Exception('No user logged in');
-      }
-
-      // Process TimeOfDay object before saving
-      if (jobData.containsKey('time') && jobData['time'] is TimeOfDay) {
-        final TimeOfDay timeOfDay = jobData['time'];
-        // Remove the TimeOfDay object
-        jobData.remove('time');
-        // Add processed time data
-        jobData['timeInMinutes'] = timeOfDay.hour * 60 + timeOfDay.minute;
-        jobData['timeFormatted'] = timeOfDay.format(context);
-      }
-
-      // Handle salary range if provided as min/max values
-      if (jobData.containsKey('min') && jobData.containsKey('max')) {
-        jobData['salaryRange'] = {
-          'min': jobData['min'],
-          'max': jobData['max'],
-        };
-        // Keep the original fields too for backward compatibility
-      }
-
-      // Calculate expiry date (20 days after work date)
-      if (jobData.containsKey('date') && jobData['date'] is DateTime) {
-        final workDate = jobData['date'] as DateTime;
-        jobData['expiryDate'] = workDate.add(const Duration(days: 20));
-      }
-
-      // Get user data from hirers collection
-      final userDoc = await _firestore.collection('hirers').doc(user.uid).get();
-      final userData = userDoc.data() ?? {};
-
-      // Check if industry data exists in jobData and save it to hirer document
-      if (jobData.containsKey('industry')) {
-        // Update hirer document with industry information
-        await _firestore.collection('hirers').doc(user.uid).update({
-          'industry': jobData['industry'],
-          'updatedAt': FieldValue.serverTimestamp(),
-        });
-      }
-
-      // Create job document with both job and user data
-      final completeJobData = {
-        ...jobData,
-        'hirerId': user.uid,
-        'hirerName': userData['name'] ?? 'User',
-        'hirerBusinessName': userData['businessName'] ?? '',
-        'hirerLocation': userData['location'] ?? '',
-        'hirerPhone': userData['phoneNumber'] ?? '',
-        'hirerProfileImage': userData['profileImage'] ?? '',
-        'hirerIndustry': userData['industry'] ?? jobData['industry'] ?? '',
-        'createdAt': FieldValue.serverTimestamp(),
-        'updatedAt': FieldValue.serverTimestamp(),
-        'status': 'active',
-      };
-
-      DocumentReference jobRef;
-
-      if (isEditing && jobId != null) {
-        // Update existing job
-        jobRef = _firestore.collection('jobs').doc(jobId);
-        await jobRef.update(completeJobData);
-      } else {
-        // Create new job
-        jobRef = _firestore.collection('jobs').doc();
-        completeJobData['jobId'] = jobRef.id;
-        await jobRef.set(completeJobData);
-
-        // Also update user's jobs collection with more complete data
-        await _firestore
-            .collection('hirers')
-            .doc(user.uid)
-            .collection('jobs')
-            .doc(jobRef.id)
-            .set({
-          'jobId': jobRef.id,
-          'createdAt': FieldValue.serverTimestamp(),
-          'jobCategory': jobData['jobCategory'],
-          'jobType': jobData['jobType'],
-          'budget': jobData['budget'],
-          'description': jobData['description'],
-          'salaryRange': jobData['salaryRange'],
-          'industry': jobData['industry'] ?? userData['industry'] ?? '',
-          'status': 'active',
-        });
-      }
-
-      return {
-        'success': true,
-        'jobId': jobRef.id,
-        'jobData': completeJobData,
-      };
-    } catch (e) {
-      print('Error saving job data: $e');
-      return {
-        'success': false,
-        'error': e.toString(),
-      };
-    }
-  }
-
-  // New methods for job management
-
-  // Update job status (active/closed)
-  Future<bool> updateJobStatus(String jobId, String status) async {
-    try {
-      await _firestore.collection('jobs').doc(jobId).update({
-        'status': status,
-        'updatedAt': FieldValue.serverTimestamp(),
-        if (status == 'closed') 'closedAt': FieldValue.serverTimestamp(),
-      });
-      
-      // Also update in user's jobs collection
-      final user = _auth.currentUser;
-      if (user != null) {
-        await _firestore
-            .collection('hirers')
-            .doc(user.uid)
-            .collection('jobs')
-            .doc(jobId)
-            .update({
-          'status': status,
-          'updatedAt': FieldValue.serverTimestamp(),
-        });
-      }
-      
-      return true;
-    } catch (e) {
-      print('Error updating job status: $e');
-      return false;
-    }
-  }
-
-  // Delete job
-  Future<bool> deleteJob(String jobId) async {
-    try {
-      // Delete job document
-      await _firestore.collection('jobs').doc(jobId).delete();
-      
-      // Delete from user's jobs collection
-      final user = _auth.currentUser;
-      if (user != null) {
-        await _firestore
-            .collection('hirers')
-            .doc(user.uid)
-            .collection('jobs')
-            .doc(jobId)
-            .delete();
-      }
-      
-      return true;
-    } catch (e) {
-      print('Error deleting job: $e');
-      return false;
-    }
-  }
-}
+ }
 
 // JobApplicationService class to handle getting applications by status
 class JobApplicationService {
