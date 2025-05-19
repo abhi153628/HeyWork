@@ -726,115 +726,145 @@ class _MyJobsSectionState extends State<MyJobsSection> {
   }
   
   // Build section header with title and "See All" button
-  Widget _buildSectionHeader() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          'My Jobs',
-          style: GoogleFonts.roboto(
-            fontSize: 18.sp,
-            fontWeight: FontWeight.w600,
-            color: Colors.black,
-          ),
-        ),
-        TextButton(
-          onPressed: () {
-            Navigator.push(
-              context, 
-              MaterialPageRoute(
-                builder: (context) => const JobManagementScreen(),
-              ),
+ Widget _buildSectionHeader() {
+  return Padding(
+    padding: EdgeInsets.only(bottom: 4.h),
+    child: Text(
+      'My Jobs',
+      style: GoogleFonts.roboto(
+        fontSize: 18.sp,
+        fontWeight: FontWeight.w600,
+        color: Colors.black,
+      ),
+    ),
+  );
+}
+  
+  //! J O B - L I S T - Same as in JobManagementScreen
+ Widget _buildJobList() {
+  return Column(
+    children: [
+      SizedBox(
+        // Set a fixed height to limit the number of jobs shown
+        height: 670.h, // Reduced height to accommodate the button
+        child: StreamBuilder<QuerySnapshot>(
+          stream: _getJobsStream(),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
+
+            if (snapshot.hasError) {
+              return Center(
+                child: Text(
+                  'Error: ${snapshot.error}',
+                  style: TextStyle(color: Colors.red),
+                ),
+              );
+            }
+
+            final jobDocs = snapshot.data?.docs ?? [];
+
+            if (jobDocs.isEmpty) {
+              return Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.work_off,
+                      size: 80,
+                      color: Colors.grey.shade400,
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'No jobs posted yet',
+                      style: GoogleFonts.roboto(
+                        fontSize: 18,
+                        color: Colors.grey.shade600,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Create a job to see it here',
+                      style: GoogleFonts.roboto(
+                        fontSize: 14,
+                        color: Colors.grey.shade500,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }
+
+            // Convert docs to JobModel
+            final jobs = jobDocs.map((doc) => JobModel.fromFirestore(doc)).toList();
+
+            // Limit to latest 5 jobs (or fewer if less are available)
+            final limitedJobs = jobs.length > 5 ? jobs.sublist(0, 5) : jobs;
+
+            return ListView.builder(
+              padding: EdgeInsets.zero, // Remove padding to match design
+              physics: NeverScrollableScrollPhysics(), // Disable scrolling
+              shrinkWrap: true,
+              itemCount: limitedJobs.length,
+              itemBuilder: (context, index) {
+                final job = limitedJobs[index];
+                return _buildJobCard(job);
+              },
             );
           },
-          child: Text(
-            'See All',
-            style: GoogleFonts.roboto(
-              fontSize: 14.sp,
-              fontWeight: FontWeight.w500,
-              color: const Color(0xFF0011C9),
+        ),
+      ),
+      
+      // New "View All Jobs" button at the bottom
+      Padding(
+        padding: EdgeInsets.symmetric(vertical:16.h),
+        child: Container(
+          width: double.infinity,
+          height: 50.h,
+          child: ElevatedButton(
+            onPressed: () {
+              Navigator.push(
+                context, 
+                MaterialPageRoute(
+                  builder: (context) => const JobManagementScreen(),
+                ),
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF0011C9),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12.r),
+              ),
+              elevation: 2,
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  'View All Jobs',
+                  style: GoogleFonts.roboto(
+                    fontSize: 16.sp,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                  ),
+                ),
+                SizedBox(width: 8.w),
+                Icon(
+                  Icons.arrow_forward,
+                  color: Colors.white,
+                  size: 20.sp,
+                ),
+              ],
             ),
           ),
         ),
-      ],
-    );
-  }
-  
-  //! J O B - L I S T - Same as in JobManagementScreen
-  Widget _buildJobList() {
-    return SizedBox(
-      // Set a fixed height to limit the number of jobs shown
-      height: 890.h,
-      child: StreamBuilder<QuerySnapshot>(
-        stream: _getJobsStream(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          if (snapshot.hasError) {
-            return Center(
-              child: Text(
-                'Error: ${snapshot.error}',
-                style: TextStyle(color: Colors.red),
-              ),
-            );
-          }
-
-          final jobDocs = snapshot.data?.docs ?? [];
-
-          if (jobDocs.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.work_off,
-                    size: 80,
-                    color: Colors.grey.shade400,
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'No jobs posted yet',
-                    style: GoogleFonts.roboto(
-                      fontSize: 18,
-                      color: Colors.grey.shade600,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Create a job to see it here',
-                    style: GoogleFonts.roboto(
-                      fontSize: 14,
-                      color: Colors.grey.shade500,
-                    ),
-                  ),
-                ],
-              ),
-            );
-          }
-
-          // Convert docs to JobModel
-          final jobs = jobDocs.map((doc) => JobModel.fromFirestore(doc)).toList();
-
-          // Limit to latest 5 jobs (or fewer if less are available)
-          final limitedJobs = jobs.length > 5 ? jobs.sublist(0, 5) : jobs;
-
-          return ListView.builder(
-            padding: EdgeInsets.zero, // Remove padding to match design
-            physics: NeverScrollableScrollPhysics(), // Disable scrolling
-            shrinkWrap: true,
-            itemCount: limitedJobs.length,
-            itemBuilder: (context, index) {
-              final job = limitedJobs[index];
-              return _buildJobCard(job);
-            },
-          );
-        },
       ),
-    );
-  }
+    ],
+  );
+}
+
 
   //! D A T A - F E T C H - Same as in JobManagementScreen
   Stream<QuerySnapshot> _getJobsStream() {
