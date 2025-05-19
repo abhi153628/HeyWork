@@ -2,9 +2,12 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:hey_work/core/theme/app_colors.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 import 'package:hey_work/presentation/worker_section/job_detail_screen/job_application_modal.dart';
-import 'package:hey_work/presentation/worker_section/job_detail_screen/job_application_service.dart'; // Updated import
+import 'package:hey_work/presentation/worker_section/job_detail_screen/job_application_service.dart';
+import 'package:hey_work/presentation/worker_section/job_detail_screen/job_detail_page.dart'; 
+import 'package:hey_work/core/services/database/jobs_service.dart' as jobs_service; // Using alias to avoid naming conflicts
 
 class WorkerApplicationsScreen extends StatefulWidget {
   const WorkerApplicationsScreen({Key? key}) : super(key: key);
@@ -36,6 +39,7 @@ class _WorkerApplicationsScreenState extends State<WorkerApplicationsScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+          automaticallyImplyLeading: false,
         title: Text(
           'My Applications',
           style: GoogleFonts.roboto(
@@ -51,6 +55,7 @@ class _WorkerApplicationsScreenState extends State<WorkerApplicationsScreen>
           labelColor: Color(0xFF0000CC),
           unselectedLabelColor: Colors.grey.shade600,
           indicatorColor: Color(0xFF0000CC),
+          
           tabs: const [
             Tab(text: 'All'),
             Tab(text: 'Accepted'),
@@ -167,101 +172,197 @@ class _WorkerApplicationsScreenState extends State<WorkerApplicationsScreen>
     final statusColor = application.isPending
         ? Colors.orange
         : application.isAccepted
-            ? Colors.green
-            : Colors.red;
+            ? AppColors.green
+            : Colors.orange;
 
     // Status text
     final statusText = application.isPending
         ? 'Pending'
         : application.isAccepted
             ? 'Accepted'
-            : 'Rejected';
+            : 'Pending';
 
-    return Card(
-      margin: const EdgeInsets.only(bottom: 16),
-      elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Padding(
+    return GestureDetector(
+      onTap: () async {
+        // Show loading indicator
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => const Center(
+            child: CircularProgressIndicator(),
+          ),
+        );
+        
+        try {
+          // Get job details using jobId from application
+          final jobDoc = await FirebaseFirestore.instance
+              .collection('jobs')
+              .doc(application.jobId)
+              .get();
+          
+          // Close loading dialog
+          Navigator.pop(context);
+          
+          if (jobDoc.exists) {
+            // Create JobModel from the document
+            final job = jobs_service.JobModel.fromFirestore(jobDoc);
+            
+            // Navigate to JobDetailScreen
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => JobDetailScreen(job: job),
+              ),
+            );
+          } else {
+            // Job not found
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Job not found or has been removed'),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+        } catch (e) {
+          // Close loading dialog and show error
+          Navigator.pop(context);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error loading job details: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 16),
         padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              spreadRadius: 0,
+              offset: Offset(0, 2),
+            ),
+          ],
+          border: Border.all(
+            color: AppColors.black.withOpacity(0.3),
+            width: 1,
+          ),
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Job title and status
+            // Application status and job type
             Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Expanded(
-                  child: Text(
-                    application.jobTitle,
-                    style: GoogleFonts.roboto(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
+                Row(
+                  children: [
+                    Icon(
+                      Icons.access_time,
+                      size: 14,
+                      color: AppColors.darkGrey,
                     ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
+                    const SizedBox(width: 4),
+                    Text(
+                      'Applied ${_formatDate(application.appliedAt)}',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: AppColors.darkGrey,
+                      ),
+                    ),
+                  ],
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 6,
-                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
-                    color: statusColor.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                      color: statusColor,
-                      width: 1,
-                    ),
+                    color: statusColor,
+                    borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
                     statusText,
-                    style: GoogleFonts.roboto(
+                    style: const TextStyle(
                       fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: statusColor,
+                      color: Colors.white,
+                      fontWeight: FontWeight.w500,
                     ),
                   ),
                 ),
               ],
             ),
+
             const SizedBox(height: 12),
 
-            // Company and location
+            // Job title and company
             Row(
               children: [
-                Icon(
-                  Icons.business,
-                  size: 16,
-                  color: Colors.grey.shade600,
+                Container(
+                  width: 50,
+                  height: 50,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade200,
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.1),
+                        blurRadius: 4,
+                        offset: Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: const Icon(Icons.business, color: AppColors.darkGrey),
                 ),
-                const SizedBox(width: 4),
+                const SizedBox(width: 12),
                 Expanded(
-                  child: Text(
-                    application.jobCompany,
-                    style: GoogleFonts.roboto(
-                      fontSize: 14,
-                      color: Colors.grey.shade600,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        application.jobTitle,
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      SizedBox(height: 4),
+                      Text(
+                        application.jobCompany,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          color: AppColors.darkGrey,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(width: 16),
-                Icon(
-                  Icons.location_on,
+              ],
+            ),
+
+            const SizedBox(height: 12),
+
+            // Location
+            Row(
+              children: [
+                const Icon(
+                  Icons.location_on_outlined,
                   size: 16,
-                  color: Colors.grey.shade600,
+                  color: AppColors.darkGrey,
                 ),
                 const SizedBox(width: 4),
                 Expanded(
                   child: Text(
                     application.jobLocation,
-                    style: GoogleFonts.roboto(
+                    style: const TextStyle(
                       fontSize: 14,
-                      color: Colors.grey.shade600,
+                      color: AppColors.darkGrey,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -269,70 +370,28 @@ class _WorkerApplicationsScreenState extends State<WorkerApplicationsScreen>
                 ),
               ],
             ),
+
             const SizedBox(height: 8),
 
-            // Job type and salary
+            // Job type and budget
             Row(
               children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: application.jobType.toLowerCase() == 'full-time'
-                        ? AppColors.green.withOpacity(0.1)
-                        : Color(0xFF0000CC).withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: Text(
-                    application.jobType,
-                    style: GoogleFonts.roboto(
-                      fontSize: 12,
-                      color: application.jobType.toLowerCase() == 'full-time'
-                          ? AppColors.green
-                          : Color(0xFF0000CC),
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Icon(
+                const Icon(
                   Icons.currency_rupee,
                   size: 16,
-                  color: Colors.grey.shade600,
+                  color: AppColors.darkGrey,
                 ),
                 const SizedBox(width: 4),
                 Text(
                   '${application.jobBudget}/day',
-                  style: GoogleFonts.roboto(
+                  style: const TextStyle(
                     fontSize: 14,
-                    color: Colors.grey.shade600,
                     fontWeight: FontWeight.w500,
+                    color: AppColors.darkGrey,
                   ),
                 ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            const Divider(),
-            const SizedBox(height: 8),
-
-            // Application date
-            Row(
-              children: [
-                Icon(
-                  Icons.access_time,
-                  size: 16,
-                  color: Colors.grey.shade600,
-                ),
-                const SizedBox(width: 4),
-                Text(
-                  'Applied on ${_formatDate(application.appliedAt)}',
-                  style: GoogleFonts.roboto(
-                    fontSize: 12,
-                    color: Colors.grey.shade600,
-                  ),
-                ),
+                const Spacer(),
+               
               ],
             ),
           ],

@@ -187,7 +187,9 @@ class _JobDetailsScreenState extends State<JobDetailsScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
+      //! A P P - B A R
       appBar: _buildAppBar(),
+      //! B O D Y
       body: Stack(
         children: [
           _buildBody(),
@@ -205,6 +207,7 @@ class _JobDetailsScreenState extends State<JobDetailsScreen>
     );
   }
 
+  //! A P P - B A R
   PreferredSizeWidget _buildAppBar() {
     return AppBar(
       backgroundColor: Colors.white,
@@ -221,34 +224,83 @@ class _JobDetailsScreenState extends State<JobDetailsScreen>
     );
   }
 
+  //! M A I N - B O D Y
   Widget _buildBody() {
     return Form(
       key: _formKey,
       child: ListView(
         padding: EdgeInsets.all(16.w),
         children: [
-          // Job Type Toggle
+          //! J O B - T Y P E - T O G G L E
           _buildJobTypeToggle(),
-          SizedBox(height: 24.h),
+          SizedBox(height: 20.h),
 
-          // Job Category (Clickable)
+          //! J O B - C A T E G O R Y
           _buildCategoryField(),
-          SizedBox(height: 16.h),
+          SizedBox(height: 20.h),
 
-          // Job Description
-          _buildDescriptionField(),
-          SizedBox(height: 16.h),
+          //! D E S C R I P T I O N - S E C T I O N
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: EdgeInsets.only(left: 8.w, bottom: 8.h),
+                child: Text(
+                  'Description',
+                  style: GoogleFonts.poppins(
+                    fontSize: 16.sp,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.black87,
+                  ),
+                ),
+              ),
+              _buildDescriptionField(),
+            ],
+          ),
+          SizedBox(height: 20.h),
 
-          // Date & Time Selection
-          _buildDateTimeSection(),
-          SizedBox(height: 16.h),
+          //! D A T E - T I M E - S E C T I O N
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: EdgeInsets.only(left: 8.w, bottom: 8.h),
+                child: Text(
+                  'Select Date and Time',
+                  style: GoogleFonts.poppins(
+                    fontSize: 16.sp,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.black87,
+                  ),
+                ),
+              ),
+              _buildDateTimeSection(),
+            ],
+          ),
+          // SizedBox(height: 10.h),
 
-          // Budget or Salary Range based on job type with animation
+          //! B U D G E T - S E C T I O N
           AnimatedBuilder(
             animation: _animation,
             builder: (context, child) {
               return AnimatedCrossFade(
-                firstChild: _buildBudgetField(),
+                firstChild: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Padding(
+                      padding: EdgeInsets.only(left: 8.w, bottom: 8.h),
+                      child: Text(
+                        'Budget (₹)',
+                        style: GoogleFonts.poppins(
+                          fontSize: 16.sp,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.black87,
+                        ),
+                      ),
+                    ),
+                    _buildBudgetField(),
+                  ],
+                ),
                 secondChild: _buildSalaryRangeFields(),
                 crossFadeState: _isFullTime
                     ? CrossFadeState.showSecond
@@ -275,13 +327,185 @@ class _JobDetailsScreenState extends State<JobDetailsScreen>
           ),
           SizedBox(height: 24.h),
 
-          // Submit Button
+          //! S U B M I T - B U T T O N
           _buildSubmitButton(),
         ],
       ),
     );
   }
+  //! D E S C R I P T I O N - F I E L D
+Widget _buildDescriptionField() {
+  return TextFormField(
+    controller: _descriptionController,
+    maxLines: 3,
+    style: GoogleFonts.poppins(
+      fontSize: 16.sp,
+      color: Colors.black, // Consistent text color
+    ),
+    decoration: InputDecoration(
+      fillColor: Color(0xFFf6f5f8),
+      filled: true,
+      hintText: 'Describe the job requirements',
+      hintStyle: GoogleFonts.poppins(
+        fontSize: 16.sp,
+        color: Colors.grey, // Consistent hint text color
+      ),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12.r),
+        borderSide: BorderSide(color: Colors.grey.shade400), // Match date/time border
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12.r),
+        borderSide: BorderSide(color: Colors.grey.shade400), // Match date/time border
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12.r),
+        borderSide: BorderSide(color: Colors.grey.shade400), // Match date/time border
+      ),
+      alignLabelWithHint: true,
+    ),
+    validator: (value) {
+      if (value == null || value.isEmpty) {
+        return 'Please enter a job description';
+      }
+      return null;
+    },
+  );
+}
 
+//! B U D G E T - F I E L D
+Widget _buildBudgetField() {
+  return Container(
+    height: 60.h, // Fixed height for animation
+    child: TextFormField(
+      controller: _budgetController,
+      keyboardType: TextInputType.number,
+      style: GoogleFonts.poppins(
+        fontSize: 16.sp,
+        color: Colors.black, // Consistent text color
+      ),
+      decoration: InputDecoration(
+        fillColor: Color(0xFFf6f5f8),
+        filled: true,
+        hintText: 'Minimum ₹$_minimumBudget',
+        hintStyle: GoogleFonts.poppins(
+          fontSize: 16.sp,
+          color: Colors.grey, // Consistent hint text color
+        ),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12.r),
+          borderSide: BorderSide(color: Colors.grey.shade400), // Match date/time border
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12.r),
+          borderSide: BorderSide(color: Colors.grey.shade400), // Match date/time border
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12.r),
+          borderSide: BorderSide(color: Colors.grey.shade400), // Match date/time border
+        ),
+        prefixIcon: Icon(
+          Icons.currency_rupee,
+          color: Colors.grey.shade700, // Consistent icon color
+        ),
+      ),
+      validator: (value) {
+        if (value == null || value.isEmpty) {
+          return 'Please enter a budget amount';
+        }
+        if (int.tryParse(value) == null) {
+          return 'Please enter a valid number';
+        }
+        if (int.parse(value) < _minimumBudget) {
+          return 'Budget must be at least ₹$_minimumBudget';
+        }
+        return null;
+      },
+    ),
+  );
+}
+
+//! D A T E - T I M E - S E C T I O N
+Widget _buildDateTimeSection() {
+  return Row(
+    children: [
+      // Date Picker
+      Expanded(
+        child: InkWell(
+          onTap: _pickDate,
+          child: Container(
+            padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
+            decoration: BoxDecoration(
+              color: Color(0xFFf6f5f8),
+              borderRadius: BorderRadius.circular(12.r),
+              border: Border.all(color: Colors.grey.shade400),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    _selectedDate != null
+                        ? DateFormat('MMM dd, yyyy').format(_selectedDate!)
+                        : 'Select Date',
+                    style: GoogleFonts.poppins(
+                      fontSize: 16.sp,
+                      color: _selectedDate != null ? Colors.black : Colors.grey,
+                      fontWeight: FontWeight.w400,
+                    ),
+                  ),
+                ),
+                Icon(
+                  Icons.calendar_today,
+                  color: Colors.grey.shade700, // Consistent icon color
+                  size: 24.sp,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+      SizedBox(width: 12.w),
+
+      // Time Picker
+      Expanded(
+        child: InkWell(
+          onTap: _pickTime,
+          child: Container(
+            padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
+            decoration: BoxDecoration(
+              color: Color(0xFFf6f5f8),
+              borderRadius: BorderRadius.circular(12.r),
+              border: Border.all(color: Colors.grey.shade400),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    _selectedTime != null
+                        ? _selectedTime!.format(context)
+                        : 'Select Time',
+                    style: GoogleFonts.poppins(
+                      fontSize: 16.sp,
+                      color: _selectedTime != null ? Colors.black : Colors.grey,
+                      fontWeight: FontWeight.w400,
+                    ),
+                  ),
+                ),
+                Icon(
+                  Icons.access_time,
+                  color: Colors.grey.shade700, // Consistent icon color
+                  size: 24.sp,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    ],
+  );
+}
+
+  //! J O B - T Y P E - T O G G L E
   Widget _buildJobTypeToggle() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -366,207 +590,15 @@ class _JobDetailsScreenState extends State<JobDetailsScreen>
     );
   }
 
- Widget _buildCategoryField() {
-  return Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      Padding(
-        padding: EdgeInsets.only(left: 8.w, bottom: 8.h),
-        child: Text(
-          'Job Category',
-          style: GoogleFonts.poppins(
-            fontSize: 16.sp,
-            fontWeight: FontWeight.w500,
-            color: Colors.black87,
-          ),
-        ),
-      ),
-      InkWell(
-        onTap: () => _showJobCategoryBottomSheet(),
-        child: Container(
-          padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
-          decoration: BoxDecoration(
-            color: Color(0xFFf6f5f8),
-            border: Border.all(color: Colors.grey.shade400),
-            borderRadius: BorderRadius.circular(12.r),
-          ),
-          child: Row(
-            children: [
-              Icon(
-                Icons.work_outline,
-                color: const Color(0xFF0011C9),
-                size: 24.sp,
-              ),
-              SizedBox(width: 12.w),
-              Expanded(
-                child: Text(
-                  _categoryController.text.isNotEmpty
-                      ? _categoryController.text
-                      : 'Select Job Category',
-                  style: GoogleFonts.poppins(
-                    fontSize: 16.sp,
-                    color: _categoryController.text.isNotEmpty
-                        ? Colors.black
-                        : Colors.grey,
-                  ),
-                ),
-              ),
-              Icon(
-                Icons.arrow_drop_down,
-                color: Colors.grey.shade700,
-                size: 24.sp,
-              ),
-            ],
-          ),
-        ),
-      ),
-    ],
-  );
-}
-
- Widget _buildDescriptionField() {
-  return TextFormField(
-    controller: _descriptionController,
-    maxLines: 3,
-    decoration: InputDecoration(
-      fillColor: Color(0xFFf6f5f8),
-      filled: true,
-      labelText: 'Job Description',
-      hintText: 'Describe the job requirements',
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12.r),
-      ),
-      prefixIcon: const Icon(Icons.description_outlined),
-      alignLabelWithHint: true,
-    ),
-    validator: (value) {
-      if (value == null || value.isEmpty) {
-        return 'Please enter a job description';
-      }
-      return null;
-    },
-  );
-}
-// Updated _buildDateTimeSection method with consistent colors
-Widget _buildDateTimeSection() {
-  return Row(
-    children: [
-      // Date Picker
-      Expanded(
-        child: InkWell(
-          onTap: _pickDate,
-          child: Container(
-            padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
-            decoration: BoxDecoration(
-              color: Color(0xFFf6f5f8), // Match with other form fields
-              borderRadius: BorderRadius.circular(16.r),
-              border: Border.all(color: Colors.grey.shade200),
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    _selectedDate != null
-                        ? DateFormat('MMM dd, yyyy').format(_selectedDate!)
-                        : 'Select Date',
-                    style: GoogleFonts.poppins(
-                      fontSize: 16.sp,
-                      color: _selectedDate != null ? Colors.black : Colors.grey,
-                      fontWeight: FontWeight.w400,
-                    ),
-                  ),
-                ),
-                Icon(
-                  Icons.calendar_today,
-                  color: Colors.grey.shade800,
-                  size: 24.sp,
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-      SizedBox(width: 12.w),
-
-      // Time Picker
-      Expanded(
-        child: InkWell(
-          onTap: _pickTime,
-          child: Container(
-            padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
-            decoration: BoxDecoration(
-              color: Color(0xFFf6f5f8), // Match with other form fields
-              borderRadius: BorderRadius.circular(16.r),
-              border: Border.all(color: Colors.grey.shade200),
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    _selectedTime != null
-                        ? _selectedTime!.format(context)
-                        : 'Select Time',
-                    style: GoogleFonts.poppins(
-                      fontSize: 16.sp,
-                      color: _selectedTime != null ? Colors.black : Colors.grey,
-                      fontWeight: FontWeight.w400,
-                    ),
-                  ),
-                ),
-                Icon(
-                  Icons.access_time,
-                  color: Colors.grey.shade800,
-                  size: 24.sp,
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    ],
-  );
-} Widget _buildBudgetField() {
-  return Container(
-    height: 80.h, // Fixed height for animation
-    child: TextFormField(
-      controller: _budgetController,
-      keyboardType: TextInputType.number,
-      decoration: InputDecoration(
-        fillColor: Color(0xFFf6f5f8),
-        filled: true,
-        labelText: 'Budget (₹)',
-        hintText: 'Minimum ₹$_minimumBudget',
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12.r),
-        ),
-        prefixIcon: const Icon(Icons.monetization_on_outlined),
-      ),
-      validator: (value) {
-        if (value == null || value.isEmpty) {
-          return 'Please enter a budget amount';
-        }
-        if (int.tryParse(value) == null) {
-          return 'Please enter a valid number';
-        }
-        if (int.parse(value) < _minimumBudget) {
-          return 'Budget must be at least ₹$_minimumBudget';
-        }
-        return null;
-      },
-    ),
-  );
-}
-
- Widget _buildSalaryRangeFields() {
-  return Container(
-    height: 120.h, // Fixed height for animation
-    child: Column(
+  //! J O B - C A T E G O R Y
+  Widget _buildCategoryField() {
+    return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
           padding: EdgeInsets.only(left: 8.w, bottom: 8.h),
           child: Text(
-            'Salary Range (₹)',
+            'Job Category',
             style: GoogleFonts.poppins(
               fontSize: 16.sp,
               fontWeight: FontWeight.w500,
@@ -574,82 +606,144 @@ Widget _buildDateTimeSection() {
             ),
           ),
         ),
-        Row(
-          children: [
-            // Minimum Salary
-            Expanded(
-              child: TextFormField(
-                controller: _minSalaryController,
-                keyboardType: TextInputType.number,
-                decoration: InputDecoration(
-                  fillColor: Color(0xFFf6f5f8),
-                  filled: true,
-                  labelText: 'From',
-                  hintText: 'Min ₹$_minimumBudget',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12.r),
-                  ),
-                  prefixIcon: const Icon(Icons.remove),
-                ),
-                validator: (value) {
-                  if (_isFullTime) {
-                    if (value == null || value.isEmpty) {
-                      return 'Required';
-                    }
-                    if (int.tryParse(value) == null) {
-                      return 'Invalid';
-                    }
-                    if (int.parse(value) < _minimumBudget) {
-                      return 'Min ₹$_minimumBudget';
-                    }
-                  }
-                  return null;
-                },
-              ),
+        InkWell(
+          onTap: () => _showJobCategoryBottomSheet(),
+          child: Container(
+            padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
+            decoration: BoxDecoration(
+              color: Color(0xFFf6f5f8),
+              border: Border.all(color: Colors.grey.shade400),
+              borderRadius: BorderRadius.circular(12.r),
             ),
-            SizedBox(width: 12.w),
-
-            // Maximum Salary
-            Expanded(
-              child: TextFormField(
-                controller: _maxSalaryController,
-                keyboardType: TextInputType.number,
-                decoration: InputDecoration(
-                  fillColor: Color(0xFFf6f5f8),
-                  filled: true,
-                  labelText: 'To',
-                  hintText: 'Max',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12.r),
-                  ),
-                  prefixIcon: const Icon(Icons.add),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.work_outline,
+                  color: const Color(0xFF0011C9),
+                  size: 24.sp,
                 ),
-                validator: (value) {
-                  if (_isFullTime) {
-                    if (value == null || value.isEmpty) {
-                      return 'Required';
-                    }
-                    if (int.tryParse(value) == null) {
-                      return 'Invalid';
-                    }
-                    // Validate that max is greater than min
-                    final min = int.tryParse(_minSalaryController.text) ?? 0;
-                    final max = int.tryParse(value) ?? 0;
-                    if (max <= min) {
-                      return 'Must be > min';
-                    }
-                  }
-                  return null;
-                },
-              ),
+                SizedBox(width: 12.w),
+                Expanded(
+                  child: Text(
+                    _categoryController.text.isNotEmpty
+                        ? _categoryController.text
+                        : 'Select Job Category',
+                    style: GoogleFonts.poppins(
+                      fontSize: 16.sp,
+                      color: _categoryController.text.isNotEmpty
+                          ? Colors.black
+                          : Colors.grey,
+                    ),
+                  ),
+                ),
+                Icon(
+                  Icons.arrow_drop_down,
+                  color: Colors.grey.shade700,
+                  size: 24.sp,
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ],
-    ),
-  );
-}
+    );
+  }
 
+ 
+  Widget _buildSalaryRangeFields() {
+    return Container(
+      height: 120.h, // Fixed height for animation
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: EdgeInsets.only(left: 8.w, bottom: 8.h),
+            child: Text(
+              'Salary Range (₹)',
+              style: GoogleFonts.poppins(
+                fontSize: 16.sp,
+                fontWeight: FontWeight.w500,
+                color: Colors.black87,
+              ),
+            ),
+          ),
+          Row(
+            children: [
+              // Minimum Salary
+              Expanded(
+                child: TextFormField(
+                  controller: _minSalaryController,
+                  keyboardType: TextInputType.number,
+                  decoration: InputDecoration(
+                    fillColor: Color(0xFFf6f5f8),
+                    filled: true,
+                    labelText: 'From',
+                    hintText: 'Min ₹$_minimumBudget',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12.r),
+                    ),
+                    prefixIcon: const Icon(Icons.currency_rupee),
+                  ),
+                  validator: (value) {
+                    if (_isFullTime) {
+                      if (value == null || value.isEmpty) {
+                        return 'Required';
+                      }
+                      if (int.tryParse(value) == null) {
+                        return 'Invalid';
+                      }
+                      if (int.parse(value) < _minimumBudget) {
+                        return 'Min ₹$_minimumBudget';
+                      }
+                    }
+                    return null;
+                  },
+                ),
+              ),
+              SizedBox(width: 12.w),
+
+              // Maximum Salary
+              Expanded(
+                child: TextFormField(
+                  controller: _maxSalaryController,
+                  keyboardType: TextInputType.number,
+                  decoration: InputDecoration(
+                    fillColor: Color(0xFFf6f5f8),
+                    filled: true,
+                    labelText: 'To',
+                    hintText: 'Max',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12.r),
+                    ),
+                    prefixIcon: const Icon(Icons.currency_rupee),
+                  ),
+                  validator: (value) {
+                    if (_isFullTime) {
+                      if (value == null || value.isEmpty) {
+                        return 'Required';
+                      }
+                      if (int.tryParse(value) == null) {
+                        return 'Invalid';
+                      }
+                      // Validate that max is greater than min
+                      final min = int.tryParse(_minSalaryController.text) ?? 0;
+                      final max = int.tryParse(value) ?? 0;
+                      if (max <= min) {
+                        return 'Must be > min';
+                      }
+                    }
+                    return null;
+                  },
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  //! S U B M I T - B U T T O N
   Widget _buildSubmitButton() {
     return ElevatedButton(
       onPressed: _isLoading ? null : _submitForm, // Disable button when loading
@@ -673,6 +767,7 @@ Widget _buildDateTimeSection() {
     );
   }
 
+  //! D A T E - P I C K E R
   void _pickDate() async {
     final DateTime? pickedDate = await showDatePicker(
       context: context,
@@ -698,6 +793,7 @@ Widget _buildDateTimeSection() {
     }
   }
 
+  //! T I M E - P I C K E R
   void _pickTime() async {
     final TimeOfDay? pickedTime = await showTimePicker(
       context: context,
@@ -721,326 +817,246 @@ Widget _buildDateTimeSection() {
     }
   }
 
- // Updated _showJobCategoryBottomSheet method to fix the "attached is not true" error
-// Complete replacement for _showJobCategoryBottomSheet method and related functions
-void _showJobCategoryBottomSheet() {
-  // Currently selected category for highlighting
-  final currentCategory = _categoryController.text;
+  //! J O B - C A T E G O R Y - B O T T O M S H E E T
+  void _showJobCategoryBottomSheet() {
+    // Currently selected category for highlighting
+    final currentCategory = _categoryController.text;
 
-  // Search text controller
-  final TextEditingController searchController = TextEditingController();
+    // Search text controller
+    final TextEditingController searchController = TextEditingController();
 
-  // Filtered jobs list - initially all jobs
-  List<Map<String, dynamic>> filteredJobs = [];
-  
-  // Make a defensive copy rather than directly referencing/modifying _allJobs
-  filteredJobs.addAll(_allJobs);
+    // Filtered jobs list - initially all jobs
+    List<Map<String, dynamic>> filteredJobs = [];
+    
+    // Make a defensive copy rather than directly referencing/modifying _allJobs
+    filteredJobs.addAll(_allJobs);
 
-  showModalBottomSheet(
-    context: context,
-    isScrollControlled: true,
-    backgroundColor: Colors.transparent,
-    enableDrag: true,
-    builder: (BuildContext sheetContext) {
-      return StatefulBuilder(
-        builder: (context, setSheetState) {
-          // Filter function - uses setSheetState to update only within the bottom sheet
-          void filterJobs(String query) {
-            setSheetState(() {
-              if (query.isEmpty) {
-                filteredJobs.clear();
-                filteredJobs.addAll(_allJobs);
-              } else {
-                filteredJobs = _allJobs.where((job) {
-                  return job['name']
-                      .toString()
-                      .toLowerCase()
-                      .contains(query.toLowerCase()) ||
-                      job['category']
-                      .toString()
-                      .toLowerCase()
-                      .contains(query.toLowerCase());
-                }).toList();
-              }
-            });
-          }
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      enableDrag: true,
+      builder: (BuildContext sheetContext) {
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            // Filter function - uses setSheetState to update only within the bottom sheet
+            void filterJobs(String query) {
+              setSheetState(() {
+                if (query.isEmpty) {
+                  filteredJobs.clear();
+                  filteredJobs.addAll(_allJobs);
+                } else {
+                  filteredJobs = _allJobs.where((job) {
+                    return job['name']
+                        .toString()
+                        .toLowerCase()
+                        .contains(query.toLowerCase()) ||
+                        job['category']
+                        .toString()
+                        .toLowerCase()
+                        .contains(query.toLowerCase());
+                  }).toList();
+                }
+              });
+            }
 
-          // Job category section builder
-          Widget buildCategorySection(String title, List<Map<String, dynamic>> jobs) {
-            if (jobs.isEmpty) return const SizedBox.shrink();
+            // Job category section builder
+            Widget buildCategorySection(String title, List<Map<String, dynamic>> jobs) {
+              if (jobs.isEmpty) return const SizedBox.shrink();
 
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(8, 16, 8, 8),
-                  child: Text(
-                    title,
-                    style: GoogleFonts.poppins(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: const Color(0xFF0011C9),
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(8, 16, 8, 8),
+                    child: Text(
+                      title,
+                      style: GoogleFonts.poppins(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: const Color(0xFF0011C9),
+                      ),
                     ),
                   ),
-                ),
-                ...jobs.map((job) {
-                  final isSelected = job['name'] == currentCategory;
+                  ...jobs.map((job) {
+                    final isSelected = job['name'] == currentCategory;
 
-                  return InkWell(
-                    onTap: () {
-                      // First pop the bottom sheet
-                      Navigator.pop(context);
-                      
-                      // Then update the state after the sheet is closed
-                      Future.microtask(() {
-                        setState(() {
-                          _categoryController.text = job['name'];
+                    return InkWell(
+                      onTap: () {
+                        // First pop the bottom sheet
+                        Navigator.pop(context);
+                        
+                        // Then update the state after the sheet is closed
+                        Future.microtask(() {
+                          setState(() {
+                            _categoryController.text = job['name'];
+                          });
                         });
-                      });
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-                      margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
-                      decoration: BoxDecoration(
-                        color: isSelected
-                            ? const Color(0xFF0011C9).withOpacity(0.1)
-                            : Colors.white,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                        margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
+                        decoration: BoxDecoration(
                           color: isSelected
-                              ? const Color(0xFF0011C9)
-                              : Colors.grey.shade300,
-                          width: isSelected ? 1.5 : 1,
+                              ? const Color(0xFF0011C9).withOpacity(0.1)
+                              : Colors.white,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: isSelected
+                                ? const Color(0xFF0011C9)
+                                : Colors.grey.shade300,
+                            width: isSelected ? 1.5 : 1,
+                          ),
                         ),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.work_outline,
-                            color: isSelected ? const Color(0xFF0011C9) : Colors.grey,
-                            size: 20,
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Text(
-                              job['name'],
-                              style: GoogleFonts.poppins(
-                                fontSize: 16,
-                                fontWeight:
-                                isSelected ? FontWeight.w600 : FontWeight.w400,
-                                color:
-                                isSelected ? const Color(0xFF0011C9) : Colors.black,
-                              ),
-                            ),
-                          ),
-                          if (isSelected)
-                            const Icon(Icons.check_circle, color: Color(0xFF0011C9)),
-                        ],
-                      ),
-                    ),
-                  );
-                }).toList(),
-              ],
-            );
-          }
-
-          return Container(
-            height: MediaQuery.of(context).size.height * 0.75,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.only(
-                topLeft: Radius.circular(24.r),
-                topRight: Radius.circular(24.r),
-              ),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Handle at the top
-                Center(
-                  child: Container(
-                    margin: EdgeInsets.only(top: 12.h),
-                    width: 36.w,
-                    height: 4.h,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF1E2B8E).withOpacity(0.5),
-                      borderRadius: BorderRadius.circular(2.r),
-                    ),
-                  ),
-                ),
-                
-                // Title
-                Padding(
-                  padding: EdgeInsets.fromLTRB(24.w, 20.h, 24.w, 8.h),
-                  child: Text(
-                    'Select Job Category',
-                    style: GoogleFonts.poppins(
-                      fontSize: 20.sp,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.black,
-                    ),
-                  ),
-                ),
-                
-                // Search bar
-                Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 8.h),
-                  child: TextField(
-                    controller: searchController,
-                    autofocus: false,
-                    decoration: InputDecoration(
-                      fillColor: Color(0xFFf6f5f8),
-                      filled: true,
-                      hintText: 'Search job categories...',
-                      prefixIcon: const Icon(Icons.search),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12.r),
-                      ),
-                      contentPadding: EdgeInsets.symmetric(vertical: 12.h),
-                    ),
-                    onChanged: filterJobs,
-                  ),
-                ),
-                
-                // Categories list
-                Expanded(
-                  child: filteredJobs.isEmpty
-                      ? Center(
-                          child: Text(
-                            'No matching jobs found',
-                            style: GoogleFonts.poppins(
-                              fontSize: 16.sp,
-                              color: Colors.grey,
-                            ),
-                          ),
-                        )
-                      : ListView(
-                          padding: EdgeInsets.symmetric(horizontal: 16.w),
+                        child: Row(
                           children: [
-                            // Currently selected job (if any)
-                            if (currentCategory.isNotEmpty)
-                              buildCategorySection(
-                                'Selected',
-                                _allJobs
-                                    .where((job) => job['name'] == currentCategory)
-                                    .toList(),
-                              ),
-
-                            // General Jobs
-                            buildCategorySection(
-                              'General Jobs',
-                              filteredJobs
-                                  .where((job) => job['category'] == 'General')
-                                  .toList(),
+                            Icon(
+                              Icons.work_outline,
+                              color: isSelected ? const Color(0xFF0011C9) : Colors.grey,
+                              size: 20,
                             ),
-
-                            // Industry groups
-                            ..._getUniqueIndustries(filteredJobs).map((industry) {
-                              return buildCategorySection(
-                                industry,
-                                filteredJobs
-                                    .where((job) => job['category'] == industry)
-                                    .toList(),
-                              );
-                            }),
-                            
-                            // Extra space at bottom
-                            SizedBox(height: 24.h),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                job['name'],
+                                style: GoogleFonts.poppins(
+                                  fontSize: 16,
+                                  fontWeight:
+                                  isSelected ? FontWeight.w600 : FontWeight.w400,
+                                  color:
+                                  isSelected ? const Color(0xFF0011C9) : Colors.black,
+                                ),
+                              ),
+                            ),
+                            if (isSelected)
+                              const Icon(Icons.check_circle, color: Color(0xFF0011C9)),
                           ],
                         ),
+                      ),
+                    );
+                  }).toList(),
+                ],
+              );
+            }
+
+            return Container(
+              height: MediaQuery.of(context).size.height * 0.75,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(24.r),
+                  topRight: Radius.circular(24.r),
                 ),
-              ],
-            ),
-          );
-        },
-      );
-    },
-  ).then((_) {
-    // Dispose of controller when sheet is closed
-    searchController.dispose();
-  });
-}
-// Separate method for building job category section inside the bottom sheet
-Widget _buildJobCategorySectionForBottomSheet({
-  required BuildContext context,
-  required String title,
-  required List<Map<String, dynamic>> jobs,
-  required String currentCategory,
-}) {
-  if (jobs.isEmpty) return const SizedBox.shrink();
-
-  return Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      Padding(
-        padding: const EdgeInsets.fromLTRB(8, 16, 8, 8),
-        child: Text(
-          title,
-          style: GoogleFonts.poppins(
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-            color: const Color(0xFF0011C9),
-          ),
-        ),
-      ),
-      ...jobs.map((job) {
-        final isSelected = job['name'] == currentCategory;
-
-        return InkWell(
-          onTap: () {
-            // Use setState from the parent widget
-            setState(() {
-              _categoryController.text = job['name'];
-            });
-            // Close bottom sheet
-            Navigator.pop(context);
-          },
-          child: Container(
-            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-            margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
-            decoration: BoxDecoration(
-              color: isSelected
-                  ? const Color(0xFF0011C9).withOpacity(0.1)
-                  : Colors.white,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(
-                color: isSelected
-                    ? const Color(0xFF0011C9)
-                    : Colors.grey.shade300,
-                width: isSelected ? 1.5 : 1,
               ),
-            ),
-            child: Row(
-              children: [
-                Icon(
-                  Icons.work_outline,
-                  color: isSelected ? const Color(0xFF0011C9) : Colors.grey,
-                  size: 20,
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    job['name'],
-                    style: GoogleFonts.poppins(
-                      fontSize: 16,
-                      fontWeight:
-                          isSelected ? FontWeight.w600 : FontWeight.w400,
-                      color:
-                          isSelected ? const Color(0xFF0011C9) : Colors.black,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Handle at the top
+                  Center(
+                    child: Container(
+                      margin: EdgeInsets.only(top: 12.h),
+                      width: 36.w,
+                      height: 4.h,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF1E2B8E).withOpacity(0.5),
+                        borderRadius: BorderRadius.circular(2.r),
+                      ),
                     ),
                   ),
-                ),
-                if (isSelected)
-                  const Icon(Icons.check_circle, color: Color(0xFF0011C9)),
-              ],
-            ),
-          ),
-        );
-      }).toList(),
-    ],
-  );
-}
+                  
+                  // Title
+                  Padding(
+                    padding: EdgeInsets.fromLTRB(24.w, 20.h, 24.w, 8.h),
+                    child: Text(
+                      'Select Job Category',
+                      style: GoogleFonts.poppins(
+                        fontSize: 20.sp,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black,
+                      ),
+                    ),
+                  ),
+                  
+                  // Search bar
+                  Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 8.h),
+                    child: TextField(
+                      controller: searchController,
+                      autofocus: false,
+                      decoration: InputDecoration(
+                        fillColor: Color(0xFFf6f5f8),
+                        filled: true,
+                        hintText: 'Search job categories...',
+                        prefixIcon: const Icon(Icons.search),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12.r),
+                        ),
+                        contentPadding: EdgeInsets.symmetric(vertical: 12.h),
+                      ),
+                      onChanged: filterJobs,
+                    ),
+                  ),
+                  
+                  // Categories list
+                  Expanded(
+                    child: filteredJobs.isEmpty
+                        ? Center(
+                            child: Text(
+                              'No matching jobs found',
+                              style: GoogleFonts.poppins(
+                                fontSize: 16.sp,
+                                color: Colors.grey,
+                              ),
+                            ),
+                          )
+                        : ListView(
+                            padding: EdgeInsets.symmetric(horizontal: 16.w),
+                            children: [
+                              // Currently selected job (if any)
+                              if (currentCategory.isNotEmpty)
+                                buildCategorySection(
+                                  'Selected',
+                                  _allJobs
+                                      .where((job) => job['name'] == currentCategory)
+                                      .toList(),
+                                ),
 
+                              // General Jobs
+                              buildCategorySection(
+                                'General Jobs',
+                                filteredJobs
+                                    .where((job) => job['category'] == 'General')
+                                    .toList(),
+                              ),
+
+                              // Industry groups
+                              ..._getUniqueIndustries(filteredJobs).map((industry) {
+                                return buildCategorySection(
+                                  industry,
+                                  filteredJobs
+                                      .where((job) => job['category'] == industry)
+                                      .toList(),
+                                );
+                              }),
+                              
+                              // Extra space at bottom
+                              SizedBox(height: 24.h),
+                            ],
+                          ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    ).then((_) {
+      // Dispose of controller when sheet is closed
+      searchController.dispose();
+    });
+  }
+
+  //! G E T - U N I Q U E - I N D U S T R I E S
   List<String> _getUniqueIndustries(List<Map<String, dynamic>> jobs) {
     final Set<String> industries = {};
 
@@ -1053,84 +1069,7 @@ Widget _buildJobCategorySectionForBottomSheet({
     return industries.toList()..sort();
   }
 
-  Widget _buildJobCategorySection({
-    required String title,
-    required List<Map<String, dynamic>> jobs,
-    required String currentCategory,
-  }) {
-    if (jobs.isEmpty) return const SizedBox.shrink();
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(8, 16, 8, 8),
-          child: Text(
-            title,
-            style: GoogleFonts.poppins(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: const Color(0xFF0011C9),
-            ),
-          ),
-        ),
-        ...jobs.map((job) {
-          final isSelected = job['name'] == currentCategory;
-
-          return InkWell(
-            onTap: () {
-              setState(() {
-                _categoryController.text = job['name'];
-              });
-              Navigator.pop(context);
-            },
-            child: Container(
-              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-              margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
-              decoration: BoxDecoration(
-                color: isSelected
-                    ? const Color(0xFF0011C9).withOpacity(0.1)
-                    : Colors.white,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(
-                  color: isSelected
-                      ? const Color(0xFF0011C9)
-                      : Colors.grey.shade300,
-                  width: isSelected ? 1.5 : 1,
-                ),
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.work_outline,
-                    color: isSelected ? const Color(0xFF0011C9) : Colors.grey,
-                    size: 20,
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      job['name'],
-                      style: GoogleFonts.poppins(
-                        fontSize: 16,
-                        fontWeight:
-                            isSelected ? FontWeight.w600 : FontWeight.w400,
-                        color:
-                            isSelected ? const Color(0xFF0011C9) : Colors.black,
-                      ),
-                    ),
-                  ),
-                  if (isSelected)
-                    const Icon(Icons.check_circle, color: Color(0xFF0011C9)),
-                ],
-              ),
-            ),
-          );
-        }),
-      ],
-    );
-  }
-
-  // Modified submit form method to save data to Firebase
+  //! S U B M I T - F O R M
   Future<void> _submitForm() async {
     // Validate form
     if (_formKey.currentState?.validate() != true) {
@@ -1253,8 +1192,7 @@ Widget _buildJobCategorySectionForBottomSheet({
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(
-              builder: (context) =>
-                JobManagementScreen(),
+              builder: (context) => JobManagementScreen(),
             ),
           );
         }
@@ -1282,4 +1220,3 @@ Widget _buildJobCategorySectionForBottomSheet({
     }
   }
 }
-

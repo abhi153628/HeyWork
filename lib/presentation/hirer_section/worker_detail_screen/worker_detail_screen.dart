@@ -416,48 +416,51 @@ class _WorkerDetailsPageState extends State<WorkerDetailsPage> {
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-        SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle(
-      statusBarColor: Colors.transparent,
-      statusBarIconBrightness: Brightness.light,
-      statusBarBrightness: Brightness.dark,
-    ));
-    return Scaffold(
-      body: _isLoading
-          ? Center(
-              child: CircularProgressIndicator(
-                color: Color(0xFF414ce4),
-              ),
-            )
-          : SingleChildScrollView(
-              child: Column(
-                children: [
-                  // Top curved background with profile
-                  _buildProfileHeader(),
-
-                  // Body content
-                  Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 16.w),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Contact and hire buttons
-                        _buildContactButtons(),
-
-                        // Experience section
-                        _buildExperienceSection(),
-
-                        // Job history
-                        _buildJobHistorySection(),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
+// Update the body to adjust overall spacing in the SingleChildScrollView
+@override
+Widget build(BuildContext context) {
+  SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle(
+    statusBarColor: Colors.transparent,
+    statusBarIconBrightness: Brightness.light,
+    statusBarBrightness: Brightness.dark,
+  ));
+  return Scaffold(
+    body: _isLoading
+        ? Center(
+            child: CircularProgressIndicator(
+              color: Color(0xFF414ce4),
             ),
-    );
-  }
+          )
+        : SingleChildScrollView(
+            // Add bottom padding to ensure consistent bottom spacing
+            padding: EdgeInsets.only(bottom: 16.h),
+            child: Column(
+              children: [
+                // Top curved background with profile
+                _buildProfileHeader(),
+
+                // Body content with consistent spacing
+                Padding(
+                  padding: EdgeInsets.all(16.w), // Changed from EdgeInsets.symmetric(horizontal: 16.w)
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Contact and hire buttons
+                      _buildContactButtons(),
+
+                      // Experience section
+                      _buildExperienceSection(),
+
+                      // Job history with reduced gap
+                      _buildJobHistorySection(),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+  );
+}
 
   Widget _buildProfileHeader() {
     return Container(
@@ -625,92 +628,25 @@ class _WorkerDetailsPageState extends State<WorkerDetailsPage> {
     );
   }
 
-  Widget _buildContactButtons() {
-    return Padding(
-      padding: EdgeInsets.symmetric(vertical: 20.h),
-      child: Column(
-        children: [
-          // Contact and Hire Buttons Row
-          Row(
-            children: [
-              // Show Number button
-              Expanded(
-                child: ElevatedButton(
-                  onPressed: _makePhoneCall,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Color(0xFF00A81E),
-                    foregroundColor: Colors.white,
-                    elevation: 0,
-                    padding: EdgeInsets.symmetric(vertical: 12.h),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8.r),
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.phone, size: 20.sp, color: Colors.white),
-                      SizedBox(width: 8.w),
-                      Text(
-                        'Call Now',
-                        style: GoogleFonts.roboto(
-                          fontSize: 16.sp,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              SizedBox(width: 12.w),
-              // WhatsApp button
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: _openWhatsApp,
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.black87,
-                    side: BorderSide(color: Color(0xFF00A81E)),
-                    padding: EdgeInsets.symmetric(vertical: 12.h),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8.r),
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Image.asset(
-                        'asset/images-removebg-preview (1).png',
-                        width: 20.w,
-                        height: 20.h,
-                      ),
-                      SizedBox(width: 8.w),
-                      Text(
-                        'WhatsApp',
-                        style: GoogleFonts.roboto(
-                          fontSize: 16.sp,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-
-          SizedBox(height: 12.h),
-
-          // Hire Button - Only show if status is pending
-          if (widget.application.status.toLowerCase() == 'pending')
-            SizedBox(
-              width: double.infinity,
+  // Update contact buttons section for consistent spacing
+Widget _buildContactButtons() {
+  return Padding(
+    // Reduced vertical padding for consistency
+    padding: EdgeInsets.only(bottom: 12.h, top: 4.h), // Changed from EdgeInsets.symmetric(vertical: 20.h)
+    child: Column(
+      children: [
+        // Contact and Hire Buttons Row
+        Row(
+          children: [
+            // Show Number button
+            Expanded(
               child: ElevatedButton(
-                onPressed: _hireWorker,
+                onPressed: _makePhoneCall,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Color(0xFF414ce4),
+                  backgroundColor: Color(0xFF00A81E),
                   foregroundColor: Colors.white,
-                  elevation: 2,
-                  padding: EdgeInsets.symmetric(vertical: 14.h),
+                  elevation: 0,
+                  padding: EdgeInsets.symmetric(vertical: 12.h),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8.r),
                   ),
@@ -718,390 +654,472 @@ class _WorkerDetailsPageState extends State<WorkerDetailsPage> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.check_circle_outline, size: 22.sp),
+                    Icon(Icons.phone, size: 20.sp, color: Colors.white),
                     SizedBox(width: 8.w),
                     Text(
-                      'HIRE THIS WORKER',
+                      'Call Now',
                       style: GoogleFonts.roboto(
                         fontSize: 16.sp,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 1.2,
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
                   ],
                 ),
               ),
             ),
-            
-          // Show status badge for accepted or rejected applications
-          if (widget.application.isAccepted) ...[
-            SizedBox(height: 16.h),
-            Container(
-              width: double.infinity,
-              padding: EdgeInsets.symmetric(vertical: 12.h),
-              decoration: BoxDecoration(
-                color: Colors.green.shade50,
-                borderRadius: BorderRadius.circular(8.r),
-                border: Border.all(color: Colors.green.shade300),
+            SizedBox(width: 12.w),
+            // WhatsApp button
+            Expanded(
+              child: OutlinedButton(
+                onPressed: _openWhatsApp,
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.black87,
+                  side: BorderSide(color: Color(0xFF00A81E)),
+                  padding: EdgeInsets.symmetric(vertical: 12.h),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8.r),
+                  ),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Image.asset(
+                      'asset/images-removebg-preview (1).png',
+                      width: 20.w,
+                      height: 20.h,
+                    ),
+                    SizedBox(width: 8.w),
+                    Text(
+                      'WhatsApp',
+                      style: GoogleFonts.roboto(
+                        fontSize: 16.sp,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+
+        SizedBox(height: 10.h), // Reduced from 12.h
+
+        // Hire Button - Only show if status is pending
+        if (widget.application.status.toLowerCase() == 'pending')
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: _hireWorker,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Color(0xFF414ce4),
+                foregroundColor: Colors.white,
+                elevation: 2,
+                padding: EdgeInsets.symmetric(vertical: 14.h),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8.r),
+                ),
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(
-                    Icons.check_circle,
-                    color: Colors.green,
-                    size: 18.sp,
-                  ),
+                  Icon(Icons.check_circle_outline, size: 22.sp),
                   SizedBox(width: 8.w),
                   Text(
-                    'HIRED',
+                    'HIRE THIS WORKER',
                     style: GoogleFonts.roboto(
                       fontSize: 16.sp,
                       fontWeight: FontWeight.bold,
-                      color: Colors.green,
                       letterSpacing: 1.2,
                     ),
                   ),
                 ],
               ),
             ),
-          ],
+          ),
+          
+        // Show status badge for accepted or rejected applications
+        if (widget.application.isAccepted) ...[
+          SizedBox(height: 12.h), // Reduced from 16.h
+          Container(
+            width: double.infinity,
+            padding: EdgeInsets.symmetric(vertical: 12.h),
+            decoration: BoxDecoration(
+              color: Colors.green.shade50,
+              borderRadius: BorderRadius.circular(8.r),
+              border: Border.all(color: Colors.green.shade300),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.check_circle,
+                  color: Colors.green,
+                  size: 18.sp,
+                ),
+                SizedBox(width: 8.w),
+                Text(
+                  'HIRED',
+                  style: GoogleFonts.roboto(
+                    fontSize: 16.sp,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.green,
+                    letterSpacing: 1.2,
+                  ),
+                ),
+              ],
+            ),
+          ),
         ],
-      ),
-    );
-  }
+      ],
+    ),
+  );
+}
 
-  Widget _buildExperienceSection() {
-    return Container(
-      margin: EdgeInsets.only(bottom: 20.h),
-      padding: EdgeInsets.all(16.w),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12.r),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            spreadRadius: 0,
-            offset: Offset(0, 2),
-          ),
-        ],
-        border: Border.all(
-          color: Colors.grey.withOpacity(0.2),
-          width: 1,
+  // Update the _buildExperienceSection to match spacing
+Widget _buildExperienceSection() {
+  return Container(
+    // Reduced margin from 20.h to make consistent with other sections
+    margin: EdgeInsets.only(bottom: 12.h),
+    padding: EdgeInsets.all(16.w),
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(12.r),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withOpacity(0.05),
+          blurRadius: 10,
+          spreadRadius: 0,
+          offset: Offset(0, 2),
         ),
+      ],
+      border: Border.all(
+        color: Colors.grey.withOpacity(0.2),
+        width: 1,
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(
-                Icons.work_outline,
-                color: Color(0xFF414ce4),
-                size: 24.sp,
-              ),
-              SizedBox(width: 8.w),
-              Text(
-                'Work Experience',
-                style: GoogleFonts.roboto(
-                  fontSize: 18.sp,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
-                ),
-              ),
-            ],
-          ),
-          SizedBox(height: 16.h),
-          
-          // Work count with colored badge
-          Row(
-            children: [
-              Container(
-                padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
-                decoration: BoxDecoration(
-                  color: Color(0xFF414ce4).withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(20.r),
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.verified,
-                      color: Color(0xFF414ce4),
-                      size: 18.sp,
-                    ),
-                    SizedBox(width: 4.w),
-                    Text(
-                      'Total Works: $totalJobsDone',
-                      style: GoogleFonts.roboto(
-                        fontSize: 14.sp,
-                        fontWeight: FontWeight.w500,
-                        color: Color(0xFF414ce4),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          
-          SizedBox(height: 16.h),
-          
-          // Job category statistics
-          if (jobCategoryCounts.isNotEmpty) ...[
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(
+              Icons.work_outline,
+              color: Color(0xFF414ce4),
+              size: 24.sp,
+            ),
+            SizedBox(width: 8.w),
             Text(
-              'Experience by Category:',
+              'Work Experience',
               style: GoogleFonts.roboto(
-                fontSize: 16.sp,
+                fontSize: 18.sp,
                 fontWeight: FontWeight.bold,
                 color: Colors.black87,
               ),
             ),
-            SizedBox(height: 12.h),
-            Wrap(
-              spacing: 10.w,
-              runSpacing: 10.h,
-              children: jobCategoryCounts.entries.map((entry) {
-                return Container(
-                  padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
-                  decoration: BoxDecoration(
-                    color: Colors.grey.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(20.r),
-                    border: Border.all(
-                      color: Colors.grey.withOpacity(0.3),
-                    ),
+          ],
+        ),
+        // Reduced spacing for consistency
+        SizedBox(height: 12.h),
+        
+        // Work count with colored badge
+        Row(
+          children: [
+            Container(
+              padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
+              decoration: BoxDecoration(
+                color: Color(0xFF414ce4).withOpacity(0.1),
+                borderRadius: BorderRadius.circular(20.r),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.verified,
+                    color: Color(0xFF414ce4),
+                    size: 18.sp,
                   ),
-                  child: Text(
-                    '${entry.key}: ${entry.value}',
+                  SizedBox(width: 4.w),
+                  Text(
+                    'Total Works: $totalJobsDone',
                     style: GoogleFonts.roboto(
                       fontSize: 14.sp,
                       fontWeight: FontWeight.w500,
-                      color: Colors.black87,
+                      color: Color(0xFF414ce4),
                     ),
                   ),
-                );
-              }).toList(),
-            ),
-          ] else ...[
-            Center(
-              child: Padding(
-                padding: EdgeInsets.all(16.h),
-                child: Column(
-                  children: [
-                    Icon(
-                      Icons.work_off_outlined,
-                      size: 40.sp,
-                      color: Colors.grey.shade400,
-                    ),
-                    SizedBox(height: 12.h),
-                    Text(
-                      'No work history yet',
-                      style: GoogleFonts.roboto(
-                        fontSize: 16.sp,
-                        fontWeight: FontWeight.w500,
-                        color: Colors.grey.shade600,
-                      ),
-                    ),
-                    SizedBox(height: 8.h),
-                    Text(
-                      'This worker has no prior work experience in the app',
-                      textAlign: TextAlign.center,
-                      style: GoogleFonts.roboto(
-                        fontSize: 14.sp,
-                        color: Colors.grey.shade500,
-                      ),
-                    ),
-                  ],
-                ),
+                ],
               ),
             ),
           ],
-        ],
-      ),
-    );
-  }
-
-  Widget _buildJobHistorySection() {
-    return Container(
-      margin: EdgeInsets.only(bottom: 20.h),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
+        ),
+        
+        // Reduced spacing for consistency
+        SizedBox(height: 12.h),
+        
+        // Job category statistics
+        if (jobCategoryCounts.isNotEmpty) ...[
           Text(
-            'Completed Jobs',
+            'Experience by Category:',
             style: GoogleFonts.roboto(
-              fontSize: 18.sp,
+              fontSize: 16.sp,
               fontWeight: FontWeight.bold,
               color: Colors.black87,
             ),
           ),
-          SizedBox(height: 12.h),
-          
-          if (completedJobs.isEmpty)
-            Center(
-              child: Padding(
-                padding: EdgeInsets.symmetric(vertical: 24.h),
+          SizedBox(height: 8.h), // Reduced from 12.h
+          Wrap(
+            spacing: 10.w,
+            runSpacing: 10.h,
+            children: jobCategoryCounts.entries.map((entry) {
+              return Container(
+                padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
+                decoration: BoxDecoration(
+                  color: Colors.grey.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(20.r),
+                  border: Border.all(
+                    color: Colors.grey.withOpacity(0.3),
+                  ),
+                ),
+                child: Text(
+                  '${entry.key}: ${entry.value}',
+                  style: GoogleFonts.roboto(
+                    fontSize: 14.sp,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.black87,
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+        ] else ...[
+          Center(
+            child: Padding(
+              // Reduced padding for consistency
+              padding: EdgeInsets.all(12.h), // Reduced from 16.h
+              child: Column(
+                children: [
+                  Icon(
+                    Icons.work_off_outlined,
+                    size: 40.sp,
+                    color: Colors.grey.shade400,
+                  ),
+                  SizedBox(height: 8.h), // Reduced from 12.h
+                  Text(
+                    'No work history yet',
+                    style: GoogleFonts.roboto(
+                      fontSize: 16.sp,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.grey.shade600,
+                    ),
+                  ),
+                  SizedBox(height: 6.h), // Reduced from 8.h
+                  Text(
+                    'This worker has no prior work experience in the app',
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.roboto(
+                      fontSize: 14.sp,
+                      color: Colors.grey.shade500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ],
+    ),
+  );
+}
+ Widget _buildJobHistorySection() {
+  return Container(
+    // Reduced bottom margin from 10.h to match other sections
+    margin: EdgeInsets.only(bottom: 0),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Completed Jobs',
+          style: GoogleFonts.roboto(
+            fontSize: 18.sp,
+            fontWeight: FontWeight.bold,
+            color: Colors.black87,
+          ),
+        ),
+        // Add a small consistent gap between title and content
+        SizedBox(height: 8.h),
+        
+        if (completedJobs.isEmpty)
+          Center(
+            // Reduced vertical padding from 24.h to match other sections
+            child: Padding(
+              padding: EdgeInsets.symmetric(vertical: 16.h),
+              child: Column(
+                children: [
+                  Icon(
+                    Icons.history,
+                    size: 40.sp,
+                    color: Colors.grey.shade400,
+                  ),
+                  SizedBox(height: 12.h),
+                  Text(
+                    'No completed jobs',
+                    style: GoogleFonts.roboto(
+                      fontSize: 16.sp,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.grey.shade600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          )
+        else
+          ListView.builder(
+            shrinkWrap: true,
+            physics: NeverScrollableScrollPhysics(),
+            // Remove default padding
+            padding: EdgeInsets.zero,
+            itemCount: completedJobs.length,
+            itemBuilder: (context, index) {
+              final job = completedJobs[index];
+              
+              // Format date
+              String formattedDate = 'Unknown date';
+              if (job.containsKey('date') && job['date'] is Timestamp) {
+                final date = (job['date'] as Timestamp).toDate();
+                formattedDate = '${date.day}/${date.month}/${date.year}';
+              }
+              
+              // Last item should have no bottom margin
+              final isLastItem = index == completedJobs.length - 1;
+              
+              return Container(
+                // Reduced bottom margin from 12.h to 8.h and remove for last item
+                margin: EdgeInsets.only(bottom: isLastItem ? 0 : 8.h),
+                padding: EdgeInsets.all(16.w),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12.r),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 5,
+                      spreadRadius: 0,
+                      offset: Offset(0, 2),
+                    ),
+                  ],
+                  border: Border.all(
+                    color: Colors.grey.withOpacity(0.2),
+                    width: 1,
+                  ),
+                ),
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(
-                      Icons.history,
-                      size: 40.sp,
-                      color: Colors.grey.shade400,
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          width: 40.w,
+                          height: 40.w,
+                          decoration: BoxDecoration(
+                            color: Color(0xFF414ce4).withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(8.r),
+                          ),
+                          child: Icon(
+                            Icons.work,
+                            color: Color(0xFF414ce4),
+                            size: 24.sp,
+                          ),
+                        ),
+                        SizedBox(width: 12.w),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                job['title'] ?? 'Unknown Job',
+                                style: GoogleFonts.roboto(
+                                  fontSize: 16.sp,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.black87,
+                                ),
+                              ),
+                              SizedBox(height: 4.h),
+                              Text(
+                                job['hirerBusinessName'] ?? 'Unknown Company',
+                                style: GoogleFonts.roboto(
+                                  fontSize: 14.sp,
+                                  color: Colors.grey.shade700,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Container(
+                          padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+                          decoration: BoxDecoration(
+                            color: job['jobType'] == 'full-time'
+                                ? Colors.blue.shade100
+                                : job['jobType'] == 'part-time'
+                                    ? Colors.amber.shade100
+                                    : Colors.green.shade100,
+                            borderRadius: BorderRadius.circular(4.r),
+                          ),
+                          child: Text(
+                            job['jobType'] ?? 'Unknown',
+                            style: GoogleFonts.roboto(
+                              fontSize: 12.sp,
+                              fontWeight: FontWeight.w500,
+                              color: job['jobType'] == 'full-time'
+                                  ? Colors.blue.shade800
+                                  : job['jobType'] == 'part-time'
+                                      ? Colors.amber.shade800
+                                      : Colors.green.shade800,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                     SizedBox(height: 12.h),
-                    Text(
-                      'No completed jobs',
-                      style: GoogleFonts.roboto(
-                        fontSize: 16.sp,
-                        fontWeight: FontWeight.w500,
-                        color: Colors.grey.shade600,
-                      ),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.location_on_outlined,
+                          size: 16.sp,
+                          color: Colors.grey.shade600,
+                        ),
+                        SizedBox(width: 4.w),
+                        Text(
+                          job['hirerLocation'] ?? 'Unknown Location',
+                          style: GoogleFonts.roboto(
+                            fontSize: 13.sp,
+                            color: Colors.grey.shade600,
+                          ),
+                        ),
+                        Spacer(),
+                        Icon(
+                          Icons.calendar_today_outlined,
+                          size: 16.sp,
+                          color: Colors.grey.shade600,
+                        ),
+                        SizedBox(width: 4.w),
+                        Text(
+                          formattedDate,
+                          style: GoogleFonts.roboto(
+                            fontSize: 13.sp,
+                            color: Colors.grey.shade600,
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
-              ),
-            )
-          else
-            ListView.builder(
-              shrinkWrap: true,
-              physics: NeverScrollableScrollPhysics(),
-              itemCount: completedJobs.length,
-              itemBuilder: (context, index) {
-                final job = completedJobs[index];
-                
-                // Format date
-                String formattedDate = 'Unknown date';
-                if (job.containsKey('date') && job['date'] is Timestamp) {
-                  final date = (job['date'] as Timestamp).toDate();
-                  formattedDate = '${date.day}/${date.month}/${date.year}';
-                }
-                
-                return Container(
-                  margin: EdgeInsets.only(bottom: 12.h),
-                  padding: EdgeInsets.all(16.w),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12.r),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.05),
-                        blurRadius: 5,
-                        spreadRadius: 0,
-                        offset: Offset(0, 2),
-                      ),
-                    ],
-                    border: Border.all(
-                      color: Colors.grey.withOpacity(0.2),
-                      width: 1,
-                    ),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Container(
-                            width: 40.w,
-                            height: 40.w,
-                            decoration: BoxDecoration(
-                              color: Color(0xFF414ce4).withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(8.r),
-                            ),
-                            child: Icon(
-                              Icons.work,
-                              color: Color(0xFF414ce4),
-                              size: 24.sp,
-                            ),
-                          ),
-                          SizedBox(width: 12.w),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  job['title'] ?? 'Unknown Job',
-                                  style: GoogleFonts.roboto(
-                                    fontSize: 16.sp,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.black87,
-                                  ),
-                                ),
-                                SizedBox(height: 4.h),
-                                Text(
-                                  job['hirerBusinessName'] ?? 'Unknown Company',
-                                  style: GoogleFonts.roboto(
-                                    fontSize: 14.sp,
-                                    color: Colors.grey.shade700,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          Container(
-                            padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
-                            decoration: BoxDecoration(
-                              color: job['jobType'] == 'full-time'
-                                  ? Colors.blue.shade100
-                                  : job['jobType'] == 'part-time'
-                                      ? Colors.amber.shade100
-                                      : Colors.green.shade100,
-                              borderRadius: BorderRadius.circular(4.r),
-                            ),
-                            child: Text(
-                              job['jobType'] ?? 'Unknown',
-                              style: GoogleFonts.roboto(
-                                fontSize: 12.sp,
-                                fontWeight: FontWeight.w500,
-                                color: job['jobType'] == 'full-time'
-                                    ? Colors.blue.shade800
-                                    : job['jobType'] == 'part-time'
-                                        ? Colors.amber.shade800
-                                        : Colors.green.shade800,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      SizedBox(height: 12.h),
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.location_on_outlined,
-                            size: 16.sp,
-                            color: Colors.grey.shade600,
-                          ),
-                          SizedBox(width: 4.w),
-                          Text(
-                            job['hirerLocation'] ?? 'Unknown Location',
-                            style: GoogleFonts.roboto(
-                              fontSize: 13.sp,
-                              color: Colors.grey.shade600,
-                            ),
-                          ),
-                          Spacer(),
-                          Icon(
-                            Icons.calendar_today_outlined,
-                            size: 16.sp,
-                            color: Colors.grey.shade600,
-                          ),
-                          SizedBox(width: 4.w),
-                          Text(
-                            formattedDate,
-                            style: GoogleFonts.roboto(
-                              fontSize: 13.sp,
-                              color: Colors.grey.shade600,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                );
-              },
-            ),
-        ],
-      ),
-    );
-  }
+              );
+            },
+          ),
+      ],
+    ),
+  );
+}
 }

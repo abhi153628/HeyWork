@@ -1,11 +1,6 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'dart:io';
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -15,16 +10,7 @@ import 'package:hey_work/presentation/hirer_section/settings_screen/settings_pag
 import 'package:image_picker/image_picker.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:uuid/uuid.dart';
-import 'dart:io';
-import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_storage/firebase_storage.dart';
-import 'package:image_picker/image_picker.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:uuid/uuid.dart';
+import 'package:cached_network_image/cached_network_image.dart'; // Added import for CachedNetworkImage
 
 class HirerProfilePage extends StatefulWidget {
   const HirerProfilePage({Key? key}) : super(key: key);
@@ -57,6 +43,8 @@ class _HirerProfilePageState extends State<HirerProfilePage> {
     );
   }
 }
+
+
 
 class ProfileHeaderSection extends StatelessWidget {
   final Function refreshCallback;
@@ -156,6 +144,7 @@ class ProfileHeaderSection extends StatelessWidget {
               // Content
               Column(
                 children: [
+                  //! A P P -  B A R
                   // Back button and menu
                   Padding(
                     padding: EdgeInsets.symmetric(horizontal: 25.w, vertical: 40.h),
@@ -201,50 +190,35 @@ class ProfileHeaderSection extends StatelessWidget {
                     ),
                   ),
 
-                  // Profile picture - Using real data
+                  // Profile picture - Using real data with modifications
                   Container(
                     width: 120.w,
                     height: 120.w,
                     decoration: BoxDecoration(
-                      shape: BoxShape.circle, 
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.8),
-                          blurRadius: 3,
-                          offset: Offset(-4, 1),
-                          spreadRadius: 1
-                        )
-                      ]
+                      shape: BoxShape.circle,
+                      // Shadow removed as requested
                     ),
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(70.r),
                       child: profileImage.isNotEmpty 
-                          ? Image.network(
-                              profileImage,
+                          ? CachedNetworkImage(
+                              imageUrl: profileImage,
                               fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) {
-                                // Fallback to default image on error
-                                return Image.asset(
-                                  'asset/heywork.jpeg',
-                                  fit: BoxFit.cover,
-                                );
-                              },
-                              loadingBuilder: (context, child, loadingProgress) {
-                                if (loadingProgress == null) return child;
-                                return Center(
-                                  child: CircularProgressIndicator(
-                                    color: Colors.white,
-                                    value: loadingProgress.expectedTotalBytes != null
-                                        ? loadingProgress.cumulativeBytesLoaded / 
-                                          loadingProgress.expectedTotalBytes!
-                                        : null,
-                                  ),
-                                );
-                              },
+                              placeholder: (context, url) => Center(
+                                child: CircularProgressIndicator(
+                                  color: Colors.white,
+                                ),
+                              ),
+                              errorWidget: (context, url, error) => Icon(
+                                Icons.person,
+                                size: 60.sp,
+                                color: Colors.white,
+                              ),
                             )
-                          : Image.asset(
-                              'asset/heywork.jpeg',
-                              fit: BoxFit.cover,
+                          : Icon(
+                              Icons.person,
+                              size: 60.sp,
+                              color: Colors.white,
                             ),
                     ),
                   ),
@@ -308,10 +282,6 @@ class ProfileHeaderSection extends StatelessWidget {
     );
   }
 }
-
-
-
-
 // This is a stub for the EditProfilePage
 // You would need to implement this page to allow editing profile data
 class EditProfilePage extends StatefulWidget {
@@ -398,11 +368,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
     );
   }
 }
-
-
-
-
-
 
 class EditProfileButton extends StatelessWidget {
   final Function refreshCallback;
@@ -1005,16 +970,19 @@ class _EditProfileBottomSheetState extends State<EditProfileBottomSheet> {
                                             fit: BoxFit.cover,
                                           )
                                         : _currentImageUrl != null && _currentImageUrl!.isNotEmpty
-                                            ? Image.network(
-                                                _currentImageUrl!,
+                                            ? CachedNetworkImage(
+                                                imageUrl: _currentImageUrl!,
                                                 fit: BoxFit.cover,
-                                                errorBuilder: (context, error, stackTrace) {
-                                                  return Icon(
-                                                    Icons.person,
-                                                    size: 50.w,
-                                                    color: Colors.grey.shade400,
-                                                  );
-                                                },
+                                                placeholder: (context, url) => Center(
+                                                  child: CircularProgressIndicator(
+                                                    color: Color(0xFFBB0000),
+                                                  ),
+                                                ),
+                                                errorWidget: (context, url, error) => Icon(
+                                                  Icons.person,
+                                                  size: 50.w,
+                                                  color: Colors.grey.shade400,
+                                                ),
                                               )
                                             : Icon(
                                                 Icons.person,

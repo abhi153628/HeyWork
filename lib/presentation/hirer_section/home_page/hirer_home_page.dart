@@ -548,24 +548,14 @@ class _HirerHomePageState extends State<HirerHomePage> {
                         sliver: SliverList(
                           delegate: SliverChildListDelegate([
                             //! I N D U S T R Y  T I T L E
-                            Padding(
-                              padding: EdgeInsets.only(bottom: 16.h),
-                              child: Text(
-                                'Related Jobs',
-                                style: TextStyle(
-                                  fontSize: 18.sp,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-
+                            SizedBox(height: 12.h),
                             //! J O B  C A T E G O R I E S
                             _buildJobCategoriesSection(),
 
                             //! My Jobs Section (Replaced LatestJobsSection)
                             const MyJobsSection(),
 
-                            SizedBox(height: 72.h), // Space for FAB
+                            SizedBox(height: 12.h), // Space for FAB
                           ]),
                         ),
                       ),
@@ -728,7 +718,7 @@ class _MyJobsSectionState extends State<MyJobsSection> {
   // Build section header with title and "See All" button
  Widget _buildSectionHeader() {
   return Padding(
-    padding: EdgeInsets.only(bottom: 4.h),
+    padding: EdgeInsets.only(bottom: 4.h,right: 280.h),
     child: Text(
       'My Jobs',
       style: GoogleFonts.roboto(
@@ -819,7 +809,7 @@ class _MyJobsSectionState extends State<MyJobsSection> {
       
       // New "View All Jobs" button at the bottom
       Padding(
-        padding: EdgeInsets.symmetric(vertical:16.h),
+        padding: EdgeInsets.symmetric(vertical:6.h),
         child: Container(
           width: double.infinity,
           height: 50.h,
@@ -833,11 +823,13 @@ class _MyJobsSectionState extends State<MyJobsSection> {
               );
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF0011C9),
+           backgroundColor: Colors.white,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12.r),
+                
               ),
-              elevation: 2,
+              side: BorderSide(color: const Color(0xFF0011C9)),
+            
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -847,13 +839,13 @@ class _MyJobsSectionState extends State<MyJobsSection> {
                   style: GoogleFonts.roboto(
                     fontSize: 16.sp,
                     fontWeight: FontWeight.w600,
-                    color: Colors.white,
+                    color: const Color(0xFF0011C9),
                   ),
                 ),
                 SizedBox(width: 8.w),
                 Icon(
                   Icons.arrow_forward,
-                  color: Colors.white,
+                  color: const Color(0xFF0011C9),
                   size: 20.sp,
                 ),
               ],

@@ -5,14 +5,36 @@ import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:hey_work/core/services/database/jobs_service.dart';
 import 'package:hey_work/core/theme/app_colors.dart';
+import 'package:share_plus/share_plus.dart'; // Add this import for sharing functionality
 
-class JobDetailScreen extends StatelessWidget {
+class JobDetailScreen extends StatefulWidget {
   final JobModel job;
 
   const JobDetailScreen({
     Key? key,
     required this.job,
   }) : super(key: key);
+
+  @override
+  State<JobDetailScreen> createState() => _JobDetailScreenState();
+}
+
+class _JobDetailScreenState extends State<JobDetailScreen> {
+  bool _isApplied = false;
+  bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkInitialApplicationStatus();
+  }
+
+  Future<void> _checkInitialApplicationStatus() async {
+    final isApplied = await _checkIfApplied();
+    setState(() {
+      _isApplied = isApplied;
+    });
+  }
 
   //! N A V I G A T I O N  B U T T O N S
   Widget _buildNavigationButtons(BuildContext context) {
@@ -23,7 +45,10 @@ class JobDetailScreen extends StatelessWidget {
         children: [
           // Back button
           GestureDetector(
-            onTap: () => Navigator.pop(context),
+            onTap: () {
+              // Navigate back to applications page
+              Navigator.pop(context);
+            },
             child: Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
@@ -45,15 +70,12 @@ class JobDetailScreen extends StatelessWidget {
             ),
           ),
 
-          // Bookmark button
+          // Share button (replacing bookmark)
           GestureDetector(
             onTap: () {
-              // Bookmark functionality
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Job saved to bookmarks'),
-                  duration: Duration(seconds: 2),
-                ),
+              // Share job details functionality
+              Share.share(
+                'Check out this ${widget.job.jobType} ${widget.job.jobCategory} job at ${widget.job.company} in ${widget.job.location}',
               );
             },
             child: Container(
@@ -70,7 +92,7 @@ class JobDetailScreen extends StatelessWidget {
                 ],
               ),
               child: const Icon(
-                Icons.bookmark_border,
+                Icons.share,
                 color: Colors.black,
                 size: 24,
               ),
@@ -83,7 +105,7 @@ class JobDetailScreen extends StatelessWidget {
 
   //! H E A D E R  S E C T I O N
   Widget _buildHeader() {
-    final isFullTime = job.jobType.toLowerCase() == 'full-time';
+    final isFullTime = widget.job.jobType.toLowerCase() == 'full-time';
     final jobTypeColor = isFullTime ? AppColors.green : Color(0xFF0000CC);
 
     return Container(
@@ -107,11 +129,11 @@ class JobDetailScreen extends StatelessWidget {
                 ),
               ],
             ),
-            child: job.imageUrl != null && job.imageUrl!.isNotEmpty
+            child: widget.job.imageUrl != null && widget.job.imageUrl!.isNotEmpty
                 ? ClipRRect(
                     borderRadius: BorderRadius.circular(40),
                     child: Image.network(
-                      job.imageUrl!,
+                      widget.job.imageUrl!,
                       width: 80,
                       height: 80,
                       fit: BoxFit.cover,
@@ -135,13 +157,15 @@ class JobDetailScreen extends StatelessWidget {
 
           // Job title
           Text(
-            job.jobCategory,
+            widget.job.jobCategory,
             style: const TextStyle(
               fontSize: 24,
               fontWeight: FontWeight.bold,
               color: Colors.black,
             ),
             textAlign: TextAlign.center,
+            overflow: TextOverflow.ellipsis,
+            maxLines: 2,
           ),
 
           const SizedBox(height: 8),
@@ -150,20 +174,26 @@ class JobDetailScreen extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text(
-                job.company,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w500,
-                  color: AppColors.darkGrey,
+              Flexible(
+                child: Text(
+                  widget.job.company,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                    color: AppColors.darkGrey,
+                  ),
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
-              if (job.hirerIndustry.isNotEmpty) ...[
-                Text(
-                  ' • ${job.hirerIndustry}',
-                  style: const TextStyle(
-                    fontSize: 14,
-                    color: AppColors.darkGrey,
+              if (widget.job.hirerIndustry.isNotEmpty) ...[
+                Flexible(
+                  child: Text(
+                    ' • ${widget.job.hirerIndustry}',
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: AppColors.darkGrey,
+                    ),
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ],
@@ -172,9 +202,11 @@ class JobDetailScreen extends StatelessWidget {
 
           const SizedBox(height: 16),
 
-          // Location, job type, and salary information
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
+                  // Location, job type, and salary information
+          Wrap(
+            alignment: WrapAlignment.center,
+            spacing: 8, // horizontal space between items
+            runSpacing: 8, // vertical space between lines
             children: [
               Container(
                 padding:
@@ -184,7 +216,7 @@ class JobDetailScreen extends StatelessWidget {
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
-                  job.jobType,
+                  widget.job.jobType,
                   style: const TextStyle(
                     fontSize: 14,
                     color: Colors.white,
@@ -193,57 +225,71 @@ class JobDetailScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 8),
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade200,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(
-                      Icons.location_on,
-                      size: 14,
-                      color: AppColors.darkGrey,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      job.location.split(',').first, // Only show city name
-                      style: const TextStyle(
-                        fontSize: 14,
+              Flexible(
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade200,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.location_on,
+                        size: 14,
                         color: AppColors.darkGrey,
                       ),
-                    ),
-                  ],
+                      const SizedBox(width: 4),
+                      Flexible(
+                        child: Text(
+                          widget.job.location, // Show full location
+                          style: const TextStyle(
+                            fontSize: 14,
+                            color: AppColors.darkGrey,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 1,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
               const SizedBox(width: 8),
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade200,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(
-                      Icons.currency_rupee,
-                      size: 14,
-                      color: AppColors.darkGrey,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      isFullTime && job.salaryRange != null
-                          ? '${job.salaryRange!['min']}-${job.salaryRange!['max']}/mo'
-                          : '${job.budget}/day',
-                      style: const TextStyle(
-                        fontSize: 14,
+              Flexible(
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade200,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.currency_rupee,
+                        size: 14,
                         color: AppColors.darkGrey,
                       ),
-                    ),
-                  ],
+                      const SizedBox(width: 4),
+                      Flexible(
+                        child: Text(
+                          isFullTime && widget.job.salaryRange != null
+                              ? '${_formatCurrency(widget.job.salaryRange!['min'])}-${_formatCurrency(widget.job.salaryRange!['max'])}/mo'
+                              : '${_formatCurrency(widget.job.budget)}/day',
+                          style: const TextStyle(
+                            fontSize: 14,
+                            color: AppColors.darkGrey,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 1,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ],
@@ -289,7 +335,7 @@ class JobDetailScreen extends StatelessWidget {
             context,
             icon: Icons.location_on,
             title: 'Location',
-            value: job.location,
+            value: widget.job.location,
           ),
 
           const Divider(height: 24),
@@ -299,7 +345,7 @@ class JobDetailScreen extends StatelessWidget {
             context,
             icon: Icons.calendar_today,
             title: 'Date',
-            value: _formatDate(job.date),
+            value: _formatDate(widget.job.date),
           ),
 
           const Divider(height: 24),
@@ -308,15 +354,137 @@ class JobDetailScreen extends StatelessWidget {
           _buildInfoItem(
             context,
             icon: Icons.access_time,
-            title: 'Arival Time',
-            value: job.timeFormatted ?? 'Not specified',
+            title: 'Arrival Time',
+            value: widget.job.timeFormatted ?? 'Not specified',
           ),
         ],
       ),
     );
   }
 
-// Add to JobDetailScreen class in the first file
+  Widget _buildConfirmationBottomSheet(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.only(
+          topLeft: Radius.circular(24),
+          topRight: Radius.circular(24),
+        ),
+      ),
+      padding: EdgeInsets.all(24),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 50,
+            height: 5,
+            decoration: BoxDecoration(
+              color: Colors.grey.shade300,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            margin: EdgeInsets.only(bottom: 20),
+          ),
+          
+          Icon(
+            Icons.work_outline,
+            color: Color(0xFF0000CC),
+            size: 48,
+          ),
+          
+          SizedBox(height: 16),
+          
+          Text(
+            'Confirm Application',
+            style: GoogleFonts.poppins(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          
+          SizedBox(height: 16),
+          
+          Text(
+            'Are you applying for the ${widget.job.jobCategory} job at ${widget.job.company}? Once applied, the hirer will receive your application.',
+            textAlign: TextAlign.center,
+            style: GoogleFonts.poppins(
+              fontSize: 16,
+              color: Colors.grey.shade700,
+            ),
+            overflow: TextOverflow.visible,
+          ),
+          
+          SizedBox(height: 24),
+          
+          Row(
+            children: [
+              // Cancel button
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () => Navigator.pop(context, false),
+                  style: OutlinedButton.styleFrom(
+                    padding: EdgeInsets.symmetric(vertical: 16),
+                    side: BorderSide(color: Color(0xFF0000CC)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  child: Text(
+                    'Cancel',
+                    style: GoogleFonts.poppins(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF0000CC),
+                    ),
+                  ),
+                ),
+              ),
+              
+              SizedBox(width: 16),
+              
+              // Apply button
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: () => Navigator.pop(context, true),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Color(0xFF0000CC),
+                    padding: EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    elevation: 0,
+                  ),
+                  child: Text(
+                    'Apply',
+                    style: GoogleFonts.poppins(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Check if user has already applied
+  Future<bool> _checkIfApplied() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      return false;
+    }
+
+    final applicationDoc = await FirebaseFirestore.instance
+        .collection('jobApplications')
+        .doc('${widget.job.id}_${user.uid}')
+        .get();
+
+    return applicationDoc.exists;
+  }
+
   Future<void> _applyForJob(BuildContext context) async {
     try {
       // Get current user
@@ -331,24 +499,14 @@ class JobDetailScreen extends StatelessWidget {
         return;
       }
 
-      // Show loading indicator
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => const Center(
-          child: CircularProgressIndicator(),
-        ),
-      );
-
       // Check if already applied
       final applicationRef = FirebaseFirestore.instance
           .collection('jobApplications')
-          .doc('${job.id}_${user.uid}');
+          .doc('${widget.job.id}_${user.uid}');
 
       final applicationDoc = await applicationRef.get();
       if (applicationDoc.exists) {
-        // Already applied, close loading dialog
-        Navigator.pop(context);
+        // Already applied
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('You have already applied for this job'),
@@ -365,8 +523,6 @@ class JobDetailScreen extends StatelessWidget {
           .get();
 
       if (!workerDoc.exists) {
-        // Close loading dialog
-        Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Worker profile not found'),
@@ -380,20 +536,20 @@ class JobDetailScreen extends StatelessWidget {
 
       // Create application record with composite ID (jobId_workerId)
       final application = {
-        'jobId': job.id,
+        'jobId': widget.job.id,
         'workerId': user.uid,
-        'hirerId': job.hirerId,
+        'hirerId': widget.job.hirerId,
         'workerName': workerData['name'] ?? 'No Name',
         'workerLocation': workerData['location'] ?? 'No Location',
         'workerProfileImage': workerData['profileImage'],
         'workerPhone': workerData['phoneNumber'] ?? '',
         'appliedAt': FieldValue.serverTimestamp(),
         'status': 'pending', // pending, accepted, rejected
-        'jobTitle': job.jobCategory,
-        'jobCompany': job.company,
-        'jobLocation': job.location,
-        'jobBudget': job.budget,
-        'jobType': job.jobType,
+        'jobTitle': widget.job.jobCategory,
+        'jobCompany': widget.job.company,
+        'jobLocation': widget.job.location,
+        'jobBudget': widget.job.budget,
+        'jobType': widget.job.jobType,
       };
 
       // Save to applications collection (for easy querying)
@@ -404,19 +560,16 @@ class JobDetailScreen extends StatelessWidget {
           .collection('workers')
           .doc(user.uid)
           .collection('applications')
-          .doc(job.id)
+          .doc(widget.job.id)
           .set(application);
 
       // Also add to job's applications subcollection (for hirer to see)
       await FirebaseFirestore.instance
           .collection('jobs')
-          .doc(job.id)
+          .doc(widget.job.id)
           .collection('applications')
           .doc(user.uid)
           .set(application);
-
-      // Close loading dialog
-      Navigator.pop(context);
 
       // Show success message
       ScaffoldMessenger.of(context).showSnackBar(
@@ -426,9 +579,6 @@ class JobDetailScreen extends StatelessWidget {
         ),
       );
     } catch (e) {
-      // Close loading dialog
-      Navigator.pop(context);
-
       // Show error
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -439,61 +589,60 @@ class JobDetailScreen extends StatelessWidget {
     }
   }
 
-// Update the _buildApplyButton method to check if already applied
+  // Updated to use state variable for applied status
   Widget _buildApplyButton(BuildContext context) {
-    return FutureBuilder<bool>(
-      future: _checkIfApplied(),
-      builder: (context, snapshot) {
-        // Show loading indicator while checking
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Padding(
-            padding: EdgeInsets.all(38.0),
-            child: Center(child: CircularProgressIndicator()),
-          );
-        }
-
-        final bool hasApplied = snapshot.data ?? false;
-
-        return Padding(
-          padding: const EdgeInsets.all(38.0),
-          child: ElevatedButton(
-            onPressed: hasApplied ? null : () => _applyForJob(context),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: hasApplied ? Colors.grey : Color(0xFF0000CC),
-              padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-              elevation: 0,
-            ),
-            child: Text(
-              hasApplied ? 'APPLIED' : 'APPLY NOW',
-              style: GoogleFonts.roboto(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-// Add a method to check if the user has already applied
-  Future<bool> _checkIfApplied() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) {
-      return false;
+    if (_isLoading) {
+      return const Padding(
+        padding: EdgeInsets.all(38.0),
+        child: Center(child: CircularProgressIndicator()),
+      );
     }
 
-    final applicationDoc = await FirebaseFirestore.instance
-        .collection('jobApplications')
-        .doc('${job.id}_${user.uid}')
-        .get();
-
-    return applicationDoc.exists;
+    return Padding(
+      padding: const EdgeInsets.all(38.0),
+      child: ElevatedButton(
+        onPressed: _isApplied ? null : () => _showApplyConfirmationSheet(context),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: _isApplied ? Colors.grey : Color(0xFF0000CC),
+          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+          elevation: 0,
+        ),
+        child: Text(
+          _isApplied ? 'APPLIED' : 'APPLY NOW',
+          style: GoogleFonts.roboto(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+        ),
+      ),
+    );
   }
+   Future<void> _showApplyConfirmationSheet(BuildContext context) async {
+    final result = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => _buildConfirmationBottomSheet(context),
+    );
+    
+    if (result == true) {
+      setState(() {
+        _isLoading = true;
+      });
+      
+      await _applyForJob(context);
+      
+      setState(() {
+        _isLoading = false;
+        _isApplied = true;
+      });
+    }
+  }
+
 
   String _formatDate(DateTime date) {
     // Format: "Monday, May 5, 2025"
@@ -522,6 +671,33 @@ class JobDetailScreen extends StatelessWidget {
     ];
 
     return '${days[date.weekday - 1]}, ${months[date.month - 1]} ${date.day}, ${date.year}';
+  }
+
+  // Currency formatting helper method
+  String _formatCurrency(dynamic value) {
+    // Safety check first
+    if (value == null) return '0';
+    
+    // Convert to string if it's not already
+    String numStr = value.toString();
+    
+    // Parse as double
+    double? numValue = double.tryParse(numStr);
+    if (numValue == null) return numStr;
+    
+    // For large values (millions+), convert to shorthand notation
+    if (numValue >= 1000000000) {
+      return '${(numValue / 1000000000).toStringAsFixed(1)}B';
+    } else if (numValue >= 1000000) {
+      return '${(numValue / 1000000).toStringAsFixed(1)}M';
+    } else if (numValue >= 100000) {
+      return '${(numValue / 100000).toStringAsFixed(1)}L';
+    } else if (numValue >= 1000) {
+      return '${(numValue / 1000).toStringAsFixed(1)}K';
+    }
+    
+    // Regular formatting for smaller numbers
+    return numValue.toStringAsFixed(0);
   }
 
   Widget _buildInfoItem(
@@ -565,6 +741,8 @@ class JobDetailScreen extends StatelessWidget {
                   fontWeight: FontWeight.w500,
                   color: Colors.black,
                 ),
+                overflow: TextOverflow.ellipsis,
+                maxLines: 2,
               ),
             ],
           ),
@@ -604,13 +782,14 @@ class JobDetailScreen extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           Text(
-            job.description ??
+            widget.job.description ??
                 "This is a sample job description and its going to be the easiest way the hirer would type it. And obviously is going to be less than 1 paragraph since what is there to tell more about it?",
             style: const TextStyle(
               fontSize: 14,
               color: AppColors.darkGrey,
               height: 1.5,
             ),
+            overflow: TextOverflow.visible, // Allow text to wrap naturally
           ),
         ],
       ),
@@ -670,6 +849,17 @@ class JobDetailScreen extends StatelessWidget {
             right: 0,
             child: _buildApplyButton(context),
           ),
+          
+          // Loading overlay
+          if (_isLoading)
+            Container(
+              color: Colors.black.withOpacity(0.5),
+              child: const Center(
+                child: CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF0000CC)),
+                ),
+              ),
+            ),
         ],
       ),
     );
