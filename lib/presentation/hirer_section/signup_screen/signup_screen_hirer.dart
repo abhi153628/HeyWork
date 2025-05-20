@@ -1205,7 +1205,7 @@ class SignupForm extends StatelessWidget {
                   style: GoogleFonts.roboto(
                     fontSize: responsive.getFontSize(28),
                     fontWeight: FontWeight.w700,
-                    color: Colors.blue.shade700,
+                    color: Color(0xFF0033FF),
                   ),
                 ),
               ),
@@ -1284,7 +1284,7 @@ class SignupForm extends StatelessWidget {
                     child: Checkbox(
                       value: acceptedTerms,
                       onChanged: (value) => onTermsChanged(value ?? false),
-                      activeColor: Colors.blue.shade700,
+                      activeColor: Color(0xFF0033FF),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(4),
                       ),
@@ -1306,7 +1306,7 @@ class SignupForm extends StatelessWidget {
                       "Terms",
                       style: GoogleFonts.roboto(
                         fontSize: responsive.getFontSize(14),
-                        color: Colors.blue.shade700,
+                        color: Color(0xFF0033FF),
                         fontWeight: FontWeight.w500,
                       ),
                     ),
@@ -1342,7 +1342,7 @@ class SignupForm extends StatelessWidget {
                 child: ElevatedButton(
                   onPressed: onSubmit,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue.shade700,
+                    backgroundColor:Color(0xFF0033FF),
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10),
@@ -1483,7 +1483,7 @@ class ProfileImageSelector extends StatelessWidget {
                     ),
                     child: Icon(
                       Icons.photo_library,
-                      color: Colors.blue.shade700,
+                      color: Color(0xFF0033FF),
                     ),
                   ),
                   title: Text(
@@ -1512,7 +1512,7 @@ class ProfileImageSelector extends StatelessWidget {
                     ),
                     child: Icon(
                       Icons.camera_alt,
-                      color: Colors.blue.shade700,
+                      color: Color(0xFF0033FF),
                     ),
                   ),
                   title: Text(
@@ -1597,7 +1597,7 @@ class CustomTextField extends StatelessWidget {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
-          borderSide: BorderSide(color: Colors.blue.shade400, width: 1.5),
+          borderSide: BorderSide(color: Color(0xFF0033FF), width: 1.5),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
@@ -1731,7 +1731,7 @@ class _LocationSelectorState extends State<LocationSelector> {
                       width: widget.responsive.getWidth(16),
                       child: CircularProgressIndicator(
                         strokeWidth: 2,
-                        color: Colors.blue.shade700,
+                        color: Color(0xFF0033FF),
                       ),
                     ),
                   )
@@ -1755,7 +1755,7 @@ class _LocationSelectorState extends State<LocationSelector> {
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
-              borderSide: BorderSide(color: Colors.blue.shade400, width: 1.5),
+              borderSide: BorderSide(color: Color(0xFF0033FF), width: 1.5),
             ),
             errorBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
@@ -1822,7 +1822,7 @@ class _LocationSelectorState extends State<LocationSelector> {
                         Icon(
                           Icons.location_on,
                           size: widget.responsive.getWidth(20),
-                          color: Colors.blue.shade700,
+                          color: Color(0xFF0033FF),
                         ),
                         SizedBox(width: widget.responsive.getWidth(12)),
                         Expanded(

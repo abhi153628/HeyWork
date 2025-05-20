@@ -472,18 +472,24 @@ class JobService {
   }
 
   // Get job by ID
-  Future<JobModel?> getJobById(String jobId) async {
-    try {
-      final doc = await _firestore.collection('jobs').doc(jobId).get();
-      if (doc.exists) {
-        return JobModel.fromFirestore(doc);
-      }
-      return null;
-    } catch (e) {
-      print('Error fetching job by ID: $e');
-      return null;
+Future<JobModel?> getJobById(String jobId) async {
+  try {
+    print('getJobById called with ID: $jobId');
+    final doc = await _firestore.collection('jobs').doc(jobId).get();
+    
+    print('Document exists: ${doc.exists}');
+    if (doc.exists) {
+      final job = JobModel.fromFirestore(doc);
+      print('Successfully created JobModel: ${job.title}');
+      return job;
     }
+    print('Document not found');
+    return null;
+  } catch (e) {
+    print('Error in getJobById: $e');
+    return null;
   }
+}
 
   // Get predefined job categories
   List<JobCategory> getJobCategories() {

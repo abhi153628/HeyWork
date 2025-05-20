@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:hey_work/presentation/hirer_section/signup_screen/widgets/snack_bar_utils.dart';
 
 import 'package:hey_work/presentation/services/authentication_services.dart';
 import 'package:hey_work/presentation/hirer_section/common/bottom_nav_bar.dart';
 import 'package:hey_work/presentation/hirer_section/signup_screen/signup_screen_hirer.dart';
 import 'package:hey_work/presentation/hirer_section/signup_screen/widgets/responsive_utils.dart';
+
 
 class HirerLoginScreen extends StatefulWidget {
   const HirerLoginScreen({Key? key}) : super(key: key);
@@ -47,28 +49,9 @@ class _HirerLoginScreenState extends State<HirerLoginScreen> {
     super.dispose();
   }
 
-  // Show custom snackbar
+  // Show custom snackbar - now uses the utility class
   void _showSnackBar(String message, {bool isError = false}) {
-    ScaffoldMessenger.of(context).hideCurrentSnackBar();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: isError ? Colors.red.shade800 : const Color(0xFF0033FF),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10),
-        ),
-        margin: const EdgeInsets.all(10),
-        duration: Duration(seconds: isError ? 4 : 3),
-        action: SnackBarAction(
-          label: 'OK',
-          textColor: Colors.white,
-          onPressed: () {
-            ScaffoldMessenger.of(context).hideCurrentSnackBar();
-          },
-        ),
-      ),
-    );
+    SnackBarUtil.showSnackBar(context, message, isError: isError);
   }
 
   Future<void> _verifyPhoneNumber() async {
@@ -284,7 +267,7 @@ class _HirerLoginScreenState extends State<HirerLoginScreen> {
                   left: 0,
                   right: 1,
                   child: Container(
-                    height: _otpSent ? screenHeight * 0.5 : screenHeight * 0.4, // Adjust height based on OTP state
+                    height: _otpSent ? screenHeight * 0.47 : screenHeight * 0.4, // Adjust height based on OTP state
                     decoration: const BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.only(
@@ -410,49 +393,76 @@ class _HirerLoginScreenState extends State<HirerLoginScreen> {
                                 ),
                                 borderRadius: BorderRadius.circular(10),
                               ),
-                              child: TextFormField(
-                                controller: _otpController,
-                                style: GoogleFonts.roboto(
-                                  fontSize: _responsive.getFontSize(16),
-                                  color: const Color(0xFF0033FF),
-                                  letterSpacing: 2,
-                                ),
-                                decoration: InputDecoration(
-                                  hintText: "Enter 6-digit OTP",
-                                  hintStyle: GoogleFonts.roboto(
-                                    fontSize: _responsive.getFontSize(16),
-                                    color: const Color(0xFF0033FF).withOpacity(0.7),
-                                    fontWeight: FontWeight.w600
+                              child: Row(
+                                children: [
+                                  // Lock icon container (matching the flag container's style)
+                                  Container(
+                                    padding: EdgeInsets.symmetric(
+                                      horizontal: _responsive.getWidth(12),
+                                      vertical: _responsive.getHeight(14),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        Icon(
+                                          Icons.lock_outline,
+                                          color: const Color(0xFF0033FF),
+                                          size: _responsive.getWidth(24),
+                                        ),
+                                        SizedBox(width: _responsive.getWidth(8)),
+                                        Text(
+                                          "OTP |",
+                                          style: GoogleFonts.roboto(
+                                            fontSize: _responsive.getFontSize(16),
+                                            fontWeight: FontWeight.w900,
+                                            color: const Color(0xFF0033FF)
+                                          ),
+                                        ),
+                                      ],
+                                    ),
                                   ),
-                                  prefixIcon: Icon(
-                                    Icons.lock_outline,
-                                    color: const Color(0xFF0033FF),
+                                  
+                                  // OTP input (matching the phone input's style)
+                                  Expanded(
+                                    child: TextFormField(
+                                      controller: _otpController,
+                                      style: GoogleFonts.roboto(
+                                        fontSize: _responsive.getFontSize(16),
+                                        color: const Color(0xFF0033FF),
+                                        letterSpacing: 2,
+                                      ),
+                                      decoration: InputDecoration(
+                                        hintText: "Enter 6-digit OTP",
+                                        hintStyle: GoogleFonts.roboto(
+                                          fontSize: _responsive.getFontSize(16),
+                                          color: const Color(0xFF0033FF),
+                                          fontWeight: FontWeight.w600
+                                        ),
+                                        border: InputBorder.none,
+                                        contentPadding: EdgeInsets.symmetric(
+                                          vertical: _responsive.getHeight(16),
+                                          horizontal: _responsive.getWidth(12),
+                                        ),
+                                      ),
+                                      keyboardType: TextInputType.number,
+                                      inputFormatters: [
+                                        FilteringTextInputFormatter.digitsOnly,
+                                        LengthLimitingTextInputFormatter(6),
+                                      ],
+                                      validator: (value) {
+                                        if (value == null || value.isEmpty) {
+                                          return 'Please enter the OTP';
+                                        }
+                                        if (value.length != 6) {
+                                          return 'OTP must be 6 digits';
+                                        }
+                                        return null;
+                                      },
+                                    ),
                                   ),
-                                  border: InputBorder.none,
-                                  contentPadding: EdgeInsets.symmetric(
-                                    vertical: _responsive.getHeight(16),
-                                    horizontal: _responsive.getWidth(12),
-                                  ),
-                                ),
-                                keyboardType: TextInputType.number,
-                                inputFormatters: [
-                                  FilteringTextInputFormatter.digitsOnly,
-                                  LengthLimitingTextInputFormatter(6),
                                 ],
-                                validator: (value) {
-                                  if (value == null || value.isEmpty) {
-                                    return 'Please enter the OTP';
-                                  }
-                                  if (value.length != 6) {
-                                    return 'OTP must be 6 digits';
-                                  }
-                                  return null;
-                                },
                               ),
                             ),
                             
-                            // Add resend OTP option
-                            SizedBox(height: _responsive.getHeight(12)),
                             Row(
                               mainAxisAlignment: MainAxisAlignment.end,
                               children: [
@@ -471,7 +481,7 @@ class _HirerLoginScreenState extends State<HirerLoginScreen> {
                             ),
                           ],
                           
-                          SizedBox(height: _responsive.getHeight(20)),
+                          SizedBox(height: _responsive.getHeight(10)),
                           
                           // Continue button
                           SizedBox(
@@ -499,7 +509,7 @@ class _HirerLoginScreenState extends State<HirerLoginScreen> {
                           
                           // Sign up link (if needed)
                           if (!_otpSent) ...[
-                            SizedBox(height: _responsive.getHeight(20)),
+                            SizedBox(height: _responsive.getHeight(10)),
                             Row(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [

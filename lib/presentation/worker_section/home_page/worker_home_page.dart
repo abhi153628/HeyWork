@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:hey_work/core/services/database/jobs_service.dart';
 import 'package:hey_work/core/theme/app_colors.dart';
 import 'package:hey_work/presentation/hirer_section/settings_screen/settings_page.dart';
+import 'package:share_plus/share_plus.dart';
 import 'more_jobs_page.dart';
 import 'search_bar_widget.dart';
 import 'widgets/catogory_list.dart';
@@ -20,46 +21,111 @@ class WorkerHomePage extends StatefulWidget {
 class _WorkerHomePageState extends State<WorkerHomePage> {
   final JobService _jobService = JobService();
   late Stream<List<JobModel>> _jobsStream;
-  String _workerLocation = 'Location';
+  String _workerLocation = 'Loading location...';
 
   @override
   void initState() {
     super.initState();
+    
+    //! S T A T U S  B A R  S T Y L E
     SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
       statusBarBrightness: Brightness.light,
       statusBarIconBrightness: Brightness.light,
     ));
 
-    // Get worker's location
-    _fetchWorkerLocation();
-
-    // Initialize job categories
-    final jobProvider = Provider.of<JobProvider>(context, listen: false);
-    jobProvider.setCategories(_jobService.getJobCategories());
-
     // Set initial jobs stream
     _jobsStream = _jobService.getJobs();
-  }
-
-  void _fetchWorkerLocation() async {
-    final location = await _jobService.getWorkerLocation();
-    setState(() {
-      _workerLocation = location;
+    
+    // Initialize properly after build is complete
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _initializeApp();
     });
-
-    // Update the first category with the worker's location
+  }
+  
+  //! I N I T I A L I Z A T I O N
+  void _initializeApp() {
+    // Initialize job categories first
     final jobProvider = Provider.of<JobProvider>(context, listen: false);
-    List<JobCategory> categories = List.from(jobProvider.categories);
-    categories[0] = JobCategory(
-      id: 'location',
-      name: "Nearby Jobs",
-      iconPath: 'asset/Rectangle 24928.png',
-      isSelected: categories[0].isSelected,
-    );
-    jobProvider.setCategories(categories);
+    jobProvider.setCategories(_jobService.getJobCategories());
+    
+    // Then fetch worker location
+    _fetchWorkerLocation();
   }
 
+  //! L O C A T I O N  F E T C H I N G
+  void _fetchWorkerLocation() async {
+    try {
+      final location = await _jobService.getWorkerLocation();
+      
+      if (!mounted) return;
+      
+      setState(() {
+        _workerLocation = location.isNotEmpty ? location : 'Location Unknown';
+      });
+      
+      // Get provider after state update to ensure widget is fully built
+      final jobProvider = Provider.of<JobProvider>(context, listen: false);
+      
+      // Only update if we have categories already
+      if (jobProvider.categories.isNotEmpty) {
+        // Create a new list to avoid modifying the original
+        List<JobCategory> categories = List.from(jobProvider.categories);
+        
+        // Update the first category with the worker's location
+        categories[0] = JobCategory(
+          id: 'location',
+          name: "Nearby Jobs",
+          iconPath: 'asset/Rectangle 24928.png',
+          isSelected: categories[0].isSelected,
+        );
+        
+        // Update provider with new categories
+        jobProvider.setCategories(categories);
+      }
+      
+      // Refresh jobs based on updated location
+      setState(() {
+        _jobsStream = _jobService.getJobsByCategory(
+          jobProvider.selectedCategory == "Nearby Jobs" ? _workerLocation : jobProvider.selectedCategory,
+          workerLocation: _workerLocation
+        );
+      });
+    } catch (error) {
+      if (!mounted) return;
+      
+      setState(() {
+        _workerLocation = 'Location Unavailable';
+      });
+      
+      // Show a snackbar with the error but limit error text length
+      String errorMsg = error.toString();
+      if (errorMsg.length > 50) {
+        errorMsg = '${errorMsg.substring(0, 47)}...';
+      }
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not fetch location: $errorMsg')),
+      );
+    }
+  }
+
+  //! S H A R E  J O B
+  void _shareJob(JobModel job) {
+    final String shareText = '''
+Job Opportunity: ${job.title}
+Company: ${job.company}
+Location: ${job.location}
+Salary: ${job.hirerBusinessName}
+Description: ${job.description.length > 100 ? '${job.description.substring(0, 100)}...' : job.description}
+
+Find more jobs on HeyWork!
+''';
+
+    Share.share(shareText, subject: 'Check out this job opportunity!');
+  }
+
+  //! C A T E G O R Y  S E L E C T I O N
   void _onCategorySelected(String category) {
     final jobProvider = Provider.of<JobProvider>(context, listen: false);
     jobProvider.setSelectedCategory(category);
@@ -78,6 +144,7 @@ class _WorkerHomePageState extends State<WorkerHomePage> {
     });
   }
 
+  //! N A V I G A T I O N
   void _navigateToMoreJobs() {
     // Get the current selected category
     final jobProvider = Provider.of<JobProvider>(context, listen: false);
@@ -95,7 +162,6 @@ class _WorkerHomePageState extends State<WorkerHomePage> {
     );
   }
 
-  // New method to navigate to search page
   void _navigateToSearchPage() {
     // Get the current selected category from provider
     final jobProvider = Provider.of<JobProvider>(context, listen: false);
@@ -115,65 +181,68 @@ class _WorkerHomePageState extends State<WorkerHomePage> {
 
   @override
   Widget build(BuildContext context) {
-      SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle(
-   
+    //! S Y S T E M  U I  S T Y L E
+    SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle(
       statusBarIconBrightness: Brightness.light,
       statusBarBrightness: Brightness.dark,
     ));
+    
     return Scaffold(
       backgroundColor: Colors.white,
       body: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-              Padding(
-              padding: const EdgeInsets.only(top: 29,left: 20),
-                child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'Heywork',
-                          style: GoogleFonts.roboto(
-                            color: Color(0xFF0000CC),
-                            fontSize: 28,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.menu, color: Color(0xFF0000CC)),
-                          onPressed: () {Navigator.of(context).push(MaterialPageRoute(
-                builder: (context) =>  SettingsScreen(),
-              ));},
-                        ),
-                      ],
-                    ),
-              ),
-
-                  // Location row
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 16,left: 20),
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.location_on,
-                          color: Colors.black54,
-                          size: 20,
-                        ),
-                        SizedBox(width: 4),
-                        Text(
-                          _workerLocation,
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                color: Colors.black87,
-                                fontSize: 14,
-                              ),
-                        ),
-                      ],
+            //! A P P  B A R
+            Padding(
+              padding: const EdgeInsets.only(top: 29, left: 20),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Heywork',
+                    style: GoogleFonts.roboto(
+                      color: Color(0xFF0000CC),
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
-                
-              
+                  IconButton(
+                    icon: const Icon(Icons.menu, color: Color(0xFF0000CC)),
+                    onPressed: () {
+                      Navigator.of(context).push(MaterialPageRoute(
+                        builder: (context) => SettingsScreen(),
+                      ));
+                    },
+                  ),
+                ],
+              ),
+            ),
+
+            //! L O C A T I O N  I N D I C A T O R
+            Padding(
+              padding: const EdgeInsets.only(bottom: 16, left: 20),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.location_on,
+                    color: Colors.black54,
+                    size: 20,
+                  ),
+                  SizedBox(width: 4),
+                  Text(
+                    _workerLocation,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: Colors.black87,
+                          fontSize: 14,
+                        ),
+                  ),
+                ],
+              ),
+            ),
             
-                    Container(
+            //! H E R O  B A N N E R
+            Container(
               height: 180,
               margin: EdgeInsets.symmetric(horizontal: 16),
               decoration: BoxDecoration(
@@ -211,15 +280,18 @@ class _WorkerHomePageState extends State<WorkerHomePage> {
                     right: 2,
                     bottom: 0,
                     child: Image.asset(
-                      'asset/Rectangle 24928.png', // Make sure this image exists
+                      'asset/Rectangle 24928.png',
                       height: 200,
                     ),
                   ),
                 ],
               ),
             ),
-            SizedBox(height: 20,),
-              Padding(
+            
+            SizedBox(height: 20),
+            
+            //! S E A R C H  B A R
+            Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: GestureDetector(
                 onTap: _navigateToSearchPage,
@@ -249,20 +321,8 @@ class _WorkerHomePageState extends State<WorkerHomePage> {
                           fontSize: 16,
                         ),
                       ),
+                      // Removed filter button as requested
                       Spacer(),
-                      Container(
-                        margin: EdgeInsets.all(5),
-                        padding: EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: Colors.grey.shade200,
-                          borderRadius: BorderRadius.circular(40),
-                        ),
-                        child: Icon(
-                          Icons.tune,
-                          color: Colors.grey,
-                          size: 20,
-                        ),
-                      ),
                     ],
                   ),
                 ),
@@ -270,24 +330,17 @@ class _WorkerHomePageState extends State<WorkerHomePage> {
             ),
 
             SizedBox(height: 20),
-            // Header section
-            
 
-            // Search bar section with blue background
-        
-
-            SizedBox(
-              height: 10,
-            ),
-
-            // Categories Section Title
+            //! C A T E G O R I E S  T I T L E
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16.0),
-              child: Text('Categories',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+              child: Text(
+                'Categories',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)
+              ),
             ),
 
-            // Categories List
+            //! C A T E G O R I E S  L I S T
             Consumer<JobProvider>(
               builder: (context, jobProvider, child) {
                 return CategoryListWidget(
@@ -298,7 +351,7 @@ class _WorkerHomePageState extends State<WorkerHomePage> {
               },
             ),
 
-            // Jobs List (10 jobs)
+            //! J O B S  L I S T
             StreamBuilder<List<JobModel>>(
               stream: _jobsStream,
               builder: (context, snapshot) {
@@ -343,6 +396,7 @@ class _WorkerHomePageState extends State<WorkerHomePage> {
     );
   }
   
+  //! V I E W  A L L  J O B S  B U T T O N
   Widget _buildViewAllJobsButton() {
     return GestureDetector(
       onTap: _navigateToMoreJobs,

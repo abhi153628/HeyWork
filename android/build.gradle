@@ -1,3 +1,20 @@
+buildscript {
+    ext.kotlin_version = '1.7.10' // Keep as is or update if needed
+    repositories {
+        google()
+        mavenCentral()
+    }
+
+    dependencies {
+        // Update the Gradle plugin version to support compileSdk 34
+        classpath 'com.android.tools.build:gradle:8.2.0' // Update from current version
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+        // Keep other dependencies as they are
+        // For example, your Google services classpath would stay here
+    }
+}
+
+
 allprojects {
     repositories {
         google()
