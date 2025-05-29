@@ -11,6 +11,7 @@ import 'package:hey_work/presentation/common_screens/log_sign.dart';
 
 import 'package:hey_work/presentation/common_screens/splash_screen.dart';
 import 'package:hey_work/presentation/hirer_section/common/navigating_page.dart';
+import 'package:hey_work/presentation/hirer_section/home_page/hirer_home_page.dart';
 import 'package:hey_work/presentation/hirer_section/signup_screen/signup_screen_hirer.dart';
 import 'package:hey_work/presentation/worker_section/home_page/worker_home_page.dart';
 import 'package:hey_work/presentation/worker_section/worker_login_page/worker_login_page.dart';

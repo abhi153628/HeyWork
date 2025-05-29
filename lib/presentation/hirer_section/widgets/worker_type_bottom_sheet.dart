@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../jobs_posted/job_detail_screen.dart';
+import '../jobs_posted/hirer_job_detail_screen.dart';
 
 class WorkerTypeBottomSheet extends StatelessWidget {
   final String jobCategory;

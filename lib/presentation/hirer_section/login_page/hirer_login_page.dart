@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:hey_work/presentation/authentication/role_validation_service.dart';
 import 'package:hey_work/presentation/hirer_section/signup_screen/widgets/snack_bar_utils.dart';
 
 import 'package:hey_work/presentation/services/authentication_services.dart';
 import 'package:hey_work/presentation/hirer_section/common/bottom_nav_bar.dart';
 import 'package:hey_work/presentation/hirer_section/signup_screen/signup_screen_hirer.dart';
 import 'package:hey_work/presentation/hirer_section/signup_screen/widgets/responsive_utils.dart';
+import 'package:lottie/lottie.dart';
 
 
 class HirerLoginScreen extends StatefulWidget {
@@ -50,178 +52,257 @@ class _HirerLoginScreenState extends State<HirerLoginScreen> {
   }
 
   // Show custom snackbar - now uses the utility class
-  void _showSnackBar(String message, {bool isError = false}) {
-    SnackBarUtil.showSnackBar(context, message, isError: isError);
-  }
+// Replace the existing _showSnackBar method with this:
+void _showSnackBar(String message, {bool isError = false}) {
+  final overlay = Overlay.of(context);
+  late OverlayEntry overlayEntry;
 
-  Future<void> _verifyPhoneNumber() async {
-    if (_phoneController.text.isEmpty) {
-      _showSnackBar('Please enter your phone number', isError: true);
-      return;
-    }
-
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
-
-    try {
-      // Format phone number to ensure it starts with +91
-      String phoneNumber = _phoneController.text.trim();
-      if (!phoneNumber.startsWith('+')) {
-        phoneNumber = '+91$phoneNumber';
-      }
-
-      // Verify phone for hirer user type using Firebase directly
-      await FirebaseAuth.instance.verifyPhoneNumber(
-        phoneNumber: phoneNumber,
-        timeout: Duration(seconds: 120),
-        verificationCompleted: (PhoneAuthCredential credential) async {
-          // Auto-verification completed (mainly on Android)
-          try {
-            UserCredential userCredential = await FirebaseAuth.instance.signInWithCredential(credential);
-            if (userCredential.user != null) {
-              // Check if user is really a hirer
-              final userType = await _authService.getUserType();
-              
-              if (userType == 'hirer') {
-                // Store user type locally
-                await _authService.storeUserType('hirer');
-                
-                setState(() {
-                  _isLoading = false;
-                });
-                
-                // Navigate to main hirer screen
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => MainScreen(),
+  overlayEntry = OverlayEntry(
+    builder: (context) => Positioned(
+      top: MediaQuery.of(context).padding.top + 20, // Safe area + padding
+      left: 16,
+      right: 16,
+      child: Material(
+        color: Colors.transparent,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          decoration: BoxDecoration(
+            color: isError ? const Color(0xFFEF4444) : const Color(0xFF0033FF),
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                offset: const Offset(0, 4),
+                blurRadius: 12,
+                spreadRadius: 0,
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Center(
+                  child: Icon(
+                    isError ? Icons.error_rounded : Icons.check_circle_rounded,
+                    color: Colors.white,
+                    size: 18,
                   ),
-                );
-              } else {
-                // Wrong user type, sign out
-                await _authService.signOut();
-                
-                setState(() {
-                  _isLoading = false;
-                  _errorMessage = 'This number is registered as a worker, not a hirer. Please use worker login.';
-                });
-                
-                _showSnackBar('This number is registered as a worker, not a hirer. Please use worker login.', isError: true);
-              }
-            }
-          } catch (e) {
-            setState(() {
-              _isLoading = false;
-              _errorMessage = e.toString();
-            });
-            _showSnackBar('Auto-verification failed: $e', isError: true);
-          }
-        },
-        verificationFailed: (FirebaseAuthException e) {
-          setState(() {
-            _isLoading = false;
-          });
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  message,
+                  style: GoogleFonts.roboto(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.white,
+                    height: 1.4,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    ),
+  );
 
-          // Handle specific error types
-          String errorMessage = 'Verification failed';
-          if (e.code == 'invalid-phone-number') {
-            errorMessage = 'Invalid phone number format';
-          } else if (e.message != null && e.message!.contains('BILLING_NOT_ENABLED')) {
-            errorMessage = 'Authentication service is temporarily unavailable. Please try again later.';
-          } else if (e.code == 'too-many-requests') {
-            errorMessage = 'Too many attempts from this device. Please try again later.';
-          } else {
-            errorMessage = e.message ?? 'Verification failed';
-          }
+  overlay.insert(overlayEntry);
 
-          _showSnackBar(errorMessage, isError: true);
-        },
-        codeSent: (String verificationId, int? resendToken) {
-          setState(() {
-            _isLoading = false;
-            _otpSent = true;
-            _verificationId = verificationId;
-          });
-          _showSnackBar('OTP sent to your phone');
-        },
-        codeAutoRetrievalTimeout: (String verificationId) {
-          _verificationId = verificationId;
-        },
-      );
-    } catch (e) {
+  // Auto remove after 3 seconds
+  Future.delayed(const Duration(seconds: 3), () {
+    overlayEntry.remove();
+  });
+}
+
+ // Replace the _verifyPhoneNumber method in HirerLoginScreen with this:
+
+Future<void> _verifyPhoneNumber() async {
+  if (_phoneController.text.isEmpty) {
+    _showSnackBar('Please enter your phone number', isError: true);
+    return;
+  }
+
+  setState(() {
+    _isLoading = true;
+    _errorMessage = null;
+  });
+
+  try {
+    // Format phone number to ensure it starts with +91
+    String phoneNumber = _phoneController.text.trim();
+    if (!phoneNumber.startsWith('+')) {
+      phoneNumber = '+91$phoneNumber';
+    }
+
+    // Check if phone number exists and validate role
+    Map<String, dynamic> phoneCheck = await RoleValidationService.checkPhoneNumberExists(phoneNumber);
+    
+    if (phoneCheck['exists']) {
+      if (phoneCheck['userType'] != 'hirer') {
+        // Phone number is registered as worker, not hirer
+        setState(() {
+          _isLoading = false;
+        });
+        RoleValidationService.showRoleConflictDialog(
+          context, 
+          phoneCheck['userType'], 
+          'login'
+        );
+        return;
+      }
+      // Phone number exists as hirer, proceed with OTP
+    } else {
+      // Phone number doesn't exist
       setState(() {
         _isLoading = false;
       });
-      _showSnackBar('Error: $e', isError: true);
-    }
-  }
-
-  Future<void> _verifyOtp() async {
-    if (_otpController.text.isEmpty) {
-      _showSnackBar('Please enter the OTP', isError: true);
+      _showSnackBar('No account found with this number. Please sign up first.', isError: true);
       return;
     }
 
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
-
-    try {
-      // Create credential with the verification ID and OTP
-      PhoneAuthCredential credential = PhoneAuthProvider.credential(
-        verificationId: _verificationId,
-        smsCode: _otpController.text.trim(),
+    // Proceed with Firebase phone verification
+    await FirebaseAuth.instance.verifyPhoneNumber(
+      phoneNumber: phoneNumber,
+      timeout: Duration(seconds: 120),
+verificationCompleted: (PhoneAuthCredential credential) async {
+  try {
+    UserCredential userCredential = await FirebaseAuth.instance.signInWithCredential(credential);
+    if (userCredential.user != null) {
+      // Check if user data still exists
+      bool userDataExists = await RoleValidationService.checkUserDataExists(
+        userCredential.user!.uid, 
+        'worker'
       );
-
-      // Sign in with the credential
-      UserCredential userCredential = await FirebaseAuth.instance.signInWithCredential(credential);
       
-      if (userCredential.user != null) {
-        // Check if user is really a hirer
-        final userType = await _authService.getUserType();
-        
-        if (userType == 'hirer') {
-          // Store user type locally
-          await _authService.storeUserType('hirer');
-          
-          setState(() {
-            _isLoading = false;
-          });
-          
-          // Navigate to main hirer screen
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder: (context) => MainScreen(),
-            ),
-          );
-        } else {
-          // Wrong user type, sign out
-          await _authService.signOut();
-          
-          setState(() {
-            _isLoading = false;
-            _errorMessage = 'This number is registered as a worker, not a hirer. Please use worker login.';
-          });
-          
-          _showSnackBar('This number is registered as a worker, not a hirer. Please use worker login.', isError: true);
-        }
-      } else {
-        throw Exception('Authentication failed');
+      if (!userDataExists) {
+        await FirebaseAuth.instance.signOut();
+        setState(() {
+          _isLoading = false;
+        });
+        RoleValidationService.showAccountDeletedDialog(context);
+        return;
       }
-    } catch (e) {
+      
       setState(() {
         _isLoading = false;
-        _errorMessage = e.toString();
       });
       
-      _showSnackBar('Invalid OTP or verification failed. Please try again.', isError: true);
+      // Navigate to main worker screen on success
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(
+          builder: (context) => MainScreen(),
+       ),(route) => false,
+      );
     }
+  } catch (e) {
+    setState(() {
+      _isLoading = false;
+      _errorMessage = e.toString();
+    });
+    _showSnackBar('Auto-verification failed: $e', isError: true);
+  }
+},
+      verificationFailed: (FirebaseAuthException e) {
+        setState(() {
+          _isLoading = false;
+        });
+
+        // Handle specific error types
+        String errorMessage = 'Verification failed';
+        if (e.code == 'invalid-phone-number') {
+          errorMessage = 'Invalid phone number format';
+        } else if (e.message != null && e.message!.contains('BILLING_NOT_ENABLED')) {
+          errorMessage = 'Authentication service is temporarily unavailable. Please try again later.';
+        } else if (e.code == 'too-many-requests') {
+          errorMessage = 'Too many attempts from this device. Please try again later.';
+        } else {
+          errorMessage = e.message ?? 'Verification failed';
+        }
+
+        _showSnackBar(errorMessage, isError: true);
+      },
+      codeSent: (String verificationId, int? resendToken) {
+        setState(() {
+          _isLoading = false;
+          _otpSent = true;
+          _verificationId = verificationId;
+        });
+        _showSnackBar('OTP sent to your phone');
+      },
+      codeAutoRetrievalTimeout: (String verificationId) {
+        _verificationId = verificationId;
+      },
+    );
+  } catch (e) {
+    setState(() {
+      _isLoading = false;
+    });
+    _showSnackBar('Error: $e', isError: true);
+  }
+}
+
+// Also update the _verifyOtp method:
+Future<void> _verifyOtp() async {
+  if (_otpController.text.isEmpty) {
+    _showSnackBar('Please enter the OTP', isError: true);
+    return;
   }
 
+  setState(() {
+    _isLoading = true;
+    _errorMessage = null;
+  });
+
+  try {
+    // Create credential with the verification ID and OTP
+    PhoneAuthCredential credential = PhoneAuthProvider.credential(
+      verificationId: _verificationId,
+      smsCode: _otpController.text.trim(),
+    );
+
+    // Sign in with the credential
+    UserCredential userCredential = await FirebaseAuth.instance.signInWithCredential(credential);
+    
+    if (userCredential.user != null) {
+      setState(() {
+        _isLoading = false;
+      });
+      
+      // Navigate to main hirer screen
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(
+          builder: (context) => MainScreen(),
+        ),(route) => false
+        ,
+      );
+    } else {
+      throw Exception('Authentication failed');
+    }
+  } catch (e) {
+    setState(() {
+      _isLoading = false;
+      _errorMessage = e.toString();
+    });
+    
+    // Show proper error dialog for incorrect OTP
+    RoleValidationService.showIncorrectOtpDialog(context);
+  }
+}
+
+// Don't forget to import the RoleValidationService at the top:
+// import 'package:hey_work/presentation/services/role_validation_service.dart';
   @override
   Widget build(BuildContext context) {
     // Initialize responsive util
@@ -234,11 +315,12 @@ class _HirerLoginScreenState extends State<HirerLoginScreen> {
 
     return Scaffold(
       body: _isLoading
-          ? const Center(
-              child: CircularProgressIndicator(
-                color: Colors.blue,
-                strokeWidth: 3,
-              ),
+          ?  Center(
+              child: SizedBox(
+                      width: 140,
+                      height: 140,
+                      child:Lottie.asset('asset/Animation - 1748495844642 (1).json', ),
+                    )
             )
           : Stack(
               children: [
@@ -256,7 +338,7 @@ class _HirerLoginScreenState extends State<HirerLoginScreen> {
                   right: 0,
                   height: screenHeight * 0.65,
                   child: Image.asset(
-                    'asset/6.png', // Replace with hirer image asset path
+                    'asset/female hier 2.png', // Replace with hirer image asset path
                     fit: BoxFit.cover,
                   ),
                 ),

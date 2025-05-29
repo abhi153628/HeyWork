@@ -111,7 +111,7 @@ Future<void> signOutAndNavigateToLogin(BuildContext context) async {
     } else {
       query = await _firestore
           .collection('workers')
-          .where('loginPhoneNumber', isEqualTo: phoneNumber)
+          .where('loggedPhoneNumber', isEqualTo: phoneNumber)
           .limit(1)
           .get();
     }

@@ -3,11 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:hey_work/core/theme/app_colors.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:hey_work/presentation/worker_section/job_detail_screen/job_application_modal.dart';
 import 'package:hey_work/presentation/worker_section/job_detail_screen/job_application_service.dart';
-import 'package:hey_work/presentation/worker_section/job_detail_screen/job_detail_page.dart'; 
-import 'package:hey_work/core/services/database/jobs_service.dart' as jobs_service; // Using alias to avoid naming conflicts
+import 'package:hey_work/presentation/worker_section/job_detail_screen/worker_job_detail_page.dart'; 
+import 'package:hey_work/core/services/database/jobs_service.dart' as jobs_service;
+import 'package:lottie/lottie.dart';
 
 class WorkerApplicationsScreen extends StatefulWidget {
   const WorkerApplicationsScreen({Key? key}) : super(key: key);
@@ -25,7 +26,6 @@ class _WorkerApplicationsScreenState extends State<WorkerApplicationsScreen>
   @override
   void initState() {
     super.initState();
-    // Changed from 3 tabs to 2 tabs (removed Pending)
     _tabController = TabController(length: 2, vsync: this);
   }
 
@@ -39,7 +39,7 @@ class _WorkerApplicationsScreenState extends State<WorkerApplicationsScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-          automaticallyImplyLeading: false,
+        automaticallyImplyLeading: false,
         title: Text(
           'My Applications',
           style: GoogleFonts.roboto(
@@ -55,7 +55,6 @@ class _WorkerApplicationsScreenState extends State<WorkerApplicationsScreen>
           labelColor: Color(0xFF0000CC),
           unselectedLabelColor: Colors.grey.shade600,
           indicatorColor: Color(0xFF0000CC),
-          
           tabs: const [
             Tab(text: 'All'),
             Tab(text: 'Accepted'),
@@ -66,7 +65,11 @@ class _WorkerApplicationsScreenState extends State<WorkerApplicationsScreen>
         stream: _applicationService.getWorkerApplications(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return  Center(child: SizedBox(
+                      width: 140,
+                      height: 140,
+                      child:Lottie.asset('asset/Animation - 1748495844642 (1).json', ),
+                    ));
           }
 
           if (snapshot.hasError) {
@@ -120,7 +123,6 @@ class _WorkerApplicationsScreenState extends State<WorkerApplicationsScreen>
             children: [
               // All applications
               _buildApplicationsList(allApplications),
-
               // Accepted applications
               acceptedApplications.isEmpty
                   ? _buildEmptyState('No accepted applications')
@@ -168,14 +170,12 @@ class _WorkerApplicationsScreenState extends State<WorkerApplicationsScreen>
   }
 
   Widget _buildApplicationCard(JobApplicationModel application) {
-    // Status color
     final statusColor = application.isPending
         ? Colors.orange
         : application.isAccepted
             ? AppColors.green
             : Colors.orange;
 
-    // Status text
     final statusText = application.isPending
         ? 'Pending'
         : application.isAccepted
@@ -184,30 +184,28 @@ class _WorkerApplicationsScreenState extends State<WorkerApplicationsScreen>
 
     return GestureDetector(
       onTap: () async {
-        // Show loading indicator
         showDialog(
           context: context,
           barrierDismissible: false,
-          builder: (context) => const Center(
-            child: CircularProgressIndicator(),
+          builder: (context) =>  Center(
+            child: SizedBox(
+                      width: 140,
+                      height: 140,
+                      child:Lottie.asset('asset/Animation - 1748495844642 (1).json', ),
+                    ),
           ),
         );
         
         try {
-          // Get job details using jobId from application
           final jobDoc = await FirebaseFirestore.instance
               .collection('jobs')
               .doc(application.jobId)
               .get();
           
-          // Close loading dialog
           Navigator.pop(context);
           
           if (jobDoc.exists) {
-            // Create JobModel from the document
             final job = jobs_service.JobModel.fromFirestore(jobDoc);
-            
-            // Navigate to JobDetailScreen
             Navigator.push(
               context,
               MaterialPageRoute(
@@ -215,7 +213,6 @@ class _WorkerApplicationsScreenState extends State<WorkerApplicationsScreen>
               ),
             );
           } else {
-            // Job not found
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
                 content: Text('Job not found or has been removed'),
@@ -224,7 +221,6 @@ class _WorkerApplicationsScreenState extends State<WorkerApplicationsScreen>
             );
           }
         } catch (e) {
-          // Close loading dialog and show error
           Navigator.pop(context);
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -294,27 +290,102 @@ class _WorkerApplicationsScreenState extends State<WorkerApplicationsScreen>
                 ),
               ],
             ),
-
             const SizedBox(height: 12),
-
-            // Job title and company
+            // Job title and company with dynamic hirer image using CachedNetworkImage
             Row(
               children: [
-                Container(
-                  width: 50,
-                  height: 50,
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade200,
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.1),
-                        blurRadius: 4,
-                        offset: Offset(0, 2),
+                // FutureBuilder to load job details and show hirer image
+                FutureBuilder<DocumentSnapshot>(
+                  future: FirebaseFirestore.instance
+                      .collection('jobs')
+                      .doc(application.jobId)
+                      .get(),
+                  builder: (context, snapshot) {
+                    String? imageUrl;
+                    
+                    if (snapshot.hasData && snapshot.data!.exists) {
+                      final jobData = snapshot.data!.data() as Map<String, dynamic>;
+                      imageUrl = jobData['hirerProfileImage'];
+                    }
+
+                    return Container(
+                      width: 60,
+                      height: 60,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade200,
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.1),
+                            blurRadius: 4,
+                            offset: Offset(0, 2),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
-                  child: const Icon(Icons.business, color: AppColors.darkGrey),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(15),
+                        child: imageUrl != null && imageUrl.isNotEmpty
+                            ? CachedNetworkImage(
+                                imageUrl: imageUrl,
+                                width: 60,
+                                height: 60,
+                                fit: BoxFit.fitWidth,
+                                placeholder: (context, url) => Container(
+                                  width: 60,
+                                  height: 60,
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey.shade200,
+                             
+                                  ),
+                                  child: Center(
+                                    child: SizedBox(
+                                      width: 20,
+                                      height: 20,
+                                      child:SizedBox(
+                      width: 140,
+                      height: 140,
+                      child:Lottie.asset('asset/Animation - 1748495844642 (1).json', ),
+                    )
+                                    ),
+                                  ),
+                                ),
+                                errorWidget: (context, url, error) => Container(
+                                  width: 50,
+                                  height: 50,
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey.shade200,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(
+                                    Icons.business,
+                                    color: AppColors.darkGrey,
+                                    size: 24,
+                                  ),
+                                ),
+                                fadeInDuration: const Duration(milliseconds: 300),
+                                fadeOutDuration: const Duration(milliseconds: 100),
+                                // Cache configuration
+                                memCacheWidth: 100, // Optimize memory usage
+                                memCacheHeight: 100,
+                                maxWidthDiskCache: 200,
+                                maxHeightDiskCache: 200,
+                              )
+                            : Container(
+                                width: 50,
+                                height: 50,
+                                decoration: BoxDecoration(
+                                  color: Colors.grey.shade200,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(
+                                  Icons.business,
+                                  color: AppColors.darkGrey,
+                                  size: 24,
+                                ),
+                              ),
+                      ),
+                    );
+                  },
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -345,9 +416,7 @@ class _WorkerApplicationsScreenState extends State<WorkerApplicationsScreen>
                 ),
               ],
             ),
-
             const SizedBox(height: 12),
-
             // Location
             Row(
               children: [
@@ -370,9 +439,7 @@ class _WorkerApplicationsScreenState extends State<WorkerApplicationsScreen>
                 ),
               ],
             ),
-
             const SizedBox(height: 8),
-
             // Job type and budget
             Row(
               children: [
@@ -391,7 +458,6 @@ class _WorkerApplicationsScreenState extends State<WorkerApplicationsScreen>
                   ),
                 ),
                 const Spacer(),
-               
               ],
             ),
           ],

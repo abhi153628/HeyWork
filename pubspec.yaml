@@ -51,6 +51,10 @@ dependencies:
   url_launcher: ^6.3.1
   share_plus: ^11.0.0
   path_provider: ^2.1.5
+  lottie: ^3.3.1
+  image_cropper: ^9.1.0
+  flutter_image_compress: ^2.4.0
+  image: ^4.5.4
 
 
 dev_dependencies:
@@ -62,6 +66,7 @@ flutter:
   uses-material-design: true
   assets:
     - asset/
+    - asset/app banner.png
   
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

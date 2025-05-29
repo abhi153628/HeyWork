@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:hey_work/core/theme/app_colors.dart';
 import 'package:hey_work/presentation/hirer_section/worker_detail_screen/worker_detail_screen.dart';
+import 'package:lottie/lottie.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:cached_network_image/cached_network_image.dart'; // Import for cached images
 import '../../worker_section/job_detail_screen/job_application_service.dart';
@@ -118,19 +119,23 @@ class _ApplicationListScreenState extends State<ApplicationListScreen> with Sing
       body: TabBarView(
         controller: _tabController,
         children: [
-          _buildApplicationList(null),           // All applications
-          _buildApplicationList('accepted'),     // Hired applications
+          _buildApplicationList(null, false),           // All applications - don't show hired badge
+          _buildApplicationList('accepted', true),     // Hired applications - show hired badge
         ],
       ),
     );
   }
 
-  Widget _buildApplicationList(String? status) {
+  Widget _buildApplicationList(String? status, bool showHiredBadge) {
     return StreamBuilder<List<JobApplicationModel>>(
       stream: _getFilteredApplications(status),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
+          return  Center(child: SizedBox(
+                      width: 140,
+                      height: 140,
+                      child:Lottie.asset('asset/Animation - 1748495844642 (1).json', ),
+                    ));
         }
 
         if (snapshot.hasError) {
@@ -185,7 +190,7 @@ class _ApplicationListScreenState extends State<ApplicationListScreen> with Sing
           itemCount: applications.length,
           itemBuilder: (context, index) {
             final application = applications[index];
-            return _buildWorkerProfileCard(application);
+            return _buildWorkerProfileCard(application, showHiredBadge);
           },
         );
       },
@@ -200,7 +205,7 @@ class _ApplicationListScreenState extends State<ApplicationListScreen> with Sing
     }
   }
 
-  Widget _buildWorkerProfileCard(JobApplicationModel application) {
+  Widget _buildWorkerProfileCard(JobApplicationModel application, bool showHiredBadge) {
     // Fetch the worker's current location
     _fetchCurrentWorkerLocation(application.workerId);
     
@@ -255,12 +260,11 @@ class _ApplicationListScreenState extends State<ApplicationListScreen> with Sing
                               placeholder: (context, url) => Container(
                                 color: Colors.grey[300],
                                 child: Center(
-                                  child: CircularProgressIndicator(
-                                    valueColor: AlwaysStoppedAnimation<Color>(
-                                      const Color(0xFF414ce4),
-                                    ),
-                                    strokeWidth: 2.0,
-                                  ),
+                                  child: SizedBox(
+                      width: 140,
+                      height: 140,
+                      child:Lottie.asset('asset/Animation - 1748495844642 (1).json', ),
+                    )
                                 ),
                               ),
                               errorWidget: (context, url, error) => Container(
@@ -293,7 +297,7 @@ class _ApplicationListScreenState extends State<ApplicationListScreen> with Sing
                             Text(
                               application.workerName,
                               style: GoogleFonts.roboto(
-                                fontSize: 22,
+                                fontSize: 23,
                                 fontWeight: FontWeight.bold,
                                 color: Colors.black87,
                               ),
@@ -317,18 +321,15 @@ class _ApplicationListScreenState extends State<ApplicationListScreen> with Sing
                         const SizedBox(height: 4),
                         // Using StreamBuilder for real-time location updates
                         _buildLocationText(application.workerId, application.workerLocation),
-                        const SizedBox(height: 12),
+                        const SizedBox(height: 3),
                         // Works done count
                         Row(
                           children: [
-                            Container(
-                              width: 8,
-                              height: 8,
-                              decoration: BoxDecoration(
-                                color: Colors.green,
-                                shape: BoxShape.circle,
-                              ),
-                            ),
+                           Icon(
+                  Icons.work,
+                  size: 18,
+                  color: Colors.grey.shade600,
+                ),
                             const SizedBox(width: 6),
                             FutureBuilder<int>(
                               future: _getWorkerCompletedJobsCount(application.workerId),
@@ -337,7 +338,7 @@ class _ApplicationListScreenState extends State<ApplicationListScreen> with Sing
                                 return Text(
                                   'Works done: $count',
                                   style: GoogleFonts.roboto(
-                                    fontSize: 15,
+                                    fontSize: 18,
                                     color: Colors.grey.shade600,
                                   ),
                                 );
@@ -350,147 +351,14 @@ class _ApplicationListScreenState extends State<ApplicationListScreen> with Sing
                   ),
                 ],
               ),
-              const SizedBox(height: 20),
               
-              // Contact buttons
-              Row(
-                children: [
-                  // Show Number button
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: () async {
-                        final Uri phoneUri = Uri(
-                          scheme: 'tel',
-                          path: application.workerPhone,
-                        );
-                        if (await canLaunchUrl(phoneUri)) {
-                          await launchUrl(phoneUri);
-                        } else {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text('Could not launch phone dialer'),
-                              backgroundColor: Colors.red,
-                            ),
-                          );
-                        }
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Color(0xFF00A81E),
-                        foregroundColor: Colors.white,
-                        elevation: 0,
-                        padding: EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.phone, size: 20, color: Colors.white),
-                          SizedBox(width: 8),
-                          Text(
-                            'Show Number',
-                            style: GoogleFonts.roboto(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  SizedBox(width: 12),
-                  // WhatsApp button
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () async {
-                        final phoneNumber = application.workerPhone.replaceAll(RegExp(r'[^0-9]'), '');
-                        final whatsappUrl = Uri.parse('https://wa.me/$phoneNumber');
-                        
-                        if (await canLaunchUrl(whatsappUrl)) {
-                          await launchUrl(whatsappUrl, mode: LaunchMode.externalApplication);
-                        } else {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text('WhatsApp is not installed on your device'),
-                              backgroundColor: Colors.red,
-                            ),
-                          );
-                        }
-                      },
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: Colors.black87,
-                        side: BorderSide(color: Color(0xFF00A81E)),
-                        padding: EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Image.asset(
-                            'asset/images-removebg-preview (1).png',
-                            width: 20,
-                            height: 20,
-                          ),
-                          SizedBox(width: 8),
-                          Text(
-                            'WhatsApp',
-                            style: GoogleFonts.roboto(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+          
               
               // Show accept/reject buttons for pending applications
-              if (application.status.toLowerCase() == 'pending')
-                Padding(
-                  padding: const EdgeInsets.only(top: 16),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: ElevatedButton(
-                          onPressed: () => _showHireConfirmation(context, application),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.green,
-                            foregroundColor: Colors.white,
-                            elevation: 0,
-                            padding: EdgeInsets.symmetric(vertical: 12),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                          ),
-                          child: Text('Hire'),
-                        ),
-                      ),
-                      SizedBox(width: 12),
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: () => _updateApplicationStatus(application.id, 'rejected'),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: Colors.red,
-                            side: BorderSide(color: Colors.red),
-                            padding: EdgeInsets.symmetric(vertical: 12),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                          ),
-                          child: Text('Reject'),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+             
               
-              // Show hired badge if worker was hired
-              if (application.status.toLowerCase() == 'accepted')
+              // Show hired badge only in hired tab and if worker was hired
+              if (application.status.toLowerCase() == 'accepted' && showHiredBadge)
                 Padding(
                   padding: const EdgeInsets.only(top: 16),
                   child: Container(
@@ -556,7 +424,7 @@ class _ApplicationListScreenState extends State<ApplicationListScreen> with Sing
               children: [
                 Icon(
                   Icons.location_on,
-                  size: 16,
+                  size: 18,
                   color: Colors.grey.shade600,
                 ),
                 SizedBox(width: 4),
@@ -564,7 +432,7 @@ class _ApplicationListScreenState extends State<ApplicationListScreen> with Sing
                   child: Text(
                     locationText,
                     style: GoogleFonts.roboto(
-                      fontSize: 14,
+                    fontSize: 18,
                       color: Colors.grey.shade600,
                     ),
                     maxLines: 1,
@@ -796,9 +664,11 @@ class _ApplicationListScreenState extends State<ApplicationListScreen> with Sing
         context: context,
         barrierDismissible: false,
         builder: (context) => Center(
-          child: CircularProgressIndicator(
-            valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF414ce4)),
-          ),
+          child: SizedBox(
+                      width: 140,
+                      height: 140,
+                      child:Lottie.asset('asset/Animation - 1748495844642 (1).json', ),
+                    )
         ),
       );
 

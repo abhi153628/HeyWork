@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:hey_work/presentation/authentication/role_validation_service.dart';
 import 'package:hey_work/presentation/hirer_section/signup_screen/widgets/snack_bar_utils.dart';
 
 import 'package:hey_work/presentation/services/authentication_services.dart';
 import 'package:hey_work/presentation/worker_section/bottom_navigation/bottom_nav_bar.dart';
 import 'package:hey_work/presentation/worker_section/worker_signup_page/worker_signup_page.dart';
 import 'package:hey_work/presentation/hirer_section/signup_screen/widgets/responsive_utils.dart';
+import 'package:lottie/lottie.dart';
 // Import the SnackBar utility
 
 class WorkerLoginScreen extends StatefulWidget {
@@ -50,141 +52,255 @@ class _WorkerLoginScreenState extends State<WorkerLoginScreen> {
   }
 
   // Show custom snackbar - updated to use SnackBarUtil
-  void _showSnackBar(String message, {bool isError = false}) {
-    SnackBarUtil.showSnackBar(context, message, isError: isError);
-  }
+  // Replace the existing _showSnackBar method with this:
+void _showSnackBar(String message, {bool isError = false}) {
+  final overlay = Overlay.of(context);
+  late OverlayEntry overlayEntry;
 
-  Future<void> _verifyPhoneNumber() async {
-    if (_phoneController.text.isEmpty) {
-      _showSnackBar('Please enter your phone number', isError: true);
-      return;
-    }
-
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
-
-    try {
-      // Format phone number to ensure it starts with +91
-      String phoneNumber = _phoneController.text.trim();
-      if (!phoneNumber.startsWith('+')) {
-        phoneNumber = '+91$phoneNumber';
-      }
-
-      // Verify phone for worker user type using Firebase directly
-      await FirebaseAuth.instance.verifyPhoneNumber(
-        phoneNumber: phoneNumber,
-        timeout: Duration(seconds: 120),
-        verificationCompleted: (PhoneAuthCredential credential) async {
-          // Auto-verification completed (mainly on Android)
-          try {
-            UserCredential userCredential = await FirebaseAuth.instance.signInWithCredential(credential);
-            if (userCredential.user != null) {
-              setState(() {
-                _isLoading = false;
-              });
-              
-              // Navigate to main worker screen on success
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => WorkerMainScreen(),
+  overlayEntry = OverlayEntry(
+    builder: (context) => Positioned(
+      top: MediaQuery.of(context).padding.top + 20, // Safe area + padding
+      left: 16,
+      right: 16,
+      child: Material(
+        color: Colors.transparent,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          decoration: BoxDecoration(
+            color: isError ? const Color(0xFFEF4444) : const Color(0xFF0033FF),
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                offset: const Offset(0, 4),
+                blurRadius: 12,
+                spreadRadius: 0,
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(8),
                 ),
-              );
-            }
-          } catch (e) {
-            setState(() {
-              _isLoading = false;
-              _errorMessage = e.toString();
-            });
-            _showSnackBar('Auto-verification failed: $e', isError: true);
-          }
-        },
-        verificationFailed: (FirebaseAuthException e) {
-          setState(() {
-            _isLoading = false;
-          });
+                child: Center(
+                  child: Icon(
+                    isError ? Icons.error_rounded : Icons.check_circle_rounded,
+                    color: Colors.white,
+                    size: 18,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  message,
+                  style: GoogleFonts.roboto(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.white,
+                    height: 1.4,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    ),
+  );
 
-          // Handle specific error types
-          String errorMessage = 'Verification failed';
-          if (e.code == 'invalid-phone-number') {
-            errorMessage = 'Invalid phone number format';
-          } else if (e.message != null && e.message!.contains('BILLING_NOT_ENABLED')) {
-            errorMessage = 'Authentication service is temporarily unavailable. Please try again later.';
-          } else if (e.code == 'too-many-requests') {
-            errorMessage = 'Too many attempts from this device. Please try again later.';
-          } else {
-            errorMessage = e.message ?? 'Verification failed';
-          }
+  overlay.insert(overlayEntry);
 
-          _showSnackBar(errorMessage, isError: true);
-        },
-        codeSent: (String verificationId, int? resendToken) {
-          setState(() {
-            _isLoading = false;
-            _otpSent = true;
-            _verificationId = verificationId;
-          });
-          _showSnackBar('OTP sent to your phone');
-        },
-        codeAutoRetrievalTimeout: (String verificationId) {
-          _verificationId = verificationId;
-        },
-      );
-    } catch (e) {
-      setState(() {
-        _isLoading = false;
-      });
-      _showSnackBar('Error: $e', isError: true);
-    }
+  // Auto remove after 3 seconds
+  Future.delayed(const Duration(seconds: 3), () {
+    overlayEntry.remove();
+  });
+}
+ // Replace the _verifyPhoneNumber method in WorkerLoginScreen with this:
+
+Future<void> _verifyPhoneNumber() async {
+  if (_phoneController.text.isEmpty) {
+    _showSnackBar('Please enter your phone number', isError: true);
+    return;
   }
 
-  Future<void> _verifyOtp() async {
-    if (_otpController.text.isEmpty) {
-      _showSnackBar('Please enter the OTP', isError: true);
-      return;
+  setState(() {
+    _isLoading = true;
+    _errorMessage = null;
+  });
+
+  try {
+    // Format phone number to ensure it starts with +91
+    String phoneNumber = _phoneController.text.trim();
+    if (!phoneNumber.startsWith('+')) {
+      phoneNumber = '+91$phoneNumber';
     }
 
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
-
-    try {
-      // Create credential with the verification ID and OTP
-      PhoneAuthCredential credential = PhoneAuthProvider.credential(
-        verificationId: _verificationId,
-        smsCode: _otpController.text.trim(),
-      );
-
-      // Sign in with the credential
-      UserCredential userCredential = await FirebaseAuth.instance.signInWithCredential(credential);
-      
-      if (userCredential.user != null) {
+    // Check if phone number exists and validate role
+    Map<String, dynamic> phoneCheck = await RoleValidationService.checkPhoneNumberExists(phoneNumber);
+    
+    if (phoneCheck['exists']) {
+      if (phoneCheck['userType'] != 'worker') {
+        // Phone number is registered as hirer, not worker
         setState(() {
           _isLoading = false;
         });
-        
-        // Navigate to main worker screen
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (context) => WorkerMainScreen(),
-          ),
+        RoleValidationService.showRoleConflictDialog(
+          context, 
+          phoneCheck['userType'], 
+          'login'
         );
-      } else {
-        throw Exception('Authentication failed');
+        return;
       }
-    } catch (e) {
+      // Phone number exists as worker, proceed with OTP
+    } else {
+      // Phone number doesn't exist
       setState(() {
         _isLoading = false;
-        _errorMessage = e.toString();
+      });
+      _showSnackBar('No account found with this number. Please sign up first.', isError: true);
+      return;
+    }
+
+    // Proceed with Firebase phone verification
+    await FirebaseAuth.instance.verifyPhoneNumber(
+      phoneNumber: phoneNumber,
+      timeout: Duration(seconds: 120),
+    verificationCompleted: (PhoneAuthCredential credential) async {
+  try {
+    UserCredential userCredential = await FirebaseAuth.instance.signInWithCredential(credential);
+    if (userCredential.user != null) {
+      // Check if user data still exists
+      bool userDataExists = await RoleValidationService.checkUserDataExists(
+        userCredential.user!.uid, 
+        'worker'
+      );
+      
+      if (!userDataExists) {
+        await FirebaseAuth.instance.signOut();
+        setState(() {
+          _isLoading = false;
+        });
+        RoleValidationService.showAccountDeletedDialog(context);
+        return;
+      }
+      
+      setState(() {
+        _isLoading = false;
       });
       
-      _showSnackBar('Invalid OTP or verification failed. Please try again.', isError: true);
+      // Navigate to main worker screen on success
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(
+          builder: (context) => WorkerMainScreen(),
+       ),(route) => false,
+      );
     }
+  } catch (e) {
+    setState(() {
+      _isLoading = false;
+      _errorMessage = e.toString();
+    });
+    _showSnackBar('Auto-verification failed: $e', isError: true);
   }
+},
+      verificationFailed: (FirebaseAuthException e) {
+        setState(() {
+          _isLoading = false;
+        });
+
+        // Handle specific error types
+        String errorMessage = 'Verification failed';
+        if (e.code == 'invalid-phone-number') {
+          errorMessage = 'Invalid phone number format';
+        } else if (e.message != null && e.message!.contains('BILLING_NOT_ENABLED')) {
+          errorMessage = 'Authentication service is temporarily unavailable. Please try again later.';
+        } else if (e.code == 'too-many-requests') {
+          errorMessage = 'Too many attempts from this device. Please try again later.';
+        } else {
+          errorMessage = e.message ?? 'Verification failed';
+        }
+
+        _showSnackBar(errorMessage, isError: true);
+      },
+      codeSent: (String verificationId, int? resendToken) {
+        setState(() {
+          _isLoading = false;
+          _otpSent = true;
+          _verificationId = verificationId;
+        });
+        _showSnackBar('OTP sent to your phone');
+      },
+      codeAutoRetrievalTimeout: (String verificationId) {
+        _verificationId = verificationId;
+      },
+    );
+  } catch (e) {
+    setState(() {
+      _isLoading = false;
+    });
+    _showSnackBar('Error: $e', isError: true);
+  }
+}
+
+// Also update the _verifyOtp method to show proper error dialog:
+Future<void> _verifyOtp() async {
+  if (_otpController.text.isEmpty) {
+    _showSnackBar('Please enter the OTP', isError: true);
+    return;
+  }
+
+  setState(() {
+    _isLoading = true;
+    _errorMessage = null;
+  });
+
+  try {
+    // Create credential with the verification ID and OTP
+    PhoneAuthCredential credential = PhoneAuthProvider.credential(
+      verificationId: _verificationId,
+      smsCode: _otpController.text.trim(),
+    );
+
+    // Sign in with the credential
+    UserCredential userCredential = await FirebaseAuth.instance.signInWithCredential(credential);
+    
+    if (userCredential.user != null) {
+      setState(() {
+        _isLoading = false;
+      });
+      
+      // Navigate to main worker screen
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(
+          builder: (context) => WorkerMainScreen(),
+        ),(route) => false,
+      );
+    } else {
+      throw Exception('Authentication failed');
+    }
+  } catch (e) {
+    setState(() {
+      _isLoading = false;
+      _errorMessage = e.toString();
+    });
+    
+    // Show proper error dialog for incorrect OTP
+    RoleValidationService.showIncorrectOtpDialog(context);
+  }
+}
+
+// Don't forget to import the RoleValidationService at the top:
+// import 'package:hey_work/presentation/services/role_validation_service.dart';
 
   @override
   Widget build(BuildContext context) {
@@ -198,11 +314,12 @@ class _WorkerLoginScreenState extends State<WorkerLoginScreen> {
 
     return Scaffold(
       body: _isLoading
-          ? const Center(
-              child: CircularProgressIndicator(
-                color: Colors.blue,
-                strokeWidth: 3,
-              ),
+          ?  Center(
+              child:SizedBox(
+                      width: 140,
+                      height: 140,
+                      child:Lottie.asset('asset/Animation - 1748495844642 (1).json', ),
+                    )
             )
           : Stack(
               children: [

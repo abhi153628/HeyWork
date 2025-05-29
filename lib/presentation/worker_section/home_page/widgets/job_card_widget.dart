@@ -1,19 +1,22 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:hey_work/core/services/database/jobs_service.dart';
 import 'package:hey_work/core/theme/app_colors.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:path_provider/path_provider.dart';
 
-import '../../job_detail_screen/job_detail_page.dart';
+import '../../job_detail_screen/worker_job_detail_page.dart';
 
 class JobCardWidget extends StatelessWidget {
   final JobModel job;
+  final bool isApplied; // Add this parameter to track application status
 
   const JobCardWidget({
     super.key,
     required this.job,
+    this.isApplied = false, // Default to false
   });
 
   String _getTimeAgo(DateTime dateTime) {
@@ -29,16 +32,18 @@ class JobCardWidget extends StatelessWidget {
     }
   }
 
+  // Check if posted within 2 hours
+  bool _isRecentlyPosted(DateTime dateTime) {
+    final now = DateTime.now();
+    final difference = now.difference(dateTime);
+    return difference.inHours < 2;
+  }
+
   // Enhanced share job function with better formatting
 Future<void> _shareJob(BuildContext context) async {
   try {
     // Show loading indicator
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Preparing to share...'),
-        duration: Duration(seconds: 1),
-      ),
-    );
+   
     
     // Create custom URL scheme link
     final String customSchemeLink = 'heywork://jobs/${job.id}';
@@ -100,12 +105,38 @@ Join hundreds of satisfied job seekers in India.
     }
     
     // Success message
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Thanks for sharing!'),
-        backgroundColor: Color(0xFF0000CC),
-      ),
-    );
+     ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              Icon(
+                Icons.check_circle,
+                color: Colors.white,
+                size: 24,
+              ),
+              SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'Thanks for sharing!',
+                  style: GoogleFonts.poppins(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          backgroundColor: Color(0xFF0000CC),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          margin: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+          duration: Duration(seconds: 2),
+          elevation: 6,
+        ),
+      );
   } catch (e) {
     print('Error sharing: $e');
     ScaffoldMessenger.of(context).showSnackBar(
@@ -121,7 +152,9 @@ String _getMonthName(int month) {
     'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
   ];
   return months[month - 1];
-}  void _navigateToJobDetail(BuildContext context) {
+}
+
+  void _navigateToJobDetail(BuildContext context) {
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -132,17 +165,31 @@ String _getMonthName(int month) {
 
   @override
   Widget build(BuildContext context) {
+    // DEBUG: Print the applied status
+    print('Job ${job.id} - ${job.jobCategory}: isApplied = $isApplied');
+    
     final isFullTime = job.jobType.toLowerCase() == 'full-time';
     final jobTypeColor = isFullTime ? AppColors.green : Color(0xFF0000CC);
+    final isRecent = _isRecentlyPosted(job.createdAt);
+    
+    // Get screen width for responsive design
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isSmallScreen = screenWidth < 360;
+    
+    // Responsive font sizes
+    final titleFontSize = isSmallScreen ? 16.0 : 18.0;
+    final companyFontSize = isSmallScreen ? 13.0 : 14.0;
+    final industryFontSize = isSmallScreen ? 11.0 : 12.0;
+    final detailFontSize = isSmallScreen ? 13.0 : 14.0;
 
-    // Wrap the container with GestureDetector to handle taps
     return GestureDetector(
       onTap: () => _navigateToJobDetail(context),
       child: Container(
         margin: const EdgeInsets.only(bottom: 16),
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.all(isSmallScreen ? 12 : 15),
         decoration: BoxDecoration(
-          color: Colors.white,
+          // ONLY background color changes for applied jobs
+          color: isApplied ? const Color.fromARGB(132, 237, 237, 237) : Colors.white,
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
@@ -153,53 +200,92 @@ String _getMonthName(int month) {
             ),
           ],
           border: Border.all(
-            color: AppColors.black.withOpacity(0.3),
-            width: 1,
+            color: AppColors.black.withOpacity(0.3), // Same border for all
+            width: 1, // Same border width for all
           ),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Posted time and job type
+            // Posted time and job type - Make more responsive
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  'Posted ${_getTimeAgo(job.createdAt)}',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: AppColors.darkGrey,
+                Flexible(
+                  flex: 3,
+                  child: Row(
+                    children: [
+                      // Show green dot for recent posts (only if not applied)
+                      if (isRecent && !isApplied) ...[
+                        Container(
+                          width: 8,
+                          height: 8,
+                          decoration: BoxDecoration(
+                            color: Colors.green,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        SizedBox(width: 6),
+                      ],
+                      // Show applied icon for applied jobs
+                      if (isApplied) ...[
+                        Icon(
+                          Icons.check_circle,
+                          color: Color.fromARGB(255, 255, 119, 0), // Green tick mark for applied jobs
+                          size: 14,
+                        ),
+                        SizedBox(width: 6),
+                      ],
+                      Expanded(
+                        child: Text(
+                          isApplied ? 'Applied ' : 'Posted ${_getTimeAgo(job.createdAt)}',
+                          style: TextStyle(
+                            fontSize: isSmallScreen ? 11 : 12,
+                            color: isApplied ? Color.fromARGB(255, 255, 119, 0): (isRecent && !isApplied ? Colors.green : AppColors.darkGrey), // Green for applied, green for recent, normal for others
+                            fontWeight: (isRecent && !isApplied) || isApplied ? FontWeight.w400 : FontWeight.normal,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
+                SizedBox(width: 8),
+                // Job type badge (always shows job type, never "APPLIED")
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding: EdgeInsets.symmetric(
+                    horizontal: isSmallScreen ? 8 : 10, 
+                    vertical: 4
+                  ),
                   decoration: BoxDecoration(
-                    color: jobTypeColor,
+                    color: jobTypeColor, 
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
-                    job.jobType,
-                    style: const TextStyle(
-                      fontSize: 12,
+                    job.jobType, 
+                    style: TextStyle(
+                      fontSize: isSmallScreen ? 10 : 12,
                       color: Colors.white,
-                      fontWeight: FontWeight.w500,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                 ),
               ],
             ),
 
-            const SizedBox(height: 12),
+            SizedBox(height: isSmallScreen ? 10 : 12),
 
-            // Job title and company
+            // Job title and company - Improved responsive layout
             Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // Company logo/icon
                 Container(
-                  width: 50,
-                  height: 50,
+                  width: isSmallScreen ? 55 : 60,
+                  height: isSmallScreen ? 55 : 60,
                   decoration: BoxDecoration(
-                    color: Colors.grey.shade200,
+                    color: Colors.grey.shade200, // Same color for all
                     shape: BoxShape.circle,
                     boxShadow: [
                       BoxShadow(
@@ -211,81 +297,101 @@ String _getMonthName(int month) {
                   ),
                   child: job.imageUrl != null && job.imageUrl!.isNotEmpty
                       ? ClipRRect(
-                          borderRadius: BorderRadius.circular(25),
-                          child: Image.network(
+                          borderRadius: BorderRadius.circular(30),
+                          child: Image.network( // No color filter - same image for all
                             job.imageUrl!,
-                            width: 50,
-                            height: 50,
+                            width: isSmallScreen ? 55 : 60,
+                            height: isSmallScreen ? 55 : 60,
                             fit: BoxFit.cover,
                             errorBuilder: (context, error, stackTrace) {
-                              return const Icon(Icons.business,
-                                  color: AppColors.darkGrey);
+                              return Icon(
+                                Icons.business,
+                                color: AppColors.darkGrey, // Same icon color for all
+                                size: isSmallScreen ? 20 : 24,
+                              );
                             },
                           ),
                         )
-                      : const Icon(Icons.business, color: AppColors.darkGrey),
+                      : Icon(
+                          Icons.business, 
+                          color: AppColors.darkGrey, // Same icon color for all
+                          size: isSmallScreen ? 20 : 24,
+                        ),
                 ),
-                const SizedBox(width: 12),
+                
+                SizedBox(width: isSmallScreen ? 10 : 12),
+                
+                // Job details - Flexible and responsive
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // Job Category (Title)
                       Text(
                         job.jobCategory,
-                        style: const TextStyle(
-                          fontSize: 18,
+                        style: TextStyle(
+                          fontSize: titleFontSize,
                           fontWeight: FontWeight.bold,
-                          color: Colors.black,
+                          color: Colors.black, // Same color for all
+                          height: 1.2,
                         ),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
-                      SizedBox(height: 4),
-                      Row(
-                        children: [
-                          Text(
-                            job.company,
-                            style: const TextStyle(
-                              fontSize: 14,
-                              color: AppColors.darkGrey,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                          if (job.hirerIndustry.isNotEmpty) ...[
-                            Text(
-                              ' (${job.hirerIndustry})',
-                              style: const TextStyle(
-                                fontSize: 12,
-                                color: AppColors.darkGrey,
-                                fontStyle: FontStyle.italic,
-                              ),
-                            ),
-                          ],
-                        ],
+                      
+                      SizedBox(height: 3),
+                      
+                      // Company Name
+                      Text(
+                        job.company,
+                        style: TextStyle(
+                          fontSize: companyFontSize,
+                          color: AppColors.darkGrey, // Same color for all
+                          fontWeight: FontWeight.w500,
+                          height: 1.2,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
+                      
+                      // Industry (only if not empty and space permits)
+                      if (job.hirerIndustry.isNotEmpty) ...[
+                         SizedBox(height: 4),
+                        Text(
+                          '[${job.hirerIndustry}]',
+                          style: TextStyle(
+                            fontSize: industryFontSize,
+                            color: AppColors.darkGrey, // Same color for all
+                            height: 1.1,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
                     ],
                   ),
                 ),
               ],
             ),
 
-            const SizedBox(height: 12),
+            SizedBox(height: 20),
 
-            // Location
+            // Location - Responsive
             Row(
               children: [
-                const Icon(
+                Icon(
                   Icons.location_on_outlined,
-                  size: 16,
-                  color: AppColors.darkGrey,
+                  size: isSmallScreen ? 14 : 16,
+                  color: AppColors.darkGrey, // Same color for all
                 ),
-                const SizedBox(width: 4),
+                SizedBox(width: 4),
                 Expanded(
                   child: Text(
                     job.location,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      color: AppColors.darkGrey,
+                    style: TextStyle(
+                      fontSize: detailFontSize,
+                      color: AppColors.darkGrey, // Same color for all
+                      height: 1.2,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -294,40 +400,59 @@ String _getMonthName(int month) {
               ],
             ),
 
-            const SizedBox(height: 8),
+            SizedBox(height: 8),
 
-            // Salary or Budget information
+            // Salary and Share button - Better responsive layout
             Row(
               children: [
-                const Icon(
+                Icon(
                   Icons.currency_rupee,
-                  size: 16,
-                  color: AppColors.darkGrey,
+                  size: isSmallScreen ? 14 : 16,
+                  color: AppColors.darkGrey, // Same color for all
                 ),
-                const SizedBox(width: 4),
+                SizedBox(width: 4),
+                
+                // Salary/Budget - Takes available space
                 Expanded(
                   child: isFullTime && job.salaryRange != null
                       ? Text(
                           'Rs. ${job.salaryRange!['min']} - ${job.salaryRange!['max']} per month',
-                          style: const TextStyle(
-                            fontSize: 14,
+                          style: TextStyle(
+                            fontSize: detailFontSize,
                             fontWeight: FontWeight.w500,
-                            color: AppColors.darkGrey,
+                            color: AppColors.darkGrey, // Same color for all
+                            height: 1.2,
                           ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         )
                       : Text(
                           'Budget: Rs. ${job.budget}',
-                          style: const TextStyle(
-                            fontSize: 14,
+                          style: TextStyle(
+                            fontSize: detailFontSize,
                             fontWeight: FontWeight.w500,
-                            color: AppColors.darkGrey,
+                            color: AppColors.darkGrey, // Same color for all
+                            height: 1.2,
                           ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                 ),
-                // Share button with context
-                IconButton(
-                  icon: Icon(Icons.share, color: Color(0xFF0000CC)),
-                  onPressed: () => _shareJob(context),
+                
+                // Share button - Fixed size
+                Container(
+                  width: isSmallScreen ? 40 : 38,
+                  height: isSmallScreen ? 40 : 38,
+                  child: IconButton(
+                    padding: EdgeInsets.zero,
+                    constraints: BoxConstraints(),
+                    icon: Icon(
+                      Icons.share,
+                      color: Color(0xFF0000CC), // Same color for all
+                      size: isSmallScreen ? 20 : 24,
+                    ),
+                    onPressed: () => _shareJob(context),
+                  ),
                 ),
               ],
             ),

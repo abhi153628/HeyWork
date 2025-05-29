@@ -1,4 +1,6 @@
 import 'dart:io';
+import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -9,8 +11,11 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:hey_work/presentation/hirer_section/settings_screen/settings_page.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:lottie/lottie.dart';
 import 'package:uuid/uuid.dart';
-import 'package:cached_network_image/cached_network_image.dart'; // Added import for CachedNetworkImage
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:http/http.dart' as http;
+import 'package:image_cropper/image_cropper.dart'; // Add this import
 
 class HirerProfilePage extends StatefulWidget {
   const HirerProfilePage({Key? key}) : super(key: key);
@@ -43,8 +48,6 @@ class _HirerProfilePageState extends State<HirerProfilePage> {
     );
   }
 }
-
-
 
 class ProfileHeaderSection extends StatelessWidget {
   final Function refreshCallback;
@@ -92,7 +95,21 @@ class ProfileHeaderSection extends StatelessWidget {
           final userData = snapshot.data!;
           businessName = userData['businessName'] ?? "Your Business";
           ownerName = userData['name'] ?? "Your Name";
-          location = userData['location'] ?? "Your Location";
+          
+          // Handle location data properly
+          if (userData.containsKey('location')) {
+            final locationData = userData['location'];
+            if (locationData is Map<String, dynamic> && locationData.containsKey('placeName')) {
+              location = locationData['placeName'] ?? "Your Location";
+            } else if (locationData is String) {
+              location = locationData;
+            } else {
+              location = "Your Location";
+            }
+          } else {
+            location = "Your Location";
+          }
+          
           profileImage = userData['profileImage'] ?? "";
         }
         
@@ -151,30 +168,15 @@ class ProfileHeaderSection extends StatelessWidget {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        GestureDetector(
-                          onTap: () {
-                            Navigator.pop(context);
-                          },
-                          child: Container(
-                            width: 35.w,
-                            height: 35.h,
-                            decoration: BoxDecoration(
+                      SizedBox(width: 35.w), 
+                        Center(
+                          child: Text(
+                            "Hirer",
+                            style: TextStyle(
                               color: Colors.white,
-                              borderRadius: BorderRadius.circular(15.r),
+                              fontSize: 20.sp,
+                              fontWeight: FontWeight.bold,
                             ),
-                            child: Icon(
-                              Icons.arrow_back,
-                              color: Colors.red,
-                              size: 24.sp,
-                            ),
-                          ),
-                        ),
-                        Text(
-                          "Hirer",
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 20.sp,
-                            fontWeight: FontWeight.bold,
                           ),
                         ),
                         GestureDetector(onTap: () => Navigator.of(context).push(MaterialPageRoute(
@@ -205,9 +207,11 @@ class ProfileHeaderSection extends StatelessWidget {
                               imageUrl: profileImage,
                               fit: BoxFit.cover,
                               placeholder: (context, url) => Center(
-                                child: CircularProgressIndicator(
-                                  color: Colors.white,
-                                ),
+                                child: SizedBox(
+                      width: 140,
+                      height: 140,
+                      child:Lottie.asset('asset/Animation - 1748495844642 (1).json', ),
+                    )
                               ),
                               errorWidget: (context, url, error) => Icon(
                                 Icons.person,
@@ -229,14 +233,17 @@ class ProfileHeaderSection extends StatelessWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Text(
-                        businessName,
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 24.sp,
-                          fontWeight: FontWeight.bold,
+                      Center(
+                        child: Text(
+                          businessName,
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 24.sp,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
+                      SizedBox(width: 5,),
                       Container(
                         padding: EdgeInsets.all(2.w),
                         decoration: BoxDecoration(
@@ -265,13 +272,20 @@ class ProfileHeaderSection extends StatelessWidget {
 
                   SizedBox(height: 4.h),
 
-                  // Location - Using real data
-                  Text(
-                    location,
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 14.sp,
-                    ),
+            
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                         Icon(Icons.location_on,color: Colors.white,size: 20,),SizedBox(width: 3,),
+                         
+                      Text(
+                        location,
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 14.sp,
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -282,6 +296,7 @@ class ProfileHeaderSection extends StatelessWidget {
     );
   }
 }
+
 // This is a stub for the EditProfilePage
 // You would need to implement this page to allow editing profile data
 class EditProfilePage extends StatefulWidget {
@@ -349,6 +364,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
       appBar: AppBar(
         title: Text('Edit Profile'),
         backgroundColor: Color(0xFFBB0000),
+        leading: Icon(Icons.cancel,color: Colors.black,),
       ),
       body: _isLoading
           ? Center(child: CircularProgressIndicator())
@@ -403,15 +419,18 @@ class EditProfileButton extends StatelessWidget {
             border: Border.all(color: Colors.grey.shade300),
             borderRadius: BorderRadius.circular(12.r),
           ),
-          child: Center(
-            child: Text(
-              "Edit Your Profile",
-              style: TextStyle(
-                color: Colors.grey.shade700,
-                fontSize: 16.sp,
-                fontWeight: FontWeight.w500,
+          child: Row(mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.edit),
+              Text(
+                "Edit Your Profile",
+                style: TextStyle(
+                  color: Colors.grey.shade700,
+                  fontSize: 16.sp,
+                  fontWeight: FontWeight.w500,
+                ),
               ),
-            ),
+            ],
           ),
         ),
       ),
@@ -419,6 +438,26 @@ class EditProfileButton extends StatelessWidget {
   }
 }
 
+// Debouncer class for location search
+class Debouncer {
+  final int milliseconds;
+  Timer? _timer;
+
+  Debouncer({required this.milliseconds});
+
+  void run(VoidCallback action) {
+    if (_timer != null) {
+      _timer!.cancel();
+    }
+    _timer = Timer(Duration(milliseconds: milliseconds), action);
+  }
+
+  void dispose() {
+    _timer?.cancel();
+  }
+}
+
+// Enhanced EditProfileBottomSheet with image cropping and compression
 class EditProfileBottomSheet extends StatefulWidget {
   final Function onProfileUpdated;
 
@@ -434,6 +473,7 @@ class EditProfileBottomSheet extends StatefulWidget {
 class _EditProfileBottomSheetState extends State<EditProfileBottomSheet> {
   final _formKey = GlobalKey<FormState>();
   bool _isLoading = false;
+  bool _isImageProcessing = false; // Add this for image processing state
   
   // Controllers for text fields
   final TextEditingController _nameController = TextEditingController();
@@ -449,6 +489,16 @@ class _EditProfileBottomSheetState extends State<EditProfileBottomSheet> {
   // Firestore document ID
   String? _userId;
   
+  // Location search fields
+  List<Map<String, String>> _locationSuggestions = [];
+  Map<String, String>? _selectedLocation;
+  bool _showLocationSuggestions = false;
+  final Debouncer _searchDebouncer = Debouncer(milliseconds: 500);
+  bool _isSearching = false;
+  
+  // Static cache for location results
+  static Map<String, List<Map<String, String>>> _cachedLocations = {};
+  
   @override
   void initState() {
     super.initState();
@@ -462,6 +512,7 @@ class _EditProfileBottomSheetState extends State<EditProfileBottomSheet> {
     _locationController.dispose();
     _phoneController.dispose();
     _industryController.dispose();
+    _searchDebouncer.dispose();
     super.dispose();
   }
   
@@ -483,7 +534,16 @@ class _EditProfileBottomSheetState extends State<EditProfileBottomSheet> {
           final userData = docSnapshot.data()!;
           _nameController.text = userData['name'] ?? '';
           _businessNameController.text = userData['businessName'] ?? '';
-          _locationController.text = userData['location'] ?? '';
+          
+          // Handle location data properly
+          if (userData.containsKey('location')) {
+            final locationData = userData['location'];
+            if (locationData is Map<String, dynamic> && locationData.containsKey('placeName')) {
+              _locationController.text = locationData['placeName'] ?? '';
+            } else if (locationData is String) {
+              _locationController.text = locationData;
+            }
+          }
           
           // Format phone number (remove +91 prefix for display)
           String phone = userData['phoneNumber'] ?? '';
@@ -506,6 +566,141 @@ class _EditProfileBottomSheetState extends State<EditProfileBottomSheet> {
     }
   }
   
+  // Location search methods
+  Future<void> _searchLocation(String query) async {
+    if (query.length < 3) {
+      setState(() {
+        _locationSuggestions = [];
+        _showLocationSuggestions = false;
+      });
+      return;
+    }
+
+    setState(() {
+      _isSearching = true;
+      _showLocationSuggestions = true;
+    });
+
+    try {
+      final suggestions = await fetchLocationSuggestions(query);
+      setState(() {
+        _locationSuggestions = suggestions;
+        _isSearching = false;
+      });
+    } catch (e) {
+      print('Error fetching locations: $e');
+      setState(() {
+        _isSearching = false;
+      });
+    }
+  }
+  
+  Future<List<Map<String, String>>> fetchLocationSuggestions(String query) async {
+    // First try cached results for faster response
+    if (_cachedLocations.containsKey(query)) {
+      return _cachedLocations[query]!;
+    }
+
+    // Next, check the most popular Indian cities
+    List<Map<String, String>> filteredCities = _indianCities
+        .where((city) => city['placeName']!.toLowerCase().contains(query.toLowerCase()))
+        .toList();
+
+    if (filteredCities.isNotEmpty) {
+      _cachedLocations[query] = filteredCities;
+      return filteredCities;
+    }
+
+    try {
+      // If no local matches, try the API
+      final apiResults = await fetchFromOpenStreetMap(query);
+      _cachedLocations[query] = apiResults;
+      return apiResults;
+    } catch (e) {
+      print("OpenStreetMap API error: $e");
+      return _getMockData(query);
+    }
+  }
+
+  // Method to fetch data from OpenStreetMap
+  Future<List<Map<String, String>>> fetchFromOpenStreetMap(String query) async {
+    final String url =
+        'https://nominatim.openstreetmap.org/search?q=$query+india&format=json&addressdetails=1&limit=10&countrycodes=in&bounded=1';
+
+    Map<String, String> headers = {
+      'User-Agent': 'YourApp/1.0',
+      'Accept-Language': 'en-US,en;q=0.9',
+    };
+
+    final response = await http.get(Uri.parse(url), headers: headers);
+
+    if (response.statusCode == 200) {
+      final List<dynamic> results = json.decode(response.body);
+
+      return results.map<Map<String, String>>((result) {
+        String displayName = result['display_name'] ?? '';
+        Map<String, dynamic> address = result['address'] ?? {};
+        
+        String formattedName = '';
+        List<String> addressParts = [];
+
+        if (address.isNotEmpty) {
+          if (address['city'] != null) addressParts.add(address['city']);
+          else if (address['town'] != null) addressParts.add(address['town']);
+          else if (address['village'] != null) addressParts.add(address['village']);
+          else if (address['suburb'] != null) addressParts.add(address['suburb']);
+
+          if (address['state_district'] != null) addressParts.add(address['state_district']);
+          else if (address['county'] != null) addressParts.add(address['county']);
+          
+          if (address['state'] != null) addressParts.add(address['state']);
+          
+          formattedName = addressParts.join(', ');
+        }
+
+        if (formattedName.isEmpty) {
+          List<String> nameParts = displayName.split(', ');
+          formattedName = nameParts.length > 3
+              ? '${nameParts[0]}, ${nameParts[nameParts.length - 3]}, India'
+              : displayName.replaceAll(', India', '') + ', India';
+        }
+
+        return {
+          'placeName': formattedName,
+          'placeId': result['place_id']?.toString() ?? '',
+          'latitude': result['lat']?.toString() ?? '',
+          'longitude': result['lon']?.toString() ?? '',
+        };
+      }).toList();
+    } else {
+      throw Exception('Failed to load from OpenStreetMap: ${response.statusCode}');
+    }
+  }
+
+  // Popular Indian cities data for quick results
+  final List<Map<String, String>> _indianCities = [
+    {'placeName': 'Mumbai, Maharashtra', 'placeId': 'city_mumbai', 'latitude': '19.0760', 'longitude': '72.8777'},
+    {'placeName': 'Delhi, NCR', 'placeId': 'city_delhi', 'latitude': '28.7041', 'longitude': '77.1025'},
+    {'placeName': 'Bangalore, Karnataka', 'placeId': 'city_bangalore', 'latitude': '12.9716', 'longitude': '77.5946'},
+    {'placeName': 'Hyderabad, Telangana', 'placeId': 'city_hyderabad', 'latitude': '17.3850', 'longitude': '78.4867'},
+    {'placeName': 'Chennai, Tamil Nadu', 'placeId': 'city_chennai', 'latitude': '13.0827', 'longitude': '80.2707'},
+    {'placeName': 'Kolkata, West Bengal', 'placeId': 'city_kolkata', 'latitude': '22.5726', 'longitude': '88.3639'},
+    {'placeName': 'Pune, Maharashtra', 'placeId': 'city_pune', 'latitude': '18.5204', 'longitude': '73.8567'},
+    {'placeName': 'Ahmedabad, Gujarat', 'placeId': 'city_ahmedabad', 'latitude': '23.0225', 'longitude': '72.5714'},
+    {'placeName': 'Jaipur, Rajasthan', 'placeId': 'city_jaipur', 'latitude': '26.9124', 'longitude': '75.7873'},
+    {'placeName': 'Kochi, Kerala', 'placeId': 'city_kochi', 'latitude': '9.9312', 'longitude': '76.2673'},
+    {'placeName': 'Goa', 'placeId': 'city_goa', 'latitude': '15.2993', 'longitude': '74.1240'},
+  ];
+
+  // Mock data for fallback
+  List<Map<String, String>> _getMockData(String query) {
+    return [
+      {'placeName': 'Delhi, NCR, India', 'placeId': 'mock_delhi', 'latitude': '28.7041', 'longitude': '77.1025'},
+      {'placeName': 'Mumbai, Maharashtra, India', 'placeId': 'mock_mumbai', 'latitude': '19.0760', 'longitude': '72.8777'},
+      {'placeName': '$query Area, India', 'placeId': 'mock_custom', 'latitude': '20.5937', 'longitude': '78.9629'},
+    ];
+  }
+  
   void _showSnackBar(String message, {bool isError = true}) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -520,9 +715,8 @@ class _EditProfileBottomSheetState extends State<EditProfileBottomSheet> {
     );
   }
   
-  Future<void> _pickImage() async {
-    final ImagePicker picker = ImagePicker();
-    
+  // Enhanced image picker with crop and compression (from signup)
+  void _showImagePickerDialog(BuildContext context) {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.white,
@@ -532,82 +726,222 @@ class _EditProfileBottomSheetState extends State<EditProfileBottomSheet> {
       builder: (BuildContext context) {
         return SafeArea(
           child: Padding(
-            padding: EdgeInsets.symmetric(vertical: 20.h),
+            padding: EdgeInsets.all(20.w),
             child: Column(
               mainAxisSize: MainAxisSize.min,
-              children: <Widget>[
+              children: [
+                // Handle bar
+                Container(
+                  width: 40.w,
+                  height: 4.h,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(2.r),
+                  ),
+                ),
+                SizedBox(height: 20.h),
+
                 Text(
                   "Update Profile Picture",
                   style: GoogleFonts.poppins(
                     fontSize: 18.sp,
                     fontWeight: FontWeight.w600,
+                    color: Colors.grey.shade800,
                   ),
                 ),
+                SizedBox(height: 8.h),
+                Text(
+                  "Image will be automatically optimized",
+                  style: GoogleFonts.poppins(
+                    fontSize: 12.sp,
+                    color: Colors.grey.shade600,
+                  ),
+                ),
+                SizedBox(height: 24.h),
+
+                // Camera Option
+                _buildOptionTile(
+                  context: context,
+                  icon: Icons.camera_alt,
+                  title: "Camera",
+                  subtitle: "Take a new photo",
+                  onTap: () {
+                    Navigator.pop(context);
+                    _pickAndCropImage(ImageSource.camera);
+                  },
+                ),
+
+                SizedBox(height: 16.h),
+
+                // Gallery Option
+                _buildOptionTile(
+                  context: context,
+                  icon: Icons.photo_library,
+                  title: "Gallery",
+                  subtitle: "Choose from library",
+                  onTap: () {
+                    Navigator.pop(context);
+                    _pickAndCropImage(ImageSource.gallery);
+                  },
+                ),
+
                 SizedBox(height: 20.h),
-                ListTile(
-                  leading: Container(
-                    padding: EdgeInsets.all(8.w),
-                    decoration: BoxDecoration(
-                      color: Color(0xFFBB0000).withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(10.r),
-                    ),
-                    child: Icon(
-                      Icons.photo_library,
-                      color: Color(0xFFBB0000),
-                    ),
-                  ),
-                  title: Text(
-                    "Gallery",
-                    style: GoogleFonts.poppins(fontSize: 16.sp),
-                  ),
-                  onTap: () async {
-                    Navigator.pop(context);
-                    final XFile? image = await picker.pickImage(
-                      source: ImageSource.gallery,
-                      imageQuality: 80,
-                    );
-                    if (image != null) {
-                      setState(() {
-                        _selectedImage = File(image.path);
-                      });
-                    }
-                  },
-                ),
-                ListTile(
-                  leading: Container(
-                    padding: EdgeInsets.all(8.w),
-                    decoration: BoxDecoration(
-                      color: Color(0xFFBB0000).withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(10.r),
-                    ),
-                    child: Icon(
-                      Icons.camera_alt,
-                      color: Color(0xFFBB0000),
-                    ),
-                  ),
-                  title: Text(
-                    "Camera",
-                    style: GoogleFonts.poppins(fontSize: 16.sp),
-                  ),
-                  onTap: () async {
-                    Navigator.pop(context);
-                    final XFile? image = await picker.pickImage(
-                      source: ImageSource.camera,
-                      imageQuality: 80,
-                    );
-                    if (image != null) {
-                      setState(() {
-                        _selectedImage = File(image.path);
-                      });
-                    }
-                  },
-                ),
               ],
             ),
           ),
         );
       },
     );
+  }
+
+  Widget _buildOptionTile({
+    required BuildContext context,
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12.r),
+      child: Container(
+        padding: EdgeInsets.all(16.w),
+        decoration: BoxDecoration(
+          border: Border.all(color: Colors.grey.shade200),
+          borderRadius: BorderRadius.circular(12.r),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 48.w,
+              height: 48.w,
+              decoration: BoxDecoration(
+                color: Color(0xFFBB0000).withOpacity(0.1),
+                borderRadius: BorderRadius.circular(10.r),
+              ),
+              child: Icon(
+                icon,
+                color: Color(0xFFBB0000),
+                size: 24.w,
+              ),
+            ),
+            SizedBox(width: 16.w),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: GoogleFonts.poppins(
+                      fontSize: 16.sp,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.grey.shade800,
+                    ),
+                  ),
+                  SizedBox(height: 2.h),
+                  Text(
+                    subtitle,
+                    style: GoogleFonts.poppins(
+                      fontSize: 12.sp,
+                      color: Colors.grey.shade600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              Icons.arrow_forward_ios,
+              size: 16.w,
+              color: Colors.grey.shade400,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Enhanced image picker with cropping functionality (from signup)
+  Future<void> _pickAndCropImage(ImageSource source) async {
+    setState(() {
+      _isImageProcessing = true;
+    });
+
+    try {
+      print('📸 Starting image selection and processing...');
+
+      // Pick image with built-in compression
+      final ImagePicker picker = ImagePicker();
+      final XFile? pickedFile = await picker.pickImage(
+        source: source,
+        maxWidth: 1024, // Optimal size for profile pics
+        maxHeight: 1024, // Optimal size for profile pics
+        imageQuality: 75, // Good compression (75% quality)
+      );
+
+      if (pickedFile == null) {
+        setState(() {
+          _isImageProcessing = false;
+        });
+        return;
+      }
+
+      print('📏 Image picked, starting crop...');
+
+      // Crop with additional compression
+      final CroppedFile? croppedFile = await ImageCropper().cropImage(
+        sourcePath: pickedFile.path,
+        compressFormat: ImageCompressFormat.jpg,
+        compressQuality: 80, // Additional compression
+        uiSettings: [
+          AndroidUiSettings(
+            toolbarTitle: 'Crop Profile Picture',
+            toolbarColor: Color(0xFFBB0000),
+            toolbarWidgetColor: Colors.white,
+            backgroundColor: Colors.black,
+            activeControlsWidgetColor: Color(0xFFBB0000),
+            initAspectRatio: CropAspectRatioPreset.square,
+            lockAspectRatio: true,
+            aspectRatioPresets: [CropAspectRatioPreset.square],
+            showCropGrid: true,
+          ),
+          IOSUiSettings(
+            title: 'Crop Profile Picture',
+            aspectRatioLockEnabled: true,
+            resetAspectRatioEnabled: false,
+            aspectRatioPickerButtonHidden: true,
+          ),
+        ],
+      );
+
+      if (croppedFile != null) {
+        final File finalImage = File(croppedFile.path);
+        final int finalSize = await finalImage.length();
+        final double finalSizeMB = finalSize / 1024 / 1024;
+
+        print('✅ Image processed! Final size: ${finalSizeMB.toStringAsFixed(2)} MB');
+
+        setState(() {
+          _selectedImage = finalImage;
+        });
+      }
+    } catch (e) {
+      print('❌ Error processing image: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('❌ Failed to process image. Please try again.'),
+            backgroundColor: Colors.red.shade600,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isImageProcessing = false;
+        });
+      }
+    }
   }
 
  void _showIndustriesBottomSheet() {
@@ -785,6 +1119,8 @@ class _EditProfileBottomSheetState extends State<EditProfileBottomSheet> {
   );
   // Do NOT dispose the controller here, as it will cause "used after being disposed" error
 } 
+
+  // Enhanced image upload method with compression (from signup)
   Future<String?> _uploadImage() async {
     if (_selectedImage == null) {
       // No new image selected, return the current URL
@@ -792,31 +1128,44 @@ class _EditProfileBottomSheetState extends State<EditProfileBottomSheet> {
     }
 
     try {
-      // Generate a unique filename
+      print('Starting optimized image upload...');
+
+      // Get file size
+      final int fileSize = await _selectedImage!.length();
+      print('Image file size: ${(fileSize / 1024 / 1024).toStringAsFixed(2)} MB');
+
+      // Generate unique filename
       final uuid = Uuid();
-      String fileName = 'profile_${_userId}_${uuid.v4()}.jpg';
-      
-      // Reference to storage location
-      final storageRef = FirebaseStorage.instance.ref().child('profile_images/$fileName');
-      
+      String fileName = '${uuid.v4()}.jpg';
+      final storageRef = FirebaseStorage.instance
+          .ref()
+          .child('profile_images/$fileName');
+
       // Upload with metadata
-      final metadata = SettableMetadata(
-        contentType: 'image/jpeg',
-        customMetadata: {'userId': _userId ?? 'unknown'},
+      final uploadTask = storageRef.putFile(
+        _selectedImage!,
+        SettableMetadata(
+          contentType: 'image/jpeg',
+          customMetadata: {
+            'file_size': '$fileSize',
+            'optimized': 'true',
+          },
+        ),
       );
-      
-      // Start upload
-      final uploadTask = storageRef.putFile(_selectedImage!, metadata);
-      
-      // Wait for upload to complete
-      final snapshot = await uploadTask.whenComplete(() => null);
-      
-      // Get download URL
+
+      // Monitor progress
+      uploadTask.snapshotEvents.listen((TaskSnapshot snapshot) {
+        final progress = snapshot.bytesTransferred / snapshot.totalBytes;
+        print('Upload: ${(progress * 100).toStringAsFixed(1)}%');
+      });
+
+      final snapshot = await uploadTask;
       final downloadUrl = await snapshot.ref.getDownloadURL();
-      print('Image uploaded successfully: $downloadUrl');
+
+      print('✅ Upload successful: $downloadUrl');
       return downloadUrl;
     } catch (e) {
-      print('Error uploading image: $e');
+      print('❌ Upload error: $e');
       return _currentImageUrl; // Return existing URL on failure
     }
   }
@@ -846,11 +1195,24 @@ class _EditProfileBottomSheetState extends State<EditProfileBottomSheet> {
         phoneNumber = '+91$phoneNumber';
       }
       
+      // Prepare location data
+      Map<String, dynamic> locationData;
+      if (_selectedLocation != null) {
+        locationData = {
+          'placeName': _selectedLocation!['placeName'],
+          'placeId': _selectedLocation!['placeId'],
+          'latitude': _selectedLocation!['latitude'],
+          'longitude': _selectedLocation!['longitude'],
+        };
+      } else {
+        locationData = {'placeName': _locationController.text.trim()};
+      }
+      
       // Prepare update data
       Map<String, dynamic> updateData = {
         'name': _nameController.text.trim(),
         'businessName': _businessNameController.text.trim(),
-        'location': _locationController.text.trim(),
+        'location': locationData, // Updated to use the proper location data structure
         'UpdatingPhoneNumber': phoneNumber,
         'industry': _industryController.text.trim(),
         'updatedAt': FieldValue.serverTimestamp(),
@@ -875,7 +1237,7 @@ class _EditProfileBottomSheetState extends State<EditProfileBottomSheet> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Profile updated successfully'),
-          backgroundColor: Colors.green,
+          backgroundColor: Color(0xFFBB0000),
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -921,13 +1283,21 @@ class _EditProfileBottomSheetState extends State<EditProfileBottomSheet> {
               // Header
               Padding(
                 padding: EdgeInsets.symmetric(vertical: 16.h),
-                child: Text(
-                  "Edit Profile",
-                  style: GoogleFonts.poppins(
-                    fontSize: 20.sp,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFFBB0000),
-                  ),
+                child: Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    SizedBox(width: 10,),
+                 
+                    Text(
+                      "Edit Profile",
+                      style: GoogleFonts.poppins(
+                        fontSize: 20.sp,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFFBB0000),
+                      ),
+                    ),
+                    SizedBox(width:190,),
+                  IconButton(onPressed: ()=>Navigator.pop(context), icon:   Icon(Icons.close))
+                  ],
                 ),
               ),
               
@@ -941,10 +1311,10 @@ class _EditProfileBottomSheetState extends State<EditProfileBottomSheet> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Profile image
+                        // Enhanced Profile image with cropping
                         Center(
                           child: GestureDetector(
-                            onTap: _pickImage,
+                            onTap: _isImageProcessing ? null : () => _showImagePickerDialog(context),
                             child: Stack(
                               children: [
                                 // Profile image
@@ -964,55 +1334,96 @@ class _EditProfileBottomSheetState extends State<EditProfileBottomSheet> {
                                   ),
                                   child: ClipRRect(
                                     borderRadius: BorderRadius.circular(50.r),
-                                    child: _selectedImage != null
-                                        ? Image.file(
-                                            _selectedImage!,
-                                            fit: BoxFit.cover,
-                                          )
-                                        : _currentImageUrl != null && _currentImageUrl!.isNotEmpty
-                                            ? CachedNetworkImage(
-                                                imageUrl: _currentImageUrl!,
-                                                fit: BoxFit.cover,
-                                                placeholder: (context, url) => Center(
+                                    child: _isImageProcessing
+                                        ? Container(
+                                            color: Colors.grey[300],
+                                            child: Column(
+                                              mainAxisAlignment: MainAxisAlignment.center,
+                                              children: [
+                                                SizedBox(
+                                                  width: 30.w,
+                                                  height: 30.w,
                                                   child: CircularProgressIndicator(
+                                                    strokeWidth: 3,
                                                     color: Color(0xFFBB0000),
                                                   ),
                                                 ),
-                                                errorWidget: (context, url, error) => Icon(
-                                                  Icons.person,
-                                                  size: 50.w,
-                                                  color: Colors.grey.shade400,
+                                                SizedBox(height: 4.h),
+                                                Text(
+                                                  "Processing...",
+                                                  style: GoogleFonts.poppins(
+                                                    fontSize: 10.sp,
+                                                    color: Colors.grey.shade600,
+                                                    fontWeight: FontWeight.w500,
+                                                  ),
                                                 ),
+                                              ],
+                                            ),
+                                          )
+                                        : (_selectedImage != null
+                                            ? Image.file(
+                                                _selectedImage!,
+                                                fit: BoxFit.cover,
                                               )
-                                            : Icon(
-                                                Icons.person,
-                                                size: 50.w,
-                                                color: Colors.grey.shade400,
-                                              ),
+                                            : _currentImageUrl != null && _currentImageUrl!.isNotEmpty
+                                                ? CachedNetworkImage(
+                                                    imageUrl: _currentImageUrl!,
+                                                    fit: BoxFit.cover,
+                                                    placeholder: (context, url) => Center(
+                                                      child: CircularProgressIndicator(
+                                                        color: Color(0xFFBB0000),
+                                                      ),
+                                                    ),
+                                                    errorWidget: (context, url, error) => Icon(
+                                                      Icons.person,
+                                                      size: 50.w,
+                                                      color: Colors.grey.shade400,
+                                                    ),
+                                                  )
+                                                : Column(
+                                                    mainAxisAlignment: MainAxisAlignment.center,
+                                                    children: [
+                                                      Icon(
+                                                        Icons.add_a_photo,
+                                                        size: 32.w,
+                                                        color: Colors.grey.shade500,
+                                                      ),
+                                                      SizedBox(height: 4.h),
+                                                      Text(
+                                                        "Add Photo",
+                                                        style: GoogleFonts.poppins(
+                                                          fontSize: 12.sp,
+                                                          color: Colors.grey.shade600,
+                                                          fontWeight: FontWeight.w500,
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  )),
                                   ),
                                 ),
                                 
                                 // Edit icon overlay
-                                Positioned(
-                                  right: 0,
-                                  bottom: 0,
-                                  child: Container(
-                                    padding: EdgeInsets.all(8.w),
-                                    decoration: BoxDecoration(
-                                      color: Color(0xFFBB0000),
-                                      shape: BoxShape.circle,
-                                      border: Border.all(
+                                if (!_isImageProcessing)
+                                  Positioned(
+                                    right: 0,
+                                    bottom: 0,
+                                    child: Container(
+                                      padding: EdgeInsets.all(8.w),
+                                      decoration: BoxDecoration(
+                                        color: Color(0xFFBB0000),
+                                        shape: BoxShape.circle,
+                                        border: Border.all(
+                                          color: Colors.white,
+                                          width: 2,
+                                        ),
+                                      ),
+                                      child: Icon(
+                                        Icons.camera_alt,
                                         color: Colors.white,
-                                        width: 2,
+                                        size: 16.w,
                                       ),
                                     ),
-                                    child: Icon(
-                                      Icons.edit,
-                                      color: Colors.white,
-                                      size: 16.w,
-                                    ),
                                   ),
-                                ),
                               ],
                             ),
                           ),
@@ -1116,18 +1527,165 @@ class _EditProfileBottomSheetState extends State<EditProfileBottomSheet> {
                         
                         SizedBox(height: 16.h),
                         
-                        // Location Field
-                        EditFormField(
-                          label: "Location",
-                          controller: _locationController,
-                          hint: "Enter your business location",
-                          icon: Icons.location_on_outlined,
-                          validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return 'Please enter your location';
-                            }
-                            return null;
-                          },
+                        // Location Field with Search Functionality
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              "Location",
+                              style: GoogleFonts.poppins(
+                                fontSize: 16.sp,
+                                fontWeight: FontWeight.w500,
+                                color: Colors.grey.shade800,
+                              ),
+                            ),
+                            SizedBox(height: 8.h),
+                            Column(
+                              children: [
+                                TextFormField(
+                                  controller: _locationController,
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 16.sp,
+                                    color: Colors.black87,
+                                  ),
+                                  decoration: InputDecoration(
+                                    hintText: "Enter your business location",
+                                    hintStyle: GoogleFonts.poppins(
+                                      fontSize: 16.sp,
+                                      color: Colors.grey.shade500,
+                                    ),
+                                    prefixIcon: Icon(
+                                      Icons.location_on_outlined,
+                                      color: Colors.grey.shade600,
+                                      size: 22.w,
+                                    ),
+                                    suffixIcon: _isSearching
+                                        ? Padding(
+                                            padding: EdgeInsets.all(12.w),
+                                            child: SizedBox(
+                                              height: 16.h,
+                                              width: 16.w,
+                                              child: CircularProgressIndicator(
+                                                strokeWidth: 2,
+                                                valueColor: AlwaysStoppedAnimation<Color>(
+                                                  Color(0xFFBB0000),
+                                                ),
+                                              ),
+                                            ),
+                                          )
+                                        : null,
+                                    filled: true,
+                                    fillColor: Colors.grey.shade50,
+                                    contentPadding: EdgeInsets.symmetric(
+                                      vertical: 16.h,
+                                      horizontal: 16.w,
+                                    ),
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(10.r),
+                                      borderSide: BorderSide.none,
+                                    ),
+                                    enabledBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(10.r),
+                                      borderSide: BorderSide(color: Colors.grey.shade200, width: 1),
+                                    ),
+                                    focusedBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(10.r),
+                                      borderSide: BorderSide(color: Color(0xFFBB0000).withOpacity(0.5), width: 1.5),
+                                    ),
+                                    errorBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(10.r),
+                                      borderSide: BorderSide(color: Colors.red.shade300, width: 1),
+                                    ),
+                                    focusedErrorBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(10.r),
+                                      borderSide: BorderSide(color: Colors.red.shade400, width: 1.5),
+                                    ),
+                                    errorStyle: GoogleFonts.poppins(
+                                      fontSize: 12.sp,
+                                      color: Colors.red.shade600,
+                                    ),
+                                  ),
+                                  validator: (value) {
+                                    if (value == null || value.isEmpty) {
+                                      return 'Please enter your location';
+                                    }
+                                    return null;
+                                  },
+                                  onChanged: (value) {
+                                    _searchDebouncer.run(() {
+                                      _searchLocation(value);
+                                    });
+                                  },
+                                  onTap: () {
+                                    if (_locationController.text.length >= 3) {
+                                      setState(() {
+                                        _showLocationSuggestions = true;
+                                      });
+                                    }
+                                  },
+                                ),
+                                if (_showLocationSuggestions && _locationSuggestions.isNotEmpty)
+                                  Container(
+                                    margin: EdgeInsets.only(top: 4.h),
+                                    constraints: BoxConstraints(maxHeight: 200.h),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(12.r),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black.withOpacity(0.1),
+                                          blurRadius: 8,
+                                          offset: Offset(0, 4),
+                                        ),
+                                      ],
+                                    ),
+                                    child: ListView.builder(
+                                      shrinkWrap: true,
+                                      padding: EdgeInsets.symmetric(vertical: 8.h),
+                                      itemCount: _locationSuggestions.length > 5 ? 5 : _locationSuggestions.length,
+                                      itemBuilder: (context, index) {
+                                        final suggestion = _locationSuggestions[index];
+                                        return InkWell(
+                                          onTap: () {
+                                            setState(() {
+                                              _selectedLocation = suggestion;
+                                              _locationController.text = suggestion['placeName'] ?? '';
+                                              _showLocationSuggestions = false;
+                                            });
+                                            FocusScope.of(context).unfocus();
+                                          },
+                                          child: Padding(
+                                            padding: EdgeInsets.symmetric(
+                                              horizontal: 16.w,
+                                              vertical: 12.h,
+                                            ),
+                                            child: Row(
+                                              children: [
+                                                Icon(
+                                                  Icons.location_on,
+                                                  size: 20.sp,
+                                                  color: Color(0xFFBB0000),
+                                                ),
+                                                SizedBox(width: 12.w),
+                                                Expanded(
+                                                  child: Text(
+                                                    suggestion['placeName'] ?? '',
+                                                    style: TextStyle(
+                                                      fontSize: 14.sp,
+                                                      color: Colors.grey.shade800,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ],
                         ),
                         
                         SizedBox(height: 16.h),
@@ -1136,104 +1694,11 @@ class _EditProfileBottomSheetState extends State<EditProfileBottomSheet> {
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              "Phone Number",
-                              style: GoogleFonts.poppins(
-                                fontSize: 16.sp,
-                                fontWeight: FontWeight.w500,
-                                color: Colors.grey.shade800,
-                              ),
-                            ),
-                            SizedBox(height: 8.h),
-                            Container(
-                              decoration: BoxDecoration(
-                                color: Colors.grey.shade50,
-                                borderRadius: BorderRadius.circular(10.r),
-                                border: Border.all(
-                                  color: Colors.grey.shade200,
-                                  width: 1,
-                                ),
-                              ),
-                              child: Row(
-                                children: [
-                                  // Country code prefix
-                                  Container(
-                                    padding: EdgeInsets.symmetric(
-                                      horizontal: 12.w,
-                                      vertical: 14.h,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: Colors.grey.shade100,
-                                      borderRadius: BorderRadius.only(
-                                        topLeft: Radius.circular(10.r),
-                                        bottomLeft: Radius.circular(10.r),
-                                      ),
-                                    ),
-                                    child: Text(
-                                      "+91",
-                                      style: GoogleFonts.poppins(
-                                        fontSize: 16.sp,
-                                        fontWeight: FontWeight.w500,
-                                        color: Colors.grey.shade700,
-                                      ),
-                                    ),
-                                  ),
-                                  
-                                  // Divider
-                                  Container(
-                                    height: 30.h,
-                                    width: 1,
-                                    color: Colors.grey.shade300,
-                                  ),
-                                  
-                                  // Phone input
-                                  Expanded(
-                                    child: TextFormField(
-                                      controller: _phoneController,
-                                      style: GoogleFonts.poppins(
-                                        fontSize: 16.sp,
-                                        color: Colors.black87,
-                                      ),
-                                      decoration: InputDecoration(
-                                        hintText: "Enter mobile number",
-                                        hintStyle: GoogleFonts.poppins(
-                                          fontSize: 16.sp,
-                                          color: Colors.grey.shade500,
-                                        ),
-                                        prefixIcon: Icon(
-                                          Icons.phone_android,
-                                          color: Colors.grey.shade600,
-                                          size: 22.w,
-                                        ),
-                                        border: InputBorder.none,
-                                        contentPadding: EdgeInsets.symmetric(
-                                          vertical: 16.h,
-                                          horizontal: 12.w,
-                                        ),
-                                      ),
-                                      keyboardType: TextInputType.phone,
-                                      inputFormatters: [
-                                        FilteringTextInputFormatter.digitsOnly,
-                                        LengthLimitingTextInputFormatter(10),
-                                      ],
-                                      validator: (value) {
-                                        if (value == null || value.isEmpty) {
-                                          return 'Please enter your phone number';
-                                        }
-                                        if (value.length != 10) {
-                                          return 'Phone number must be 10 digits';
-                                        }
-                                        return null;
-                                      },
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
+                           
+                          
                           ],
                         ),
-                        
-                        SizedBox(height: 32.h),
+                
                         
                         // Update Button
                         SizedBox(
@@ -1250,7 +1715,7 @@ class _EditProfileBottomSheetState extends State<EditProfileBottomSheet> {
                               elevation: 0,
                             ),
                             child: Text(
-                              "Update Profile",
+                              "Save Changes",
                               style: GoogleFonts.poppins(
                                 fontSize: 16.sp,
                                 fontWeight: FontWeight.w500,
@@ -1262,29 +1727,7 @@ class _EditProfileBottomSheetState extends State<EditProfileBottomSheet> {
                         SizedBox(height: 16.h),
                         
                         // Cancel Button
-                        SizedBox(
-                          width: double.infinity,
-                          height: 54.h,
-                          child: TextButton(
-                            onPressed: () {
-                              Navigator.pop(context);
-                            },
-                            style: TextButton.styleFrom(
-                              backgroundColor: Colors.grey.shade100,
-                              foregroundColor: Colors.grey.shade800,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10.r),
-                              ),
-                            ),
-                            child: Text(
-                              "Cancel",
-                              style: GoogleFonts.poppins(
-                                fontSize: 16.sp,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ),
-                        ),
+                    
                       ],
                     ),
                   ),

@@ -13,6 +13,9 @@ import 'package:flutter/services.dart';
 import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:google_fonts/google_fonts.dart';
+import 'package:lottie/lottie.dart';
+import 'package:image_cropper/image_cropper.dart'; // Add this import
+import 'package:uuid/uuid.dart'; // Add this import
 
 class WorkerProfilePage extends StatefulWidget {
   const WorkerProfilePage({Key? key}) : super(key: key);
@@ -73,57 +76,333 @@ class _WorkerProfilePageState extends State<WorkerProfilePage> {
     }
   }
   
-  Future<void> _loadCompletedJobs(String workerId) async {
-    try {
-      // Query for completed jobs where worker was hired
-      final jobsSnapshot = await _firestore
-          .collection('jobApplications')
-          .where('workerId', isEqualTo: workerId)
-          .where('status', isEqualTo: 'accepted')
-          .get();
+Future<void> _loadCompletedJobs(String workerId) async {
+  try {
+    // Query for completed jobs where worker was hired
+    final jobsSnapshot = await _firestore
+        .collection('jobApplications')
+        .where('workerId', isEqualTo: workerId)
+        .where('status', isEqualTo: 'accepted')
+        .get();
 
-      List<Map<String, dynamic>> jobs = [];
-      Map<String, int> categoryCounts = {};
-      int totalJobs = 0;
+    List<Map<String, dynamic>> jobs = [];
+    Map<String, int> categoryCounts = {};
+    int totalJobs = 0;
 
-      // Process each job application
-      for (var doc in jobsSnapshot.docs) {
-        final jobData = doc.data();
-        final jobId = jobData['jobId'];
+    // Process each job application
+    for (var doc in jobsSnapshot.docs) {
+      final jobData = doc.data();
+      final jobId = jobData['jobId'];
 
-        // Get the actual job details
-        if (jobId != null) {
-          final jobDoc = await _firestore.collection('jobs').doc(jobId).get();
-          if (jobDoc.exists) {
-            final fullJobData = jobDoc.data() ?? {};
+      // Get the actual job details
+      if (jobId != null) {
+        final jobDoc = await _firestore.collection('jobs').doc(jobId).get();
+        if (jobDoc.exists) {
+          final fullJobData = jobDoc.data() ?? {};
+          
+          // Helper function to safely get job title
+          String getJobTitle(Map<String, dynamic> data) {
+            // In your database, jobCategory IS the job title (Cashier, Security Guard, etc.)
+            final jobTitle = data['jobCategory'] ?? 
+                             data['jobTitle'] ?? 
+                             data['title'] ?? 
+                             data['name'] ?? 
+                             'Unknown Job';
             
-            // Add to completed jobs list
-            jobs.add({
-              'id': jobDoc.id,
-              ...fullJobData,
-            });
-
-            // Count job categories
-            final category = fullJobData['jobCategory'] ?? 'Uncategorized';
-            categoryCounts[category] = (categoryCounts[category] ?? 0) + 1;
-            totalJobs++;
+            print('DEBUG: Job title from jobCategory: $jobTitle');
+            return jobTitle;
           }
+          
+          // Helper function to safely get company name
+          String getCompanyName(Map<String, dynamic> data) {
+            return data['hirerBusinessName'] ?? 
+                   data['company'] ?? 
+                   data['businessName'] ?? 
+                   data['companyName'] ?? 
+                   'Unknown Company';
+          }
+          
+          // Helper function to safely get location
+          String getJobLocation(Map<String, dynamic> data) {
+            return data['hirerLocation'] ?? 
+                   data['location'] ?? 
+                   data['jobLocation'] ?? 
+                   'Unknown Location';
+          }
+          
+          // Helper function to safely get job type
+          String getJobType(Map<String, dynamic> data) {
+            return data['jobType'] ?? 
+                   data['type'] ?? 
+                   data['workType'] ?? 
+                   'part-time';
+          }
+          
+          // Create job details with proper extraction
+          final jobDetails = {
+            'id': jobDoc.id,
+            'jobTitle': getJobTitle(fullJobData),
+            'hirerBusinessName': getCompanyName(fullJobData),
+            'hirerLocation': getJobLocation(fullJobData),
+            'jobType': getJobType(fullJobData),
+            'description': fullJobData['description'] ?? '',
+            'budget': fullJobData['budget'] ?? 0,
+            'date': fullJobData['date'],
+            'createdAt': fullJobData['createdAt'],
+            'status': fullJobData['status'] ?? 'completed',
+            'jobCategory': fullJobData['jobCategory'] ?? 'General',
+            // Include all original data for compatibility
+            ...fullJobData,
+          };
+          
+          jobs.add(jobDetails);
+
+          // Count job categories
+          final category = fullJobData['jobCategory'] ?? 'Uncategorized';
+          categoryCounts[category] = (categoryCounts[category] ?? 0) + 1;
+          totalJobs++;
         }
       }
-
-      setState(() {
-        completedJobs = jobs;
-        jobCategoryCounts = categoryCounts;
-        totalJobsDone = totalJobs;
-        _isLoading = false;
-      });
-    } catch (e) {
-      print('Error loading completed jobs: $e');
-      setState(() {
-        _isLoading = false;
-      });
     }
+
+    setState(() {
+      completedJobs = jobs;
+      jobCategoryCounts = categoryCounts;
+      totalJobsDone = totalJobs;
+      _isLoading = false;
+    });
+  } catch (e) {
+    print('Error loading completed jobs: $e');
+    setState(() {
+      _isLoading = false;
+    });
   }
+}
+
+Widget _buildJobHistorySection() {
+  return Container(
+    // Reduced bottom margin from 10.h to match other sections
+    margin: EdgeInsets.only(bottom: 0),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Completed Jobs',
+          style: GoogleFonts.roboto(
+            fontSize: 18.sp,
+            fontWeight: FontWeight.bold,
+            color: Colors.black87,
+          ),
+        ),
+        // Add a small consistent gap between title and content
+        SizedBox(height: 8.h),
+        
+        if (completedJobs.isEmpty)
+          Center(
+            // Reduced vertical padding from 24.h to match other sections
+            child: Padding(
+              padding: EdgeInsets.symmetric(vertical: 16.h),
+              child: Column(
+                children: [
+                  Icon(
+                    Icons.history,
+                    size: 40.sp,
+                    color: Colors.grey.shade400,
+                  ),
+                  SizedBox(height: 12.h),
+                  Text(
+                    'No completed jobs',
+                    style: GoogleFonts.roboto(
+                      fontSize: 16.sp,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.grey.shade600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          )
+        else
+          ListView.builder(
+            shrinkWrap: true,
+            physics: NeverScrollableScrollPhysics(),
+            // Remove default padding
+            padding: EdgeInsets.zero,
+            itemCount: completedJobs.length,
+            itemBuilder: (context, index) {
+              final job = completedJobs[index];
+              
+              // Format date
+              String formattedDate = 'Unknown date';
+              if (job.containsKey('date') && job['date'] is Timestamp) {
+                final date = (job['date'] as Timestamp).toDate();
+                formattedDate = '${date.day}/${date.month}/${date.year}';
+              }
+              
+              // Last item should have no bottom margin
+              final isLastItem = index == completedJobs.length - 1;
+              
+              // FIXED: Use the properly extracted job title
+              final jobTitle = job['jobTitle'] ?? 'Unknown Job';
+              final companyName = job['hirerBusinessName'] ?? 'Unknown Company';
+              final jobLocation = job['hirerLocation'] ?? 'Unknown Location';
+              final jobType = job['jobType'] ?? 'Unknown Type';
+              
+              return Container(
+                // Reduced bottom margin from 12.h to 8.h and remove for last item
+                margin: EdgeInsets.only(bottom: isLastItem ? 0 : 8.h),
+                padding: EdgeInsets.all(16.w),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12.r),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 5,
+                      spreadRadius: 0,
+                      offset: Offset(0, 2),
+                    ),
+                  ],
+                  border: Border.all(
+                    color: Colors.grey.withOpacity(0.2),
+                    width: 1,
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          width: 40.w,
+                          height: 40.w,
+                          decoration: BoxDecoration(
+                            color: Color(0xFF414ce4).withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(8.r),
+                          ),
+                          child: Icon(
+                            Icons.work,
+                            color: Color(0xFF414ce4),
+                            size: 24.sp,
+                          ),
+                        ),
+                        SizedBox(width: 12.w),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                jobTitle, // Now using the correctly extracted job title
+                                style: GoogleFonts.roboto(
+                                  fontSize: 16.sp,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.black87,
+                                ),
+                              ),
+                              SizedBox(height: 4.h),
+                              Text(
+                                companyName, // Now using the correctly extracted company name
+                                style: GoogleFonts.roboto(
+                                  fontSize: 14.sp,
+                                  color: Colors.grey.shade700,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Container(
+                          padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+                          decoration: BoxDecoration(
+                            color: jobType == 'full-time'
+                                ? Colors.blue.shade100
+                                : jobType == 'part-time'
+                                    ? Colors.amber.shade100
+                                    : Colors.green.shade100,
+                            borderRadius: BorderRadius.circular(4.r),
+                          ),
+                          child: Text(
+                            jobType,
+                            style: GoogleFonts.roboto(
+                              fontSize: 12.sp,
+                              fontWeight: FontWeight.w500,
+                              color: jobType == 'full-time'
+                                  ? Colors.blue.shade800
+                                  : jobType == 'part-time'
+                                      ? Colors.amber.shade800
+                                      : Colors.green.shade800,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 12.h),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.location_on_outlined,
+                          size: 16.sp,
+                          color: Colors.grey.shade600,
+                        ),
+                        SizedBox(width: 4.w),
+                        Flexible(
+                          child: Text(
+                            jobLocation, // Now using the correctly extracted location
+                            style: GoogleFonts.roboto(
+                              fontSize: 13.sp,
+                              color: Colors.grey.shade600,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        SizedBox(width: 50.w),
+                        Icon(
+                          Icons.calendar_today_outlined,
+                          size: 16.sp,
+                          color: Colors.grey.shade600,
+                        ),
+                        SizedBox(width: 4.w),
+                        Text(
+                          formattedDate,
+                          style: GoogleFonts.roboto(
+                            fontSize: 13.sp,
+                            color: Colors.grey.shade600,
+                          ),
+                        ),
+                      ],
+                    ),
+                    
+                    // Add budget information if available
+                    if (job['budget'] != null && job['budget'] > 0) ...[
+                      SizedBox(height: 8.h),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.currency_rupee,
+                            size: 16.sp,
+                            color: Colors.green.shade600,
+                          ),
+                          SizedBox(width: 4.w),
+                          Text(
+                            ' ${job['budget']}',
+                            style: GoogleFonts.roboto(
+                              fontSize: 13.sp,
+                              color: Colors.green.shade600,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ],
+                ),
+              );
+            },
+          ),
+      ],
+    ),
+  );
+}
   
   void _navigateBack(BuildContext context) {
     Navigator.pop(context);
@@ -148,45 +427,49 @@ class _WorkerProfilePageState extends State<WorkerProfilePage> {
   @override
   Widget build(BuildContext context) {
     SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle(
-      statusBarColor: Colors.transparent,
+      statusBarColor: Color(0xFF414ce4),
       statusBarIconBrightness: Brightness.light,
       statusBarBrightness: Brightness.dark,
     ));
     
-    return Scaffold(
-      body: _isLoading
-          ? Center(
-              child: CircularProgressIndicator(
-                color: const Color(0xFF414ce4),
-              ),
-            )
-          : SingleChildScrollView(
-              padding: EdgeInsets.only(bottom: 16.h),
-              child: Column(
-                children: [
-                  // Top curved background with profile
-                  _buildProfileHeader(),
-
-                  // Body content with consistent spacing
-                  Padding(
-                    padding: EdgeInsets.all(16.w),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Edit Profile Button
-                        _buildEditProfileButton(),
-
-                        // Experience section
-                        _buildExperienceSection(),
-
-                        // Job history with reduced gap
-                        _buildJobHistorySection(),
-                      ],
+    return SafeArea(
+      child: Scaffold(
+        body: _isLoading
+            ? Center(
+                child: SizedBox(
+                        width: 140,
+                        height: 140,
+                        child:Lottie.asset('asset/Animation - 1748495844642 (1).json', ),
+                      ),
+              )
+            : SingleChildScrollView(
+                padding: EdgeInsets.only(bottom: 16.h),
+                child: Column(
+                  children: [
+                    // Top curved background with profile
+                    _buildProfileHeader(),
+      
+                    // Body content with consistent spacing
+                    Padding(
+                      padding: EdgeInsets.all(16.w),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Edit Profile Button
+                          _buildEditProfileButton(),
+      
+                          // Experience section
+                          _buildExperienceSection(),
+      
+                          // Job history with reduced gap
+                          _buildJobHistorySection(),
+                        ],
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
+      ),
     );
   }
 
@@ -207,6 +490,7 @@ class _WorkerProfilePageState extends State<WorkerProfilePage> {
     
     return Container(
       width: double.infinity,
+      height: 330.h,
       decoration: BoxDecoration(
         color: Color(0xFF414ce4),
         borderRadius: BorderRadius.only(
@@ -255,13 +539,13 @@ class _WorkerProfilePageState extends State<WorkerProfilePage> {
               children: [
                 // Back button and title
                 Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 25.w, vertical: 40.h),
+                  padding: EdgeInsets.symmetric(horizontal: 25.w, vertical: 20.h),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       SizedBox(width: 35.w), // For symmetry
                       Text(
-                        "Worker Profile",
+                        "Worker ",
                         style: GoogleFonts.roboto(
                           color: Colors.white,
                           fontSize: 20.sp,
@@ -283,36 +567,47 @@ class _WorkerProfilePageState extends State<WorkerProfilePage> {
                 ),
 
                 // Profile picture
-                Container(
-                  width: 110.w,
-                  height: 110.w,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.3),
-                        blurRadius: 5,
-                        offset: Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(60.r),
-                    child: profileImage != null && profileImage.isNotEmpty
-                        ? CachedNetworkImage(
-                            imageUrl: profileImage,
-                            fit: BoxFit.cover,
-                            placeholder: (context, url) => Container(
-                              color: Colors.grey[300],
-                              child: Center(
-                                child: CircularProgressIndicator(
-                                  valueColor: AlwaysStoppedAnimation<Color>(
-                                    const Color(0xFF414ce4),
-                                  ),
+                Padding(
+                  padding: const EdgeInsets.all(19.0),
+                  child: Container(
+                    width: 110.w,
+                    height: 110.w,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.3),
+                          blurRadius: 5,
+                          offset: Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(60.r),
+                      child: profileImage != null && profileImage.isNotEmpty
+                          ? CachedNetworkImage(
+                              imageUrl: profileImage,
+                              fit: BoxFit.cover,
+                              placeholder: (context, url) => Container(
+                                color: Colors.grey[300],
+                                child: Center(
+                                  child: SizedBox(
+                        width: 140,
+                        height: 140,
+                        child:Lottie.asset('asset/Animation - 1748495844642 (1).json', ),
+                      )
                                 ),
                               ),
-                            ),
-                            errorWidget: (context, url, error) => Container(
+                              errorWidget: (context, url, error) => Container(
+                                color: Colors.grey[300],
+                                child: Icon(
+                                  Icons.person,
+                                  size: 50.sp,
+                                  color: Colors.grey[600],
+                                ),
+                              ),
+                            )
+                          : Container(
                               color: Colors.grey[300],
                               child: Icon(
                                 Icons.person,
@@ -320,15 +615,7 @@ class _WorkerProfilePageState extends State<WorkerProfilePage> {
                                 color: Colors.grey[600],
                               ),
                             ),
-                          )
-                        : Container(
-                            color: Colors.grey[300],
-                            child: Icon(
-                              Icons.person,
-                              size: 50.sp,
-                              color: Colors.grey[600],
-                            ),
-                          ),
+                    ),
                   ),
                 ),
 
@@ -585,201 +872,10 @@ class _WorkerProfilePageState extends State<WorkerProfilePage> {
     );
   }
 
-  Widget _buildJobHistorySection() {
-    return Container(
-      // Reduced bottom margin from 10.h to match other sections
-      margin: EdgeInsets.only(bottom: 0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Completed Jobs',
-            style: GoogleFonts.roboto(
-              fontSize: 18.sp,
-              fontWeight: FontWeight.bold,
-              color: Colors.black87,
-            ),
-          ),
-          // Add a small consistent gap between title and content
-          SizedBox(height: 8.h),
-          
-          if (completedJobs.isEmpty)
-            Center(
-              // Reduced vertical padding from 24.h to match other sections
-              child: Padding(
-                padding: EdgeInsets.symmetric(vertical: 16.h),
-                child: Column(
-                  children: [
-                    Icon(
-                      Icons.history,
-                      size: 40.sp,
-                      color: Colors.grey.shade400,
-                    ),
-                    SizedBox(height: 12.h),
-                    Text(
-                      'No completed jobs',
-                      style: GoogleFonts.roboto(
-                        fontSize: 16.sp,
-                        fontWeight: FontWeight.w500,
-                        color: Colors.grey.shade600,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            )
-          else
-            ListView.builder(
-              shrinkWrap: true,
-              physics: NeverScrollableScrollPhysics(),
-              // Remove default padding
-              padding: EdgeInsets.zero,
-              itemCount: completedJobs.length,
-              itemBuilder: (context, index) {
-                final job = completedJobs[index];
-                
-                // Format date
-                String formattedDate = 'Unknown date';
-                if (job.containsKey('date') && job['date'] is Timestamp) {
-                  final date = (job['date'] as Timestamp).toDate();
-                  formattedDate = '${date.day}/${date.month}/${date.year}';
-                }
-                
-                // Last item should have no bottom margin
-                final isLastItem = index == completedJobs.length - 1;
-                
-                return Container(
-                  // Reduced bottom margin from 12.h to 8.h and remove for last item
-                  margin: EdgeInsets.only(bottom: isLastItem ? 0 : 8.h),
-                  padding: EdgeInsets.all(16.w),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12.r),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.05),
-                        blurRadius: 5,
-                        spreadRadius: 0,
-                        offset: Offset(0, 2),
-                      ),
-                    ],
-                    border: Border.all(
-                      color: Colors.grey.withOpacity(0.2),
-                      width: 1,
-                    ),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Container(
-                            width: 40.w,
-                            height: 40.w,
-                            decoration: BoxDecoration(
-                              color: Color(0xFF414ce4).withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(8.r),
-                            ),
-                            child: Icon(
-                              Icons.work,
-                              color: Color(0xFF414ce4),
-                              size: 24.sp,
-                            ),
-                          ),
-                          SizedBox(width: 12.w),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  job['title'] ?? 'Unknown Job',
-                                  style: GoogleFonts.roboto(
-                                    fontSize: 16.sp,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.black87,
-                                  ),
-                                ),
-                                SizedBox(height: 4.h),
-                                Text(
-                                  job['hirerBusinessName'] ?? 'Unknown Company',
-                                  style: GoogleFonts.roboto(
-                                    fontSize: 14.sp,
-                                    color: Colors.grey.shade700,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          Container(
-                            padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
-                            decoration: BoxDecoration(
-                              color: job['jobType'] == 'full-time'
-                                  ? Colors.blue.shade100
-                                  : job['jobType'] == 'part-time'
-                                      ? Colors.amber.shade100
-                                      : Colors.green.shade100,
-                              borderRadius: BorderRadius.circular(4.r),
-                            ),
-                            child: Text(
-                              job['jobType'] ?? 'Unknown',
-                              style: GoogleFonts.roboto(
-                                fontSize: 12.sp,
-                                fontWeight: FontWeight.w500,
-                                color: job['jobType'] == 'full-time'
-                                    ? Colors.blue.shade800
-                                    : job['jobType'] == 'part-time'
-                                        ? Colors.amber.shade800
-                                        : Colors.green.shade800,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      SizedBox(height: 12.h),
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.location_on_outlined,
-                            size: 16.sp,
-                            color: Colors.grey.shade600,
-                          ),
-                          SizedBox(width: 4.w),
-                          Text(
-                            job['hirerLocation'] ?? 'Unknown Location',
-                            style: GoogleFonts.roboto(
-                              fontSize: 13.sp,
-                              color: Colors.grey.shade600,
-                            ),
-                          ),
-                          Spacer(),
-                          Icon(
-                            Icons.calendar_today_outlined,
-                            size: 16.sp,
-                            color: Colors.grey.shade600,
-                          ),
-                          SizedBox(width: 4.w),
-                          Text(
-                            formattedDate,
-                            style: GoogleFonts.roboto(
-                              fontSize: 13.sp,
-                              color: Colors.grey.shade600,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                );
-              },
-            ),
-        ],
-      ),
-    );
-  }
+ 
 }
 
-// Keep the original EditProfileBottomSheet class without changes
+// Enhanced EditProfileBottomSheet with image cropping and compression
 class EditProfileBottomSheet extends StatefulWidget {
   final Map<String, dynamic>? userData;
   final VoidCallback onProfileUpdated;
@@ -815,10 +911,10 @@ class Debouncer {
 class _EditProfileBottomSheetState extends State<EditProfileBottomSheet> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
-  final _phoneController = TextEditingController();
   final _locationController = TextEditingController();
   
   bool _isLoading = false;
+  bool _isImageProcessing = false; // Add this for image processing state
   File? _imageFile;
   String? _currentImageUrl;
   
@@ -838,7 +934,6 @@ class _EditProfileBottomSheetState extends State<EditProfileBottomSheet> {
   void _initializeControllers() {
     if (widget.userData != null) {
       _nameController.text = widget.userData!['name'] ?? '';
-      _phoneController.text = widget.userData!['phone'] ?? '';
       
       if (widget.userData!.containsKey('location')) {
         final locationData = widget.userData!['location'];
@@ -992,6 +1087,282 @@ class _EditProfileBottomSheetState extends State<EditProfileBottomSheet> {
     ];
   }
   
+  // Enhanced image picker with crop and compression (from signup)
+  void _showImagePickerDialog(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20.r)),
+      ),
+      builder: (BuildContext context) {
+        return SafeArea(
+          child: Padding(
+            padding: EdgeInsets.all(20.w),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Handle bar
+                Container(
+                  width: 40.w,
+                  height: 4.h,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(2.r),
+                  ),
+                ),
+                SizedBox(height: 20.h),
+
+                Text(
+                  "Update Profile Picture",
+                  style: GoogleFonts.roboto(
+                    fontSize: 18.sp,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.grey.shade800,
+                  ),
+                ),
+                SizedBox(height: 8.h),
+                Text(
+                  "Image will be automatically optimized",
+                  style: GoogleFonts.roboto(
+                    fontSize: 12.sp,
+                    color: Colors.grey.shade600,
+                  ),
+                ),
+                SizedBox(height: 24.h),
+
+                // Camera Option
+                _buildOptionTile(
+                  context: context,
+                  icon: Icons.camera_alt,
+                  title: "Camera",
+                  subtitle: "Take a new photo",
+                  onTap: () {
+                    Navigator.pop(context);
+                    _pickAndCropImage(ImageSource.camera);
+                  },
+                ),
+
+                SizedBox(height: 16.h),
+
+                // Gallery Option
+                _buildOptionTile(
+                  context: context,
+                  icon: Icons.photo_library,
+                  title: "Gallery",
+                  subtitle: "Choose from library",
+                  onTap: () {
+                    Navigator.pop(context);
+                    _pickAndCropImage(ImageSource.gallery);
+                  },
+                ),
+
+                SizedBox(height: 20.h),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildOptionTile({
+    required BuildContext context,
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12.r),
+      child: Container(
+        padding: EdgeInsets.all(16.w),
+        decoration: BoxDecoration(
+          border: Border.all(color: Colors.grey.shade200),
+          borderRadius: BorderRadius.circular(12.r),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 48.w,
+              height: 48.w,
+              decoration: BoxDecoration(
+                color: Color(0xFF414ce4).withOpacity(0.1),
+                borderRadius: BorderRadius.circular(10.r),
+              ),
+              child: Icon(
+                icon,
+                color: Color(0xFF414ce4),
+                size: 24.w,
+              ),
+            ),
+            SizedBox(width: 16.w),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: GoogleFonts.roboto(
+                      fontSize: 16.sp,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.grey.shade800,
+                    ),
+                  ),
+                  SizedBox(height: 2.h),
+                  Text(
+                    subtitle,
+                    style: GoogleFonts.roboto(
+                      fontSize: 12.sp,
+                      color: Colors.grey.shade600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              Icons.arrow_forward_ios,
+              size: 16.w,
+              color: Colors.grey.shade400,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Enhanced image picker with cropping functionality (from signup)
+  Future<void> _pickAndCropImage(ImageSource source) async {
+    setState(() {
+      _isImageProcessing = true;
+    });
+
+    try {
+      print('📸 Starting image selection and processing...');
+
+      // Pick image with built-in compression
+      final ImagePicker picker = ImagePicker();
+      final XFile? pickedFile = await picker.pickImage(
+        source: source,
+        maxWidth: 1024, // Optimal size for profile pics
+        maxHeight: 1024, // Optimal size for profile pics
+        imageQuality: 75, // Good compression (75% quality)
+      );
+
+      if (pickedFile == null) {
+        setState(() {
+          _isImageProcessing = false;
+        });
+        return;
+      }
+
+      print('📏 Image picked, starting crop...');
+
+      // Crop with additional compression
+      final CroppedFile? croppedFile = await ImageCropper().cropImage(
+        sourcePath: pickedFile.path,
+        compressFormat: ImageCompressFormat.jpg,
+        compressQuality: 80, // Additional compression
+        uiSettings: [
+          AndroidUiSettings(
+            toolbarTitle: 'Crop Profile Picture',
+            toolbarColor: Color(0xFF414ce4),
+            toolbarWidgetColor: Colors.white,
+            backgroundColor: Colors.black,
+            activeControlsWidgetColor: Color(0xFF414ce4),
+            initAspectRatio: CropAspectRatioPreset.square,
+            lockAspectRatio: true,
+            aspectRatioPresets: [CropAspectRatioPreset.square],
+            showCropGrid: true,
+          ),
+          IOSUiSettings(
+            title: 'Crop Profile Picture',
+            aspectRatioLockEnabled: true,
+            resetAspectRatioEnabled: false,
+            aspectRatioPickerButtonHidden: true,
+          ),
+        ],
+      );
+
+      if (croppedFile != null) {
+        final File finalImage = File(croppedFile.path);
+        final int finalSize = await finalImage.length();
+        final double finalSizeMB = finalSize / 1024 / 1024;
+
+        print('✅ Image processed! Final size: ${finalSizeMB.toStringAsFixed(2)} MB');
+
+        setState(() {
+          _imageFile = finalImage;
+        });
+      }
+    } catch (e) {
+      print('❌ Error processing image: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('❌ Failed to process image. Please try again.'),
+            backgroundColor: Colors.red.shade600,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isImageProcessing = false;
+        });
+      }
+    }
+  }
+
+  // Enhanced image upload method with compression (from signup)
+  Future<String?> _uploadProfileImage(String userId) async {
+    if (_imageFile == null) return _currentImageUrl;
+    
+    try {
+      print('Starting optimized image upload...');
+
+      // Get file size
+      final int fileSize = await _imageFile!.length();
+      print('Image file size: ${(fileSize / 1024 / 1024).toStringAsFixed(2)} MB');
+
+      // Generate unique filename
+      final uuid = Uuid();
+      String fileName = '${uuid.v4()}.jpg';
+      final storageRef = FirebaseStorage.instance
+          .ref()
+          .child('profile_images/$fileName');
+
+      // Upload with metadata
+      final uploadTask = storageRef.putFile(
+        _imageFile!,
+        SettableMetadata(
+          contentType: 'image/jpeg',
+          customMetadata: {
+            'file_size': '$fileSize',
+            'optimized': 'true',
+          },
+        ),
+      );
+
+      // Monitor progress
+      uploadTask.snapshotEvents.listen((TaskSnapshot snapshot) {
+        final progress = snapshot.bytesTransferred / snapshot.totalBytes;
+        print('Upload: ${(progress * 100).toStringAsFixed(1)}%');
+      });
+
+      final snapshot = await uploadTask;
+      final downloadUrl = await snapshot.ref.getDownloadURL();
+
+      print('✅ Upload successful: $downloadUrl');
+      return downloadUrl;
+    } catch (e) {
+      print('❌ Upload error: $e');
+      return null;
+    }
+  }
+  
   // Update the upload method to include location data
   Future<void> _updateProfile() async {
     if (!_formKey.currentState!.validate()) return;
@@ -1035,7 +1406,6 @@ class _EditProfileBottomSheetState extends State<EditProfileBottomSheet> {
           .doc(user.uid)
           .update({
         'name': _nameController.text,
-        'phone': _phoneController.text,
         'location': locationData,
         if (profileImageUrl != null) 'profileImage': profileImageUrl,
         'updatedAt': FieldValue.serverTimestamp(),
@@ -1049,7 +1419,7 @@ class _EditProfileBottomSheetState extends State<EditProfileBottomSheet> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Profile updated successfully'),
-            backgroundColor: Colors.green,
+            backgroundColor: Color(0xFF414ce4),
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -1074,56 +1444,10 @@ class _EditProfileBottomSheetState extends State<EditProfileBottomSheet> {
       }
     }
   }
-    Future<void> _pickImage() async {
-    try {
-      final ImagePicker picker = ImagePicker();
-      final XFile? pickedFile = await picker.pickImage(
-        source: ImageSource.gallery,
-        maxWidth: 1024,
-        maxHeight: 1024,
-        imageQuality: 85,
-      );
-      
-      if (pickedFile != null) {
-        setState(() {
-          _imageFile = File(pickedFile.path);
-        });
-      }
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error picking image: $e'),
-          backgroundColor: Colors.red,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-    }
-  }
-  
-  Future<String?> _uploadProfileImage(String userId) async {
-    if (_imageFile == null) return _currentImageUrl;
     
-    try {
-      final storageRef = FirebaseStorage.instance
-          .ref()
-          .child('profile_images')
-          .child('$userId.jpg');
-          
-      final uploadTask = storageRef.putFile(_imageFile!);
-      final snapshot = await uploadTask;
-      
-      return await snapshot.ref.getDownloadURL();
-    } catch (e) {
-      print('Error uploading profile image: $e');
-      return null;
-    }
-  }
-  
-  
   @override
   void dispose() {
     _nameController.dispose();
-    _phoneController.dispose();
     _locationController.dispose();
     _searchDebouncer.dispose();
     super.dispose();
@@ -1173,10 +1497,10 @@ class _EditProfileBottomSheetState extends State<EditProfileBottomSheet> {
                 
                 SizedBox(height: 20.h),
                 
-                // Profile Image Picker
+                // Enhanced Profile Image Picker with cropping
                 Center(
                   child: GestureDetector(
-                    onTap: _pickImage,
+                    onTap: _isImageProcessing ? null : () => _showImagePickerDialog(context),
                     child: Stack(
                       children: [
                         Container(
@@ -1194,65 +1518,106 @@ class _EditProfileBottomSheetState extends State<EditProfileBottomSheet> {
                           ),
                           child: ClipRRect(
                             borderRadius: BorderRadius.circular(60.r),
-                            child: _imageFile != null
-                                ? Image.file(
-                                    _imageFile!,
-                                    fit: BoxFit.cover,
+                            child: _isImageProcessing
+                                ? Container(
+                                    color: Colors.grey[300],
+                                    child: Column(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        SizedBox(
+                                          width: 30.w,
+                                          height: 30.w,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 3,
+                                            color: Color(0xFF414ce4),
+                                          ),
+                                        ),
+                                        SizedBox(height: 4.h),
+                                        Text(
+                                          "Processing...",
+                                          style: GoogleFonts.roboto(
+                                            fontSize: 10.sp,
+                                            color: Colors.grey.shade600,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
                                   )
-                                : (_currentImageUrl != null && _currentImageUrl!.isNotEmpty
-                                    ? CachedNetworkImage(
-                                        imageUrl: _currentImageUrl!,
+                                : (_imageFile != null
+                                    ? Image.file(
+                                        _imageFile!,
                                         fit: BoxFit.cover,
-                                        placeholder: (context, url) => Container(
-                                          color: Colors.grey[300],
-                                          child: Center(
-                                            child: CircularProgressIndicator(
-                                              valueColor: AlwaysStoppedAnimation<Color>(
-                                                const Color(0xFF414ce4),
+                                      )
+                                    : (_currentImageUrl != null && _currentImageUrl!.isNotEmpty
+                                        ? CachedNetworkImage(
+                                            imageUrl: _currentImageUrl!,
+                                            fit: BoxFit.cover,
+                                            placeholder: (context, url) => Container(
+                                              color: Colors.grey[300],
+                                              child: Center(
+                                                child: SizedBox(
+                                                  width: 30.w,
+                                                  height: 30.w,
+                                                  child: Lottie.asset('asset/Animation - 1748495844642 (1).json'),
+                                                ),
                                               ),
                                             ),
-                                          ),
-                                        ),
-                                        errorWidget: (context, url, error) => Container(
-                                          color: Colors.grey[300],
-                                          child: Icon(
-                                            Icons.person,
-                                            size: 50.sp,
-                                            color: Colors.grey[600],
-                                          ),
-                                        ),
-                                      )
-                                    : Container(
-                                        color: Colors.grey[300],
-                                        child: Icon(
-                                          Icons.person,
-                                          size: 50.sp,
-                                          color: Colors.grey[600],
-                                        ),
-                                      )),
+                                            errorWidget: (context, url, error) => Container(
+                                              color: Colors.grey[300],
+                                              child: Icon(
+                                                Icons.person,
+                                                size: 50.sp,
+                                                color: Colors.grey[600],
+                                              ),
+                                            ),
+                                          )
+                                        : Container(
+                                            color: Colors.grey[300],
+                                            child: Column(
+                                              mainAxisAlignment: MainAxisAlignment.center,
+                                              children: [
+                                                Icon(
+                                                  Icons.add_a_photo,
+                                                  size: 32.w,
+                                                  color: Colors.grey.shade500,
+                                                ),
+                                                SizedBox(height: 4.h),
+                                                Text(
+                                                  "Add Photo",
+                                                  style: GoogleFonts.roboto(
+                                                    fontSize: 12.sp,
+                                                    color: Colors.grey.shade600,
+                                                    fontWeight: FontWeight.w500,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ))),
                           ),
                         ),
-                        Positioned(
-                          bottom: 0,
-                          right: 0,
-                          child: Container(
-                            width: 36.w,
-                            height: 36.w,
-                            decoration: BoxDecoration(
-                              color: Color(0xFF414ce4),
-                              shape: BoxShape.circle,
-                              border: Border.all(
+                        if (!_isImageProcessing)
+                          Positioned(
+                            bottom: 0,
+                            right: 0,
+                            child: Container(
+                              width: 36.w,
+                              height: 36.w,
+                              decoration: BoxDecoration(
+                                color: Color(0xFF414ce4),
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: Colors.white,
+                                  width: 2,
+                                ),
+                              ),
+                              child: Icon(
+                                Icons.camera_alt,
                                 color: Colors.white,
-                                width: 2,
+                                size: 20.sp,
                               ),
                             ),
-                            child: Icon(
-                              Icons.camera_alt,
-                              color: Colors.white,
-                              size: 20.sp,
-                            ),
                           ),
-                        ),
                       ],
                     ),
                   ),
@@ -1295,64 +1660,6 @@ class _EditProfileBottomSheetState extends State<EditProfileBottomSheet> {
                 
                 SizedBox(height: 16.h),
                 
-                // Phone Number Field
-                Text(
-                  'Phone Number',
-                  style: TextStyle(
-                    fontSize: 16.sp,
-                    fontWeight: FontWeight.w500,
-                    color: Colors.grey[700],
-                  ),
-                ),
-                SizedBox(height: 8.h),
-                TextFormField(
-                  controller: _phoneController,
-                  decoration: InputDecoration(
-                    hintText: 'Enter your phone number',
-                    fillColor: Colors.grey[100],
-                    filled: true,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12.r),
-                      borderSide: BorderSide.none,
-                    ),
-                    contentPadding: EdgeInsets.symmetric(
-                      horizontal: 16.w,
-                      vertical: 14.h,
-                    ),
-                    prefixIcon: Container(
-                      width: 70.w,
-                      alignment: Alignment.center,
-                      child: Text(
-                        '+91', // Country code (you can make this dynamic)
-                        style: TextStyle(
-                          fontSize: 16.sp,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ),
-                    prefixIconConstraints: BoxConstraints(
-                      minWidth: 0,
-                      minHeight: 0,
-                    ),
-                  ),
-                  keyboardType: TextInputType.phone,
-                  inputFormatters: [
-                    FilteringTextInputFormatter.digitsOnly,
-                    LengthLimitingTextInputFormatter(10),
-                  ],
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter your phone number';
-                    }
-                    if (value.length != 10) {
-                      return 'Phone number must be 10 digits';
-                    }
-                    return null;
-                  },
-                ),
-                
-                SizedBox(height: 16.h),
-                
                 // Location Field with Search
                 Text(
                   'Location',
@@ -1385,11 +1692,10 @@ class _EditProfileBottomSheetState extends State<EditProfileBottomSheet> {
                                 child: SizedBox(
                                   height: 16.h,
                                   width: 16.w,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    valueColor: AlwaysStoppedAnimation<Color>(
-                                      const Color(0xFF414ce4),
-                                    ),
+                                  child: SizedBox(
+                                    width: 20.w,
+                                    height: 20.w,
+                                    child: Lottie.asset('asset/Animation - 1748495844642 (1).json'),
                                   ),
                                 ),
                               )
@@ -1498,9 +1804,10 @@ class _EditProfileBottomSheetState extends State<EditProfileBottomSheet> {
                         ? SizedBox(
                             height: 24.h,
                             width: 24.h,
-                            child: CircularProgressIndicator(
-                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                              strokeWidth: 2.5,
+                            child: SizedBox(
+                              width: 20.w,
+                              height: 20.w,
+                              child: Lottie.asset('asset/Animation - 1748495844642 (1).json'),
                             ),
                           )
                         : Text(

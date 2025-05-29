@@ -1,11 +1,12 @@
 import 'dart:developer';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:hey_work/presentation/common_screens/log_sign.dart';
-import 'package:hey_work/presentation/common_screens/privacy.dart';
-import 'package:hey_work/presentation/common_screens/terms.dart';
 import 'package:hey_work/presentation/hirer_section/profile/hirer_profile.dart';
+import 'package:hey_work/presentation/hirer_section/settings_screen/faqs_screen.dart';
 import 'package:hey_work/presentation/services/authentication_services.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class SettingsScreen extends StatelessWidget {
   SettingsScreen({Key? key}) : super(key: key);
@@ -13,67 +14,585 @@ class SettingsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Get screen size to calculate responsive sizes
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
 
-    // Calculate responsive values without using ScreenUtil
-    double horizontalPadding = screenWidth * 0.04; // approximately 16.w
-    double verticalPadding = screenHeight * 0.02; // approximately 16.h
-    double standardSpacing = screenHeight * 0.02; // approximately 16.h
-    double smallSpacing = screenHeight * 0.01; // approximately 8.h
-    double borderRadius = 12.0; // fixed radius without .r
-    double iconSize = screenWidth * 0.06; // approximately 24.sp but responsive
-    double titleFontSize = screenWidth * 0.08; // approximately 32.sp
-    double normalFontSize = screenWidth * 0.04; // approximately 16.sp
-    double smallFontSize = screenWidth * 0.035; // approximately 14.sp
-
     return Scaffold(
-      body: SafeArea(
-        child: Padding(
-          padding: EdgeInsets.symmetric(
-              horizontal: horizontalPadding, vertical: verticalPadding),
+      backgroundColor: Colors.grey.shade50,
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        leading: IconButton(
+          onPressed: () => Navigator.pop(context),
+          icon: Container(
+            padding: EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.grey.shade100,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(
+              Icons.arrow_back_ios_new,
+              color: Colors.black87,
+              size: 20,
+            ),
+          ),
+        ),
+        title: Text(
+          "Settings",
+          style: TextStyle(
+            fontSize: screenWidth * 0.055,
+            fontWeight: FontWeight.w600,
+            color: Colors.black87,
+          ),
+        ),
+        centerTitle: false,
+      ),
+      body: SingleChildScrollView(
+        physics: BouncingScrollPhysics(),
+        padding: EdgeInsets.all(screenWidth * 0.04),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Settings sections
+            _buildSettingsSection(
+              context: context,
+              title: "Account & Privacy",
+              options: [
+                SettingsOptionData(
+                  icon: Icons.shield_outlined,
+                  title: "Privacy & Security",
+                  subtitle: "Manage your privacy settings",
+                  onTap: () => _launchURL('https://heywork.in/privacy'),
+                ),
+                SettingsOptionData(
+                  icon: Icons.description_outlined,
+                  title: "Terms & Conditions",
+                  subtitle: "View app terms and policies",
+                  onTap: () => _launchURL('https://heywork.in/terms'),
+                ),
+              ],
+              screenWidth: screenWidth,
+            ),
+
+            SizedBox(height: screenHeight * 0.025),
+
+            _buildSettingsSection(
+              context: context,
+              title: "Support",
+              options: [
+                SettingsOptionData(
+                  icon: Icons.help_outline_rounded,
+                  title: "Help & Feedback",
+                  subtitle: "Get help or send us feedback",
+                  onTap: () => _navigateToPage(
+                    context,
+                    HelpFeedbackPage(),
+                  ),
+                ),
+                SettingsOptionData(
+                  icon: Icons.support_agent_outlined,
+                  title: "Contact Support",
+                  subtitle: "Reach out to our support team",
+                  onTap: () => _showContactSupportDialog(context, screenWidth),
+                ),
+              ],
+              screenWidth: screenWidth,
+            ),
+
+            SizedBox(height: screenHeight * 0.025),
+
+            _buildSettingsSection(
+              context: context,
+              title: "Account Actions",
+              options: [
+                SettingsOptionData(
+                  icon: Icons.logout_rounded,
+                  title: "Sign Out",
+                  subtitle: "Sign out of your account",
+                  onTap: () => _showModernLogoutDialog(context, screenWidth),
+                  isDestructive: true,
+                ),
+              ],
+              screenWidth: screenWidth,
+            ),
+
+            SizedBox(height: screenHeight * 0.04),
+
+            // App version footer
+            Center(
+              child: Container(
+                padding: EdgeInsets.symmetric(
+                  horizontal: screenWidth * 0.04,
+                  vertical: screenHeight * 0.015,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: Colors.grey.shade200),
+                ),
+                child: Text(
+                  "HeyWork v1.0.0",
+                  style: TextStyle(
+                    fontSize: screenWidth * 0.03,
+                    color: Colors.grey.shade600,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Function to launch URLs
+  Future<void> _launchURL(String url) async {
+    final Uri uri = Uri.parse(url);
+    try {
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(
+          uri,
+          mode: LaunchMode.externalApplication, // Opens in browser
+        );
+      } else {
+        throw Exception('Could not launch $url');
+      }
+    } catch (e) {
+      print('Error launching URL: $e');
+      // You can show a snackbar or dialog to inform the user about the error
+    }
+  }
+
+  Widget _buildSettingsSection({
+    required BuildContext context,
+    required String title,
+    required List<SettingsOptionData> options,
+    required double screenWidth,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: EdgeInsets.only(left: 4, bottom: 12),
+          child: Text(
+            title,
+            style: TextStyle(
+              fontSize: screenWidth * 0.04,
+              fontWeight: FontWeight.w600,
+              color: Colors.black87,
+            ),
+          ),
+        ),
+        Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 10,
+                offset: Offset(0, 2),
+              ),
+            ],
+          ),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            children: options.asMap().entries.map((entry) {
+              int index = entry.key;
+              SettingsOptionData option = entry.value;
+              bool isLast = index == options.length - 1;
+              
+              return _buildModernSettingsOption(
+                option: option,
+                screenWidth: screenWidth,
+                isLast: isLast,
+              );
+            }).toList(),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildModernSettingsOption({
+    required SettingsOptionData option,
+    required double screenWidth,
+    required bool isLast,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: option.onTap,
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(16),
+          bottom: Radius.circular(isLast ? 16 : 0),
+        ),
+        child: Container(
+          padding: EdgeInsets.all(screenWidth * 0.04),
+          decoration: BoxDecoration(
+            border: !isLast
+                ? Border(
+                    bottom: BorderSide(
+                      color: Colors.grey.shade100,
+                      width: 1,
+                    ),
+                  )
+                : null,
+          ),
+          child: Row(
             children: [
-              // Close button
-              GestureDetector(
-                onTap: () {
-                  // Navigate back
-                  Navigator.pop(context);
-                },
+              Container(
+                padding: EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: option.isDestructive
+                      ? Colors.red.shade50
+                      : Color(0xFF0033FF).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
                 child: Icon(
-                  Icons.close,
-                  size: iconSize,
-                  color: Colors.black,
+                  option.icon,
+                  color: option.isDestructive
+                      ? Colors.red.shade600
+                      : Color(0xFF0033FF),
+                  size: screenWidth * 0.055,
                 ),
               ),
-
-              SizedBox(height: standardSpacing),
-
-              // Settings title
-              Text(
-                "Settings",
-                style: TextStyle(
-                  fontSize: titleFontSize,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black,
+              SizedBox(width: screenWidth * 0.04),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      option.title,
+                      style: TextStyle(
+                        fontSize: screenWidth * 0.04,
+                        fontWeight: FontWeight.w500,
+                        color: option.isDestructive 
+                            ? Colors.red.shade600 
+                            : Colors.black87,
+                      ),
+                    ),
+                    if (option.subtitle != null) ...[
+                      SizedBox(height: 2),
+                      Text(
+                        option.subtitle!,
+                        style: TextStyle(
+                          fontSize: screenWidth * 0.032,
+                          color: Colors.grey.shade600,
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
               ),
+              Icon(
+                Icons.arrow_forward_ios_rounded,
+                size: screenWidth * 0.04,
+                color: Colors.grey.shade400,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 
-              SizedBox(height: standardSpacing * 1.5),
+  void _navigateToPage(BuildContext context, Widget page) {
+    Navigator.push(
+      context,
+      PageRouteBuilder(
+        pageBuilder: (context, animation, secondaryAnimation) => page,
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          const begin = Offset(1.0, 0.0);
+          const end = Offset.zero;
+          const curve = Curves.easeInOutCubic;
 
-              // Settings options
-              SettingsOptionsList(
-                horizontalPadding: horizontalPadding,
-                verticalPadding: verticalPadding,
-                standardSpacing: standardSpacing,
-                smallSpacing: smallSpacing,
-                borderRadius: borderRadius,
-                iconSize: iconSize,
-                normalFontSize: normalFontSize,
-                smallFontSize: smallFontSize,
-                authService: service,
+          var tween = Tween(begin: begin, end: end).chain(
+            CurveTween(curve: curve),
+          );
+
+          return SlideTransition(
+            position: animation.drive(tween),
+            child: child,
+          );
+        },
+        transitionDuration: const Duration(milliseconds: 300),
+      ),
+    );
+  }
+
+  void _showModernLogoutDialog(BuildContext context, double screenWidth) {
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (BuildContext context) {
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          child: Container(
+            padding: EdgeInsets.all(screenWidth * 0.06),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(24),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 20,
+                  offset: Offset(0, 10),
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Icon
+                Container(
+                  padding: EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.red.shade50,
+                    borderRadius: BorderRadius.circular(50),
+                  ),
+                  child: Icon(
+                    Icons.logout_rounded,
+                    color: Colors.red.shade600,
+                    size: screenWidth * 0.08,
+                  ),
+                ),
+
+                SizedBox(height: screenWidth * 0.04),
+
+                // Title
+                Text(
+                  "Sign Out",
+                  style: TextStyle(
+                    fontSize: screenWidth * 0.05,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black87,
+                  ),
+                ),
+
+                SizedBox(height: screenWidth * 0.02),
+
+                // Description
+                Text(
+                  "Are you sure you want to sign out of your account?",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: screenWidth * 0.035,
+                    color: Colors.grey.shade600,
+                    height: 1.4,
+                  ),
+                ),
+
+                SizedBox(height: screenWidth * 0.06),
+
+                // Buttons
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        style: TextButton.styleFrom(
+                          padding: EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            side: BorderSide(color: Colors.grey.shade300),
+                          ),
+                        ),
+                        child: Text(
+                          "Cancel",
+                          style: TextStyle(
+                            fontSize: screenWidth * 0.04,
+                            fontWeight: FontWeight.w500,
+                            color: Colors.grey.shade700,
+                          ),
+                        ),
+                      ),
+                    ),
+                    SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () {
+                          Navigator.pop(context);
+                          service.signOutAndNavigateToLogin(context);
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.red.shade600,
+                          foregroundColor: Colors.white,
+                          padding: EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          elevation: 0,
+                        ),
+                        child: Text(
+                          "Sign Out",
+                          style: TextStyle(
+                            fontSize: screenWidth * 0.04,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _showContactSupportDialog(BuildContext context, double screenWidth) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          child: Container(
+            padding: EdgeInsets.all(screenWidth * 0.06),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(24),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 20,
+                  offset: Offset(0, 10),
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Color(0xFF0033FF).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(50),
+                  ),
+                  child: Icon(
+                    Icons.support_agent_rounded,
+                    color: Color(0xFF0033FF),
+                    size: screenWidth * 0.08,
+                  ),
+                ),
+                SizedBox(height: screenWidth * 0.04),
+                Text(
+                  "Contact Support",
+                  style: TextStyle(
+                    fontSize: screenWidth * 0.05,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black87,
+                  ),
+                ),
+                SizedBox(height: screenWidth * 0.02),
+                Text(
+                  "Choose how you'd like to reach out to our support team",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: screenWidth * 0.035,
+                    color: Colors.grey.shade600,
+                    height: 1.4,
+                  ),
+                ),
+                SizedBox(height: screenWidth * 0.06),
+                
+                // Support options
+                _buildSupportOption(
+                  icon: Icons.email_outlined,
+                  title: "Email Support",
+                  subtitle: "help.heywork@gmail.com",
+                  onTap: () {
+                    Navigator.pop(context);
+                    _launchURL('mailto:help.heywork@gmail.com');
+                  },
+                  screenWidth: screenWidth,
+                ),
+                SizedBox(height: 12),
+                _buildSupportOption(
+                  icon: Icons.phone_outlined,
+                  title: "Call Support",
+                  subtitle: "+91 9778756394",
+                  onTap: () {
+                    Navigator.pop(context);
+                    _launchURL('tel:+919778756394');
+                  },
+                  screenWidth: screenWidth,
+                ),
+                
+                SizedBox(height: screenWidth * 0.04),
+                
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: Text(
+                    "Cancel",
+                    style: TextStyle(
+                      fontSize: screenWidth * 0.04,
+                      color: Colors.grey.shade600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildSupportOption({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+    required double screenWidth,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            border: Border.all(color: Colors.grey.shade200),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Row(
+            children: [
+              Icon(
+                icon,
+                color: Color(0xFF0033FF),
+                size: screenWidth * 0.055,
+              ),
+              SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(
+                        fontSize: screenWidth * 0.04,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    Text(
+                      subtitle,
+                      style: TextStyle(
+                        fontSize: screenWidth * 0.032,
+                        color: Colors.grey.shade600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(
+                Icons.arrow_forward_ios_rounded,
+                size: screenWidth * 0.04,
+                color: Colors.grey.shade400,
               ),
             ],
           ),
@@ -83,734 +602,113 @@ class SettingsScreen extends StatelessWidget {
   }
 }
 
-class SettingsOptionsList extends StatelessWidget {
-  final double horizontalPadding;
-  final double verticalPadding;
-  final double standardSpacing;
-  final double smallSpacing;
-  final double borderRadius;
-  final double iconSize;
-  final double normalFontSize;
-  final double smallFontSize;
-  final AuthService authService;
-
-  const SettingsOptionsList({
-    Key? key,
-    required this.horizontalPadding,
-    required this.verticalPadding,
-    required this.standardSpacing,
-    required this.smallSpacing,
-    required this.borderRadius,
-    required this.iconSize,
-    required this.normalFontSize,
-    required this.smallFontSize,
-    required this.authService,
-  }) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        // First group
-        SettingsOption(
-          icon: Icons.person_outline_rounded,
-          title: "Personal info",
-          iconColor: Colors.blue,
-          horizontalPadding: horizontalPadding,
-          verticalPadding: verticalPadding,
-          smallSpacing: smallSpacing,
-          borderRadius: borderRadius,
-          iconSize: iconSize,
-          normalFontSize: normalFontSize,
-          onTap: () => navigateToPage(context, HirerProfilePage()),
-        ),
-
-        SettingsOption(
-          icon: Icons.shield_outlined,
-          title: "Privacy and security",
-          iconColor: Colors.blue,
-          horizontalPadding: horizontalPadding,
-          verticalPadding: verticalPadding,
-          smallSpacing: smallSpacing,
-          borderRadius: borderRadius,
-          iconSize: iconSize,
-          normalFontSize: normalFontSize,
-          onTap: () => navigateToPage(context, PrivacyPolicyPage()),
-        ),
-
-        // Divider
-        Padding(
-          padding: EdgeInsets.symmetric(vertical: standardSpacing),
-          child: Divider(
-            height: 1,
-            thickness: 1,
-            color: Colors.grey.shade200,
-          ),
-        ),
-
-        // Second group
-        SettingsOption(
-          icon: Icons.help_outline_rounded,
-          title: "Help & feedback",
-          iconColor: Colors.blue,
-          horizontalPadding: horizontalPadding,
-          verticalPadding: verticalPadding,
-          smallSpacing: smallSpacing,
-          borderRadius: borderRadius,
-          iconSize: iconSize,
-          normalFontSize: normalFontSize,
-          onTap: () => navigateToPage(
-              context,
-              HelpFeedbackPage(
-                horizontalPadding: horizontalPadding,
-                verticalPadding: verticalPadding,
-                standardSpacing: standardSpacing,
-                smallSpacing: smallSpacing,
-                borderRadius: borderRadius,
-                iconSize: iconSize,
-                normalFontSize: normalFontSize,
-                smallFontSize: smallFontSize,
-              )),
-        ),
-
-        SettingsOption(
-          icon: Icons.logout,
-          title: "Log out",
-          iconColor: Colors.blue,
-          horizontalPadding: horizontalPadding,
-          verticalPadding: verticalPadding,
-          smallSpacing: smallSpacing,
-          borderRadius: borderRadius,
-          iconSize: iconSize,
-          normalFontSize: normalFontSize,
-          onTap: () =>
-              _showLogoutDialog(context, normalFontSize, smallFontSize),
-        ),
-      ],
-    );
-  }
-
-  void navigateToPage(BuildContext context, Widget page) {
-    Navigator.push(
-      context,
-      PageRouteBuilder(
-        pageBuilder: (context, animation, secondaryAnimation) => page,
-        transitionsBuilder: (context, animation, secondaryAnimation, child) {
-          return FadeTransition(
-            opacity: animation,
-            child: child,
-          );
-        },
-        transitionDuration: const Duration(milliseconds: 100),
-      ),
-    );
-  }
-
-  void _showLogoutDialog(
-      BuildContext context, double normalFontSize, double smallFontSize) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text(
-            "Log Out",
-            style: TextStyle(
-              fontSize: normalFontSize * 1.1,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          content: Text(
-            "Are you sure you want to log out?",
-            style: TextStyle(
-              fontSize: normalFontSize,
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text(
-                "Cancel",
-                style: TextStyle(
-                  fontSize: normalFontSize,
-                  color: Colors.grey,
-                ),
-              ),
-            ),
- TextButton(
-  onPressed: () {
-    // Close the dialog first
-    Navigator.pop(context);
-    // Then sign out and navigate
-    authService.signOutAndNavigateToLogin(context);
-  },
-  child: Text(
-    "Log Out",
-    style: TextStyle(
-      fontSize: normalFontSize,
-      color: Colors.red,
-      fontWeight: FontWeight.bold,
-    ),
-  ),
-),
-          ],
-        );
-      },
-    );
-  }
-
-  void _showCloseAccountDialog(
-      BuildContext context, double normalFontSize, double smallFontSize) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text(
-            "Close Account",
-            style: TextStyle(
-              fontSize: normalFontSize * 1.1,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          content: Text(
-            "Are you sure you want to close your account? This action cannot be undone.",
-            style: TextStyle(
-              fontSize: normalFontSize,
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text(
-                "Cancel",
-                style: TextStyle(
-                  fontSize: normalFontSize,
-                  color: Colors.grey,
-                ),
-              ),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Account closed'),
-                    duration: Duration(seconds: 2),
-                  ),
-                );
-              },
-              child: Text(
-                "Close Account",
-                style: TextStyle(
-                  fontSize: normalFontSize,
-                  color: Colors.red,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-          ],
-        );
-      },
-    );
-  }
-}
-
-class SettingsOption extends StatelessWidget {
+class SettingsOptionData {
   final IconData icon;
   final String title;
-  final Color iconColor;
+  final String? subtitle;
   final VoidCallback onTap;
-  final double horizontalPadding;
-  final double verticalPadding;
-  final double smallSpacing;
-  final double borderRadius;
-  final double iconSize;
-  final double normalFontSize;
+  final bool isDestructive;
 
-  const SettingsOption({
-    Key? key,
+  SettingsOptionData({
     required this.icon,
     required this.title,
-    required this.iconColor,
+    this.subtitle,
     required this.onTap,
-    required this.horizontalPadding,
-    required this.verticalPadding,
-    required this.smallSpacing,
-    required this.borderRadius,
-    required this.iconSize,
-    required this.normalFontSize,
-  }) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: double.infinity,
-        padding: EdgeInsets.symmetric(
-            vertical: verticalPadding, horizontal: horizontalPadding),
-        margin: EdgeInsets.only(bottom: smallSpacing),
-        decoration: BoxDecoration(
-          color: Colors.grey.shade50,
-          borderRadius: BorderRadius.circular(borderRadius),
-        ),
-        child: Row(
-          children: [
-            Container(
-              padding: EdgeInsets.all(horizontalPadding * 0.125),
-              child: Icon(
-                icon,
-                color: iconColor,
-                size: iconSize,
-              ),
-            ),
-            SizedBox(width: horizontalPadding),
-            Text(
-              title,
-              style: TextStyle(
-                fontSize: normalFontSize,
-                fontWeight: FontWeight.w500,
-                color: Colors.black,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+    this.isDestructive = false,
+  });
 }
 
-// Dummy Pages with responsive parameters
-class PersonalInfoPage extends StatelessWidget {
-  final double horizontalPadding;
-  final double verticalPadding;
-  final double standardSpacing;
-  final double smallSpacing;
-  final double borderRadius;
-  final double iconSize;
-  final double normalFontSize;
-  final double smallFontSize;
-
-  const PersonalInfoPage({
-    Key? key,
-    required this.horizontalPadding,
-    required this.verticalPadding,
-    required this.standardSpacing,
-    required this.smallSpacing,
-    required this.borderRadius,
-    required this.iconSize,
-    required this.normalFontSize,
-    required this.smallFontSize,
-  }) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Personal Info'),
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
-        elevation: 0,
-      ),
-      body: Padding(
-        padding: EdgeInsets.all(horizontalPadding),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Your Personal Information',
-              style: TextStyle(
-                fontSize: normalFontSize * 1.25,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            SizedBox(height: standardSpacing * 1.5),
-            ProfileInfoItem(
-              label: 'Name',
-              value: 'John Doe',
-              smallFontSize: smallFontSize,
-              normalFontSize: normalFontSize,
-              smallSpacing: smallSpacing,
-            ),
-            ProfileInfoItem(
-              label: 'Email',
-              value: 'john.doe@example.com',
-              smallFontSize: smallFontSize,
-              normalFontSize: normalFontSize,
-              smallSpacing: smallSpacing,
-            ),
-            ProfileInfoItem(
-              label: 'Phone',
-              value: '+91 9876543210',
-              smallFontSize: smallFontSize,
-              normalFontSize: normalFontSize,
-              smallSpacing: smallSpacing,
-            ),
-            ProfileInfoItem(
-              label: 'Date of Birth',
-              value: '01 Jan 1990',
-              smallFontSize: smallFontSize,
-              normalFontSize: normalFontSize,
-              smallSpacing: smallSpacing,
-            ),
-            SizedBox(height: standardSpacing * 1.5),
-            ElevatedButton(
-              onPressed: () {},
-              style: ElevatedButton.styleFrom(
-                padding: EdgeInsets.symmetric(vertical: smallSpacing * 1.5),
-                minimumSize: Size(double.infinity, verticalPadding * 3),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(borderRadius),
-                ),
-              ),
-              child: const Text('Edit Profile'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class ProfileInfoItem extends StatelessWidget {
-  final String label;
-  final String value;
-  final double smallFontSize;
-  final double normalFontSize;
-  final double smallSpacing;
-
-  const ProfileInfoItem({
-    Key? key,
-    required this.label,
-    required this.value,
-    required this.smallFontSize,
-    required this.normalFontSize,
-    required this.smallSpacing,
-  }) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.only(bottom: smallSpacing * 2),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: smallFontSize,
-              color: Colors.grey,
-            ),
-          ),
-          SizedBox(height: smallSpacing / 2),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: normalFontSize,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          SizedBox(height: smallSpacing),
-          const Divider(),
-        ],
-      ),
-    );
-  }
-}
-
-class PrivacySecurityPage extends StatelessWidget {
-  final double horizontalPadding;
-  final double verticalPadding;
-  final double standardSpacing;
-  final double smallSpacing;
-  final double borderRadius;
-  final double iconSize;
-  final double normalFontSize;
-  final double smallFontSize;
-
-  const PrivacySecurityPage({
-    Key? key,
-    required this.horizontalPadding,
-    required this.verticalPadding,
-    required this.standardSpacing,
-    required this.smallSpacing,
-    required this.borderRadius,
-    required this.iconSize,
-    required this.normalFontSize,
-    required this.smallFontSize,
-  }) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Privacy and Security'),
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
-        elevation: 0,
-      ),
-      body: Padding(
-        padding: EdgeInsets.all(horizontalPadding),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Security Settings',
-              style: TextStyle(
-                fontSize: normalFontSize * 1.25,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            SizedBox(height: standardSpacing * 1.5),
-            _buildSecurityOption(
-              'Change Password',
-              'Update your password regularly',
-              Icons.lock_outline,
-            ),
-            _buildSecurityOption(
-              'Two-Factor Authentication',
-              'Add an extra layer of security',
-              Icons.security,
-            ),
-            _buildSecurityOption(
-              'Login Activity',
-              'Check your recent login sessions',
-              Icons.access_time,
-            ),
-            _buildSecurityOption(
-              'Privacy Settings',
-              'Manage who can see your information',
-              Icons.visibility,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSecurityOption(String title, String subtitle, IconData icon) {
-    return Container(
-      margin: EdgeInsets.only(bottom: smallSpacing * 2),
-      padding: EdgeInsets.all(horizontalPadding),
-      decoration: BoxDecoration(
-        color: Colors.grey.shade50,
-        borderRadius: BorderRadius.circular(borderRadius),
-      ),
-      child: Row(
-        children: [
-          Icon(icon, color: Colors.blue, size: iconSize),
-          SizedBox(width: horizontalPadding),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: TextStyle(
-                    fontSize: normalFontSize,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                SizedBox(height: smallSpacing / 2),
-                Text(
-                  subtitle,
-                  style: TextStyle(
-                    fontSize: smallFontSize,
-                    color: Colors.grey,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Icon(Icons.arrow_forward_ios,
-              size: iconSize * 0.67, color: Colors.grey),
-        ],
-      ),
-    );
-  }
-}
-
-class RaiseDisputePage extends StatelessWidget {
-  final double horizontalPadding;
-  final double verticalPadding;
-  final double standardSpacing;
-  final double smallSpacing;
-  final double borderRadius;
-  final double iconSize;
-  final double normalFontSize;
-  final double smallFontSize;
-
-  const RaiseDisputePage({
-    Key? key,
-    required this.horizontalPadding,
-    required this.verticalPadding,
-    required this.standardSpacing,
-    required this.smallSpacing,
-    required this.borderRadius,
-    required this.iconSize,
-    required this.normalFontSize,
-    required this.smallFontSize,
-  }) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Raise BBPS Dispute'),
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
-        elevation: 0,
-      ),
-      body: Padding(
-        padding: EdgeInsets.all(horizontalPadding),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Raise a Dispute',
-              style: TextStyle(
-                fontSize: normalFontSize * 1.25,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            SizedBox(height: standardSpacing),
-            Text(
-              'Please fill in the details to raise a dispute for your BBPS transaction',
-              style: TextStyle(
-                fontSize: smallFontSize,
-                color: Colors.grey.shade700,
-              ),
-            ),
-            SizedBox(height: standardSpacing * 1.5),
-            _buildTextField('Transaction ID'),
-            SizedBox(height: standardSpacing),
-            _buildTextField('Biller Name'),
-            SizedBox(height: standardSpacing),
-            _buildTextField('Issue Description', maxLines: 4),
-            SizedBox(height: standardSpacing * 1.5),
-            ElevatedButton(
-              onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Dispute submitted successfully'),
-                    duration: Duration(seconds: 2),
-                  ),
-                );
-                Navigator.pop(context);
-              },
-              style: ElevatedButton.styleFrom(
-                padding: EdgeInsets.symmetric(vertical: smallSpacing * 1.5),
-                minimumSize: Size(double.infinity, verticalPadding * 3),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(borderRadius),
-                ),
-              ),
-              child: const Text('Submit Dispute'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTextField(String label, {int maxLines = 1}) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: smallFontSize,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-        SizedBox(height: smallSpacing),
-        TextField(
-          maxLines: maxLines,
-          decoration: InputDecoration(
-            hintText: 'Enter $label',
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(borderRadius * 0.67),
-              borderSide: BorderSide(color: Colors.grey.shade300),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(borderRadius * 0.67),
-              borderSide: BorderSide(color: Colors.grey.shade300),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(borderRadius * 0.67),
-              borderSide: const BorderSide(color: Colors.blue),
-            ),
-            contentPadding: EdgeInsets.all(horizontalPadding),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
+// Updated Help & Feedback Page with functionality
 class HelpFeedbackPage extends StatelessWidget {
-  final double horizontalPadding;
-  final double verticalPadding;
-  final double standardSpacing;
-  final double smallSpacing;
-  final double borderRadius;
-  final double iconSize;
-  final double normalFontSize;
-  final double smallFontSize;
-
-  const HelpFeedbackPage({
-    Key? key,
-    required this.horizontalPadding,
-    required this.verticalPadding,
-    required this.standardSpacing,
-    required this.smallSpacing,
-    required this.borderRadius,
-    required this.iconSize,
-    required this.normalFontSize,
-    required this.smallFontSize,
-  }) : super(key: key);
+  const HelpFeedbackPage({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
+
     return Scaffold(
+      backgroundColor: Colors.grey.shade50,
       appBar: AppBar(
         title: const Text('Help & Feedback'),
         backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
+        foregroundColor: Colors.black87,
         elevation: 0,
+        leading: IconButton(
+          onPressed: () => Navigator.pop(context),
+          icon: Container(
+            padding: EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.grey.shade100,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(
+              Icons.arrow_back_ios_new,
+              color: Colors.black87,
+              size: 20,
+            ),
+          ),
+        ),
       ),
-      body: Padding(
-        padding: EdgeInsets.all(horizontalPadding),
+      body: SingleChildScrollView(
+        physics: BouncingScrollPhysics(),
+        padding: EdgeInsets.all(screenWidth * 0.04),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
               'How can we help you?',
               style: TextStyle(
-                fontSize: normalFontSize * 1.25,
+                fontSize: screenWidth * 0.06,
                 fontWeight: FontWeight.bold,
+                color: Colors.black87,
               ),
             ),
-            SizedBox(height: standardSpacing * 1.5),
-            _buildHelpOption(
-              'FAQs',
-              'Find answers to common questions',
-              Icons.question_answer_outlined,
+            SizedBox(height: screenWidth * 0.02),
+            Text(
+              'Choose from the options below to get the help you need',
+              style: TextStyle(
+                fontSize: screenWidth * 0.035,
+                color: Colors.grey.shade600,
+              ),
             ),
+            SizedBox(height: screenHeight * 0.03),
+            
             _buildHelpOption(
-              'Contact Support',
-              'Get in touch with our customer service team',
-              Icons.support_agent_outlined,
+              context: context,
+              title: 'FAQs',
+              subtitle: 'Find answers to common questions',
+              icon: Icons.question_answer_outlined,
+              onTap: () => _navigateToPage(context, FAQsPage()),
+              screenWidth: screenWidth,
             ),
+            
             _buildHelpOption(
-              'Report a Problem',
-              'Let us know if something isn\'t working',
-              Icons.error_outline,
+              context: context,
+              title: 'Report a Problem',
+              subtitle: 'Let us know if something isn\'t working',
+              icon: Icons.error_outline,
+              onTap: () => _openGmailCompose(context, 'Problem Report - HeyWork App'),
+              screenWidth: screenWidth,
             ),
+            
             _buildHelpOption(
-              'Send Feedback',
-              'Help us improve our app',
-              Icons.thumbs_up_down_outlined,
+              context: context,
+              title: 'Send Feedback',
+              subtitle: 'Help us improve our app',
+              icon: Icons.thumbs_up_down_outlined,
+              onTap: () => _openGmailCompose(context, 'Feedback - HeyWork App'),
+              screenWidth: screenWidth,
+            ),
+            
+            _buildHelpOption(
+              context: context,
+              title: 'Account Deletion Request',
+              subtitle: 'Request for account deletion',
+              icon: Icons.delete_forever_outlined,
+              onTap: () => _launchURL(context, 'https://www.heywork.in/Data-Delete-Request'),
+              screenWidth: screenWidth,
+              isDestructive: true,
             ),
           ],
         ),
@@ -818,44 +716,235 @@ class HelpFeedbackPage extends StatelessWidget {
     );
   }
 
-  Widget _buildHelpOption(String title, String subtitle, IconData icon) {
-    return Container(
-      margin: EdgeInsets.only(bottom: smallSpacing * 2),
-      padding: EdgeInsets.all(horizontalPadding),
-      decoration: BoxDecoration(
-        color: Colors.grey.shade50,
-        borderRadius: BorderRadius.circular(borderRadius),
+  void _navigateToPage(BuildContext context, Widget page) {
+    Navigator.push(
+      context,
+      PageRouteBuilder(
+        pageBuilder: (context, animation, secondaryAnimation) => page,
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          const begin = Offset(1.0, 0.0);
+          const end = Offset.zero;
+          const curve = Curves.easeInOutCubic;
+
+          var tween = Tween(begin: begin, end: end).chain(
+            CurveTween(curve: curve),
+          );
+
+          return SlideTransition(
+            position: animation.drive(tween),
+            child: child,
+          );
+        },
+        transitionDuration: const Duration(milliseconds: 300),
       ),
-      child: Row(
-        children: [
-          Icon(icon, color: Colors.blue, size: iconSize),
-          SizedBox(width: horizontalPadding),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+    );
+  }
+
+  Future<void> _launchURL(BuildContext context, String url) async {
+    final Uri uri = Uri.parse(url);
+    try {
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(
+          uri,
+          mode: LaunchMode.externalApplication,
+        );
+      } else {
+        throw Exception('Could not launch $url');
+      }
+    } catch (e) {
+      print('Error launching URL: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Unable to open. Please contact help.heywork@gmail.com directly.'),
+          backgroundColor: Colors.red.shade600,
+          duration: Duration(seconds: 3),
+        ),
+      );
+    }
+  }
+
+  void _openGmailCompose(BuildContext context, String subject) async {
+    try {
+      // First try to open Gmail app directly
+      String gmailAppUrl = "googlegmail://co?to=help.heywork@gmail.com&subject=${Uri.encodeComponent(subject)}";
+      final Uri gmailUri = Uri.parse(gmailAppUrl);
+      
+      if (await canLaunchUrl(gmailUri)) {
+        await launchUrl(gmailUri, mode: LaunchMode.externalApplication);
+        _showSuccessMessage(context, "Opening Gmail app...");
+        return;
+      }
+    } catch (e) {
+      print('Gmail app not available: $e');
+    }
+    
+    try {
+      // Second try: Use mailto with Gmail preference
+      String mailtoUrl = "mailto:help.heywork@gmail.com?subject=${Uri.encodeComponent(subject)}";
+      final Uri mailtoUri = Uri.parse(mailtoUrl);
+      
+      if (await canLaunchUrl(mailtoUri)) {
+        await launchUrl(mailtoUri, mode: LaunchMode.externalApplication);
+        _showSuccessMessage(context, "Opening email app...");
+        return;
+      }
+    } catch (e) {
+      print('Mailto failed: $e');
+    }
+    
+    try {
+      // Third try: Gmail web interface as fallback
+      String gmailWebUrl = "https://mail.google.com/mail/?view=cm&to=help.heywork@gmail.com&su=${Uri.encodeComponent(subject)}";
+      final Uri webUri = Uri.parse(gmailWebUrl);
+      
+      if (await canLaunchUrl(webUri)) {
+        await launchUrl(webUri, mode: LaunchMode.externalApplication);
+        _showSuccessMessage(context, "Opening Gmail in browser...");
+        return;
+      }
+    } catch (e) {
+      print('Gmail web failed: $e');
+    }
+    
+    // If all methods fail
+    _showErrorMessage(context);
+  }
+
+  void _showSuccessMessage(BuildContext context, String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            Icon(Icons.check_circle, color: Colors.white, size: 20),
+            SizedBox(width: 8),
+            Text(message),
+          ],
+        ),
+        backgroundColor: Color(0xFFFF0033FF),
+        duration: Duration(seconds: 2),
+      ),
+    );
+  }
+
+  void _showErrorMessage(BuildContext context) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Unable to open email app',
+              style: TextStyle(fontWeight: FontWeight.w600),
+            ),
+            SizedBox(height: 4),
+            Text('Please email us manually at: help.heywork@gmail.com'),
+          ],
+        ),
+        backgroundColor: Colors.orange.shade600,
+        duration: Duration(seconds: 5),
+        action: SnackBarAction(
+          label: 'Copy Email',
+          textColor: Colors.white,
+          onPressed: () {
+            Clipboard.setData(ClipboardData(text: 'help.heywork@gmail.com'));
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Email copied to clipboard!'),
+                backgroundColor: Colors.green.shade600,
+                duration: Duration(seconds: 2),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHelpOption({
+    required BuildContext context,
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    required VoidCallback onTap,
+    required double screenWidth,
+    bool isDestructive = false,
+  }) {
+    return Container(
+      margin: EdgeInsets.only(bottom: screenWidth * 0.03),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(16),
+          child: Container(
+            padding: EdgeInsets.all(screenWidth * 0.04),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 10,
+                  offset: Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Row(
               children: [
-                Text(
-                  title,
-                  style: TextStyle(
-                    fontSize: normalFontSize,
-                    fontWeight: FontWeight.w500,
+                Container(
+                  padding: EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: isDestructive 
+                        ? Colors.red.shade50 
+                        : Color(0xFF0033FF).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    icon,
+                    color: isDestructive 
+                        ? Colors.red.shade600 
+                        : Color(0xFF0033FF),
+                    size: screenWidth * 0.06,
                   ),
                 ),
-                SizedBox(height: smallSpacing / 2),
-                Text(
-                  subtitle,
-                  style: TextStyle(
-                    fontSize: smallFontSize,
-                    color: Colors.grey,
+                SizedBox(width: screenWidth * 0.04),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: TextStyle(
+                          fontSize: screenWidth * 0.042,
+                          fontWeight: FontWeight.w600,
+                          color: isDestructive 
+                              ? Colors.red.shade600 
+                              : Colors.black87,
+                        ),
+                      ),
+                      SizedBox(height: 4),
+                      Text(
+                        subtitle,
+                        style: TextStyle(
+                          fontSize: screenWidth * 0.035,
+                          color: Colors.grey.shade600,
+                        ),
+                      ),
+                    ],
                   ),
+                ),
+                Icon(
+                  Icons.arrow_forward_ios_rounded,
+                  size: screenWidth * 0.04,
+                  color: Colors.grey.shade400,
                 ),
               ],
             ),
           ),
-          Icon(Icons.arrow_forward_ios,
-              size: iconSize * 0.67, color: Colors.grey),
-        ],
+        ),
       ),
     );
   }
 }
+

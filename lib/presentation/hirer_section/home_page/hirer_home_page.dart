@@ -6,13 +6,15 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:hey_work/core/theme/app_colors.dart';
 import 'package:hey_work/presentation/hirer_section/job_managment_screen/job_managment_screen.dart';
 import 'package:hey_work/core/services/database/jobs_service.dart';
+import 'package:hey_work/presentation/worker_section/job_detail_screen/job_application_service.dart';
+import 'package:lottie/lottie.dart';
 import '../common/floating_action_button.dart';
 import '../job_catogory.dart';
 import '../settings_screen/settings_page.dart';
 import '../widgets/category_chips.dart';
 import '../widgets/worker_type_bottom_sheet.dart';
 import 'package:intl/intl.dart';
-import '../jobs_posted/job_detail_screen.dart';
+import '../jobs_posted/hirer_job_detail_screen.dart';
 import '../jobs/posted_jobs.dart';
 import '../hirer_view_job_applications/hirer_view_job_applications.dart';
 
@@ -22,8 +24,7 @@ class SearchBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Use Theme.of(context) to get app theme colors if available
-    final appThemeBackgroundGrey = Colors.grey[200]; // Fallback color
+    final appThemeBackgroundGrey = Colors.grey[200];
 
     return GestureDetector(
       onTap: () => _showJobCategoriesSearchSheet(context),
@@ -31,7 +32,7 @@ class SearchBar extends StatelessWidget {
         width: double.infinity,
         decoration: BoxDecoration(
           color: appThemeBackgroundGrey,
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(8.r),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withOpacity(0.05),
@@ -40,18 +41,23 @@ class SearchBar extends StatelessWidget {
             ),
           ],
         ),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        padding: EdgeInsets.symmetric(horizontal: 17.w, vertical: 12.h),
         child: Row(
           children: [
-            Text(
-              'Start a job search',
-              style: Theme.of(context).textTheme.bodyLarge,
+            Flexible(
+              child: Text(
+                'Start a job search',
+                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                  fontSize: 14.sp, // More responsive font size
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
             const Spacer(),
-            const Icon(
+            Icon(
               Icons.search,
               color: Colors.grey,
-              size: 24,
+              size: 20.sp, // Responsive icon size
             ),
           ],
         ),
@@ -59,18 +65,12 @@ class SearchBar extends StatelessWidget {
     );
   }
 
-  // Show the job categories search sheet
   void _showJobCategoriesSearchSheet(BuildContext context) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) {
-        // Get the available screen height minus the status bar height
-        final statusBarHeight = MediaQuery.of(context).padding.top;
-        final screenHeight = MediaQuery.of(context).size.height - statusBarHeight;
-        
-        // Use almost full screen height (95%)
         return FractionallySizedBox(
           heightFactor: 0.95,
           child: JobCategoriesSearchSheet(),
@@ -106,13 +106,11 @@ class _JobCategoriesSearchSheetState extends State<JobCategoriesSearchSheet> {
     super.dispose();
   }
 
-  // Load all job categories
   void _loadAllJobs() {
     setState(() {
       _isLoading = true;
     });
 
-    // Combine general and industry jobs
     _allJobs.addAll([
       // General Jobs
       {'name': 'Cleaner', 'category': 'General', 'icon': Icons.cleaning_services},
@@ -154,7 +152,6 @@ class _JobCategoriesSearchSheetState extends State<JobCategoriesSearchSheet> {
     });
   }
 
-  // Filter jobs based on search query
   void _filterJobs(String query) {
     if (query.isEmpty) {
       setState(() {
@@ -174,11 +171,9 @@ class _JobCategoriesSearchSheetState extends State<JobCategoriesSearchSheet> {
 
   @override
   Widget build(BuildContext context) {
-    // Get keyboard height to adjust for it
     final keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
     
     return Container(
-      // No fixed height - will be determined by FractionallySizedBox
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.only(
@@ -187,7 +182,6 @@ class _JobCategoriesSearchSheetState extends State<JobCategoriesSearchSheet> {
         ),
       ),
       child: Padding(
-        // Add bottom padding when keyboard is visible
         padding: EdgeInsets.only(bottom: keyboardHeight),
         child: Column(
           children: [
@@ -208,17 +202,20 @@ class _JobCategoriesSearchSheetState extends State<JobCategoriesSearchSheet> {
               padding: EdgeInsets.fromLTRB(24.w, 24.h, 24.w, 8.h),
               child: Row(
                 children: [
-                  Text(
-                    'Search Jobs',
-                    style: GoogleFonts.roboto(
-                      fontSize: 20.sp,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.black,
+                  Flexible(
+                    child: Text(
+                      'Search Jobs',
+                      style: GoogleFonts.roboto(
+                        fontSize: 18.sp, // More responsive
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black,
+                      ),
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
                   const Spacer(),
                   IconButton(
-                    icon: const Icon(Icons.close),
+                    icon: Icon(Icons.close, size: 24.sp),
                     onPressed: () => Navigator.pop(context),
                   ),
                 ],
@@ -233,10 +230,11 @@ class _JobCategoriesSearchSheetState extends State<JobCategoriesSearchSheet> {
                 autofocus: true,
                 decoration: InputDecoration(
                   hintText: 'Search job categories...',
-                  prefixIcon: const Icon(Icons.search),
+                  hintStyle: TextStyle(fontSize: 14.sp),
+                  prefixIcon: Icon(Icons.search, size: 20.sp),
                   suffixIcon: _searchController.text.isNotEmpty
                       ? IconButton(
-                          icon: const Icon(Icons.clear),
+                          icon: Icon(Icons.clear, size: 20.sp),
                           onPressed: () {
                             _searchController.clear();
                             _filterJobs('');
@@ -252,10 +250,14 @@ class _JobCategoriesSearchSheetState extends State<JobCategoriesSearchSheet> {
               ),
             ),
             
-            // Job categories list - Now in Expanded to take remaining height
+            // Job categories list
             Expanded(
               child: _isLoading
-                  ? const Center(child: CircularProgressIndicator())
+                  ?  SizedBox(
+                      width: 140,
+                      height: 140,
+                      child:Lottie.asset('asset/Animation - 1748495844642 (1).json', ),
+                    )
                   : _filteredJobs.isEmpty
                       ? Center(
                           child: Text(
@@ -269,14 +271,12 @@ class _JobCategoriesSearchSheetState extends State<JobCategoriesSearchSheet> {
                       : ListView(
                           padding: EdgeInsets.all(16.w),
                           children: [
-                            // Group by category
                             ..._getCategorizedJobs().entries.map((entry) {
                               return _buildCategorySection(
                                 title: entry.key,
                                 jobs: entry.value,
                               );
                             }).toList(),
-                            // Add extra padding at the bottom when keyboard is visible
                             SizedBox(height: keyboardHeight > 0 ? 20.h : 0),
                           ],
                         ),
@@ -287,7 +287,6 @@ class _JobCategoriesSearchSheetState extends State<JobCategoriesSearchSheet> {
     );
   }
 
-  // Group jobs by category
   Map<String, List<Map<String, dynamic>>> _getCategorizedJobs() {
     final Map<String, List<Map<String, dynamic>>> categorizedJobs = {};
     
@@ -304,7 +303,6 @@ class _JobCategoriesSearchSheetState extends State<JobCategoriesSearchSheet> {
     return categorizedJobs;
   }
 
-  // Build a category section
   Widget _buildCategorySection({
     required String title,
     required List<Map<String, dynamic>> jobs,
@@ -329,14 +327,11 @@ class _JobCategoriesSearchSheetState extends State<JobCategoriesSearchSheet> {
     );
   }
 
-  // Build a job item
   Widget _buildJobItem(Map<String, dynamic> job) {
     return InkWell(
       onTap: () {
-        // Close the search sheet
         Navigator.pop(context);
         
-        // Show worker type bottom sheet
         showModalBottomSheet(
           context: context,
           isScrollControlled: true,
@@ -375,12 +370,13 @@ class _JobCategoriesSearchSheetState extends State<JobCategoriesSearchSheet> {
                   fontSize: 16.sp,
                   fontWeight: FontWeight.w500,
                 ),
+                overflow: TextOverflow.ellipsis,
               ),
             ),
-            const Icon(
+            Icon(
               Icons.arrow_forward_ios,
               color: Colors.grey,
-              size: 16,
+              size: 16.sp,
             ),
           ],
         ),
@@ -398,17 +394,19 @@ class CategoriesHeader extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(
-          'Popular Categories',
-          style: GoogleFonts.roboto(
-            fontSize: 18.sp,
-            fontWeight: FontWeight.w600,
-            color: Colors.black,
+        Flexible(
+          child: Text(
+            'Popular Categories',
+            style: GoogleFonts.roboto(
+              fontSize: 18.sp,
+              fontWeight: FontWeight.w600,
+              color: Colors.black,
+            ),
+            overflow: TextOverflow.ellipsis,
           ),
         ),
         TextButton(
           onPressed: () {
-            // Show job categories search sheet when "See All" is tapped
             showModalBottomSheet(
               context: context,
               isScrollControlled: true,
@@ -449,7 +447,6 @@ class _HirerHomePageState extends State<HirerHomePage> {
     _loadUserIndustry();
   }
 
-  // Load the user's industry from Firestore
   Future<void> _loadUserIndustry() async {
     setState(() {
       _isLoading = true;
@@ -473,7 +470,6 @@ class _HirerHomePageState extends State<HirerHomePage> {
                 JobCategoryManager.getFilledJobCategories(_selectedIndustry);
           });
         } else {
-          // If no industry is set, use common categories
           setState(() {
             _selectedIndustry = 'General';
             _jobCategories = JobCategoryManager.commonJobCategories;
@@ -482,7 +478,6 @@ class _HirerHomePageState extends State<HirerHomePage> {
       }
     } catch (e) {
       print('Error loading user industry: $e');
-      // Fallback to common categories
       setState(() {
         _selectedIndustry = 'General';
         _jobCategories = JobCategoryManager.commonJobCategories;
@@ -506,23 +501,24 @@ class _HirerHomePageState extends State<HirerHomePage> {
         scrolledUnderElevation: 0,
         backgroundColor: Colors.white,
         elevation: 0,
+        automaticallyImplyLeading: false, // Remove back button for home page
         title: Text(
           'Heywork',
           style: Theme.of(context).textTheme.displayLarge?.copyWith(
-              fontSize: 33,
+              fontSize: 28.sp, // More responsive
               fontWeight: FontWeight.bold,
               color: const Color(0xFF2020F0)),
         ),
         actions: [
           IconButton(
-            icon: const Icon(
+            icon: Icon(
               Icons.menu,
               color: Colors.black,
-              size: 28,
+              size: 24.sp, // Responsive icon size
             ),
             onPressed: () {
               Navigator.of(context).push(MaterialPageRoute(
-                builder: (context) =>  SettingsScreen(),
+                builder: (context) => SettingsScreen(),
               ));
             },
           ),
@@ -531,7 +527,11 @@ class _HirerHomePageState extends State<HirerHomePage> {
 
       //! B O D Y
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ?  Center(child:  SizedBox(
+                      width: 140,
+                      height: 140,
+                      child:Lottie.asset('asset/Animation - 1748495844642 (1).json', ),
+                    ))
           : NotificationListener<ScrollNotification>(
               onNotification: (scrollInfo) => false,
               child: Stack(
@@ -540,22 +540,21 @@ class _HirerHomePageState extends State<HirerHomePage> {
                   CustomScrollView(
                     slivers: [
                       SliverToBoxAdapter(
-                        child: SizedBox(height: 70.h), // Space for search bar
+                        child: SizedBox(height: 60.h), // Space for search bar
                       ),
                       SliverPadding(
                         padding:
                             EdgeInsets.symmetric(horizontal: horizontalPadding),
                         sliver: SliverList(
                           delegate: SliverChildListDelegate([
-                            //! I N D U S T R Y  T I T L E
-                            SizedBox(height: 12.h),
+                            // SizedBox(height: 12.h),
                             //! J O B  C A T E G O R I E S
                             _buildJobCategoriesSection(),
 
-                            //! My Jobs Section (Replaced LatestJobsSection)
+                            //! My Jobs Section
                             const MyJobsSection(),
 
-                            SizedBox(height: 12.h), // Space for FAB
+                         // Extra space at bottom
                           ]),
                         ),
                       ),
@@ -579,13 +578,16 @@ class _HirerHomePageState extends State<HirerHomePage> {
     );
   }
 
-  // Build the job categories section with dynamic categories based on industry
   Widget _buildJobCategoriesSection() {
-    // Split job categories into rows of 4
+    // Calculate responsive grid
+    final screenWidth = MediaQuery.of(context).size.width;
+    final padding = screenWidth * 0.06; // Total horizontal padding
+    final availableWidth = screenWidth - padding;
+    final itemWidth = (availableWidth - (3 * 8.w)) / 4; // 4 items with gaps
+    
     List<List<JobCategoryInfo>> categoryRows = [];
     for (var i = 0; i < _jobCategories.length; i += 4) {
-      int end =
-          (i + 4 <= _jobCategories.length) ? i + 4 : _jobCategories.length;
+      int end = (i + 4 <= _jobCategories.length) ? i + 4 : _jobCategories.length;
       categoryRows.add(_jobCategories.sublist(i, end));
     }
 
@@ -594,7 +596,7 @@ class _HirerHomePageState extends State<HirerHomePage> {
         for (var row in categoryRows)
           Column(
             children: [
-              _buildJobCategoryRow(row),
+              _buildJobCategoryRow(row, itemWidth),
               SizedBox(height: 16.h),
             ],
           ),
@@ -602,13 +604,7 @@ class _HirerHomePageState extends State<HirerHomePage> {
     );
   }
 
-  // Build a row of job categories
-  Widget _buildJobCategoryRow(List<JobCategoryInfo> categories) {
-    final screenWidth = MediaQuery.of(context).size.width;
-    final availableWidth =
-        screenWidth - (32 + (3 * 12)); // horizontal padding + gaps
-    final itemWidth = availableWidth / 4; // 4 items per row
-
+  Widget _buildJobCategoryRow(List<JobCategoryInfo> categories, double itemWidth) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: categories.map((category) {
@@ -621,17 +617,15 @@ class _HirerHomePageState extends State<HirerHomePage> {
     );
   }
 
-  // Build individual job category card
   Widget _buildJobCategoryCard({
     required IconData icon,
     required String title,
     required double width,
   }) {
-    final cardSize = width * 0.9; // Slightly smaller than width allocation
+    final cardSize = width.clamp(30.0, 70.0); // Constrain card size
 
     return GestureDetector(
       onTap: () {
-        // Show the bottom sheet when a category is tapped
         showModalBottomSheet(
           context: context,
           isScrollControlled: true,
@@ -641,56 +635,61 @@ class _HirerHomePageState extends State<HirerHomePage> {
           ),
         );
       },
-      child: Column(
-        children: [
-          // Card container
-          Container(
-            width: cardSize,
-            height: cardSize, // Square container
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12.r),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.grey.withOpacity(0.2),
-                  spreadRadius: 1,
-                  blurRadius: 5,
-                  offset: const Offset(0, 2),
+      child: SizedBox(
+        width: width,
+        child: Column(
+          children: [
+            // Card container
+            Container(
+              width: cardSize,
+              height: cardSize,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12.r),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.grey.withOpacity(0.2),
+                    spreadRadius: 1,
+                    blurRadius: 5,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Center(
+                child: Icon(
+                  icon,
+                  size: (cardSize * 0.4).clamp(16.0, 28.0), // Responsive icon size
+                  color: Colors.black,
                 ),
-              ],
-            ),
-            child: Center(
-              child: Icon(
-                icon,
-                size: cardSize * 0.4, // Icon size proportional to card
-                color: Colors.black,
               ),
             ),
-          ),
-          SizedBox(height: 8.h),
-          // Text label with fixed height & ellipsis
-          SizedBox(
-            width: cardSize,
-            height: 32.h, // Fixed height for title
-            child: Text(
-              title,
-              textAlign: TextAlign.center,
-              overflow: TextOverflow.ellipsis,
-              maxLines: 2,
-              style: TextStyle(
-                  fontSize: 12.sp,
+            SizedBox(height: 8.h),
+            // Text label with responsive sizing
+            SizedBox(
+              width: width,
+              height: 36.h, // Slightly more height for better text layout
+              child: Text(
+                title,
+                textAlign: TextAlign.center,
+                overflow: TextOverflow.ellipsis,
+                maxLines: 2,
+                style: TextStyle(
+                  fontSize: 11.sp, // More responsive font size
                   fontWeight: FontWeight.w500,
-                  height: 1.2, // Tight line height for better layout
-                  letterSpacing: -0.2),
+                  height: 1.2,
+                  letterSpacing: -0.2,
+                ),
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 }
 
-//! M Y  J O B S  S E C T I O N - New component that replaces LatestJobsSection
+//! M Y  J O B S  S E C T I O N
+//! M Y  J O B S  S E C T I O N
 class MyJobsSection extends StatefulWidget {
   const MyJobsSection({Key? key}) : super(key: key);
 
@@ -700,55 +699,60 @@ class MyJobsSection extends StatefulWidget {
 
 class _MyJobsSectionState extends State<MyJobsSection> {
   final JobService _jobService = JobService();
+  final JobApplicationService _applicationService = JobApplicationService(); // Add this line
 
   @override
   Widget build(BuildContext context) {
     return Column(
       children: [
-        // Header with title and "See All" button
         _buildSectionHeader(),
         SizedBox(height: 12.h),
-        
-        // Jobs list using the same UI as JobManagementScreen
         _buildJobList(),
       ],
     );
   }
   
-  // Build section header with title and "See All" button
- Widget _buildSectionHeader() {
-  return Padding(
-    padding: EdgeInsets.only(bottom: 4.h,right: 280.h),
-    child: Text(
-      'My Jobs',
-      style: GoogleFonts.roboto(
-        fontSize: 18.sp,
-        fontWeight: FontWeight.w600,
-        color: Colors.black,
+  Widget _buildSectionHeader() {
+    return Container(
+      width: double.infinity,
+      alignment: Alignment.centerLeft,
+      child: Text(
+        'My Jobs',
+        style: GoogleFonts.roboto(
+          fontSize: 18.sp,
+          fontWeight: FontWeight.w600,
+          color: Colors.black,
+        ),
       ),
-    ),
-  );
-}
+    );
+  }
   
-  //! J O B - L I S T - Same as in JobManagementScreen
- Widget _buildJobList() {
-  return Column(
-    children: [
-      SizedBox(
-        // Set a fixed height to limit the number of jobs shown
-        height: 670.h, // Reduced height to accommodate the button
-        child: StreamBuilder<QuerySnapshot>(
+  Widget _buildJobList() {
+    return Column(
+      children: [
+        // Jobs list without fixed height - let it size naturally
+        StreamBuilder<QuerySnapshot>(
           stream: _getJobsStream(),
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator());
+              return Container(
+                height: 200.h,
+                child: SizedBox(
+                      width: 140,
+                      height: 140,
+                      child:Lottie.asset('asset/Animation - 1748495844642 (1).json', ),
+                    ),
+              );
             }
 
             if (snapshot.hasError) {
-              return Center(
-                child: Text(
-                  'Error: ${snapshot.error}',
-                  style: TextStyle(color: Colors.red),
+              return Container(
+                height: 200.h,
+                child: Center(
+                  child: Text(
+                    'Error: ${snapshot.error}',
+                    style: TextStyle(color: Colors.red, fontSize: 14.sp),
+                  ),
                 ),
               );
             }
@@ -756,130 +760,128 @@ class _MyJobsSectionState extends State<MyJobsSection> {
             final jobDocs = snapshot.data?.docs ?? [];
 
             if (jobDocs.isEmpty) {
-              return Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.work_off,
-                      size: 80,
-                      color: Colors.grey.shade400,
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'No jobs posted yet',
-                      style: GoogleFonts.roboto(
-                        fontSize: 18,
-                        color: Colors.grey.shade600,
-                        fontWeight: FontWeight.w500,
+              return Container(
+                height: 300.h,
+                child: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.work_off,
+                        size: 60.sp,
+                        color: Colors.grey.shade400,
                       ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Create a job to see it here',
-                      style: GoogleFonts.roboto(
-                        fontSize: 14,
-                        color: Colors.grey.shade500,
+                      SizedBox(height: 16.h),
+                      Text(
+                        'No jobs posted yet',
+                        style: GoogleFonts.roboto(
+                          fontSize: 16.sp,
+                          color: Colors.grey.shade600,
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
-                    ),
-                  ],
+                      SizedBox(height: 8.h),
+                      Text(
+                        'Create a job to see it here',
+                        style: GoogleFonts.roboto(
+                          fontSize: 12.sp,
+                          color: Colors.grey.shade500,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               );
             }
 
-            // Convert docs to JobModel
             final jobs = jobDocs.map((doc) => JobModel.fromFirestore(doc)).toList();
-
-            // Limit to latest 5 jobs (or fewer if less are available)
             final limitedJobs = jobs.length > 5 ? jobs.sublist(0, 5) : jobs;
 
-            return ListView.builder(
-              padding: EdgeInsets.zero, // Remove padding to match design
-              physics: NeverScrollableScrollPhysics(), // Disable scrolling
-              shrinkWrap: true,
-              itemCount: limitedJobs.length,
-              itemBuilder: (context, index) {
-                final job = limitedJobs[index];
-                return _buildJobCard(job);
-              },
+            return Column(
+              children: [
+                // Use Column instead of ListView to avoid scrolling conflicts
+                ...limitedJobs.map((job) => _buildJobCard(job)).toList(),
+              ],
             );
           },
         ),
-      ),
-      
-      // New "View All Jobs" button at the bottom
-      Padding(
-        padding: EdgeInsets.symmetric(vertical:6.h),
-        child: Container(
-          width: double.infinity,
-          height: 50.h,
-          child: ElevatedButton(
-            onPressed: () {
-              Navigator.push(
-                context, 
-                MaterialPageRoute(
-                  builder: (context) => const JobManagementScreen(),
-                ),
-              );
-            },
-            style: ElevatedButton.styleFrom(
-           backgroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12.r),
-                
-              ),
-              side: BorderSide(color: const Color(0xFF0011C9)),
-            
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  'View All Jobs',
-                  style: GoogleFonts.roboto(
-                    fontSize: 16.sp,
-                    fontWeight: FontWeight.w600,
-                    color: const Color(0xFF0011C9),
+        
+        // "View All Jobs" button
+        Padding(
+          padding: EdgeInsets.symmetric(vertical: 12.h),
+          child: SizedBox(
+            width: double.infinity,
+            height: 48.h,
+            child: ElevatedButton(
+              onPressed: () {
+                Navigator.push(
+                  context, 
+                  MaterialPageRoute(
+                    builder: (context) => const JobManagementScreen(),
                   ),
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12.r),
                 ),
-                SizedBox(width: 8.w),
-                Icon(
-                  Icons.arrow_forward,
-                  color: const Color(0xFF0011C9),
-                  size: 20.sp,
-                ),
-              ],
+                side: BorderSide(color: const Color(0xFF0011C9)),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    'View All Jobs',
+                    style: GoogleFonts.roboto(
+                      fontSize: 14.sp,
+                      fontWeight: FontWeight.w600,
+                      color: const Color(0xFF0011C9),
+                    ),
+                  ),
+                  SizedBox(width: 8.w),
+                  Icon(
+                    Icons.arrow_forward,
+                    color: const Color(0xFF0011C9),
+                    size: 18.sp,
+                  ),
+                ],
+              ),
             ),
           ),
         ),
-      ),
-    ],
-  );
-}
+      ],
+    );
+  }
 
-
-  //! D A T A - F E T C H - Same as in JobManagementScreen
   Stream<QuerySnapshot> _getJobsStream() {
     var query = FirebaseFirestore.instance
       .collection('jobs')
       .where('hirerId', isEqualTo: FirebaseAuth.instance.currentUser?.uid)
       .orderBy('createdAt', descending: true)
-      .limit(5); // Limit to 5 most recent jobs
+      .limit(5);
 
     return query.snapshots();
   }
 
-  //! J O B - C A R D - Same as in JobManagementScreen
-  Widget _buildJobCard(JobModel job) {
+  // Add this method to get application count for a specific job
+  Stream<int> _getApplicationCount(String jobId) {
+    return FirebaseFirestore.instance
+        .collection('jobApplications')
+        .where('jobId', isEqualTo: jobId)
+        .snapshots()
+        .map((snapshot) => snapshot.docs.length);
+  }
+
+Widget _buildJobCard(JobModel job) {
     final isFullTime = job.jobType.toLowerCase() == 'full-time';
     final jobTypeColor = isFullTime ? AppColors.green : Color(0xFF0000CC);
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(8),
+      margin: EdgeInsets.only(bottom: 16.h),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(16.r),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.05),
@@ -893,183 +895,205 @@ class _MyJobsSectionState extends State<MyJobsSection> {
           width: 1,
         ),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Posted date and job type
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Padding(
-               padding: const EdgeInsets.only(left: 3),
-                child: Text(
-                  'Posted ${_formatDate(job.createdAt)}',
-                  style: GoogleFonts.roboto(
-                    fontSize: 12,
-                    color: AppColors.darkGrey,
-                  ),
-                ),
+      child: InkWell(
+        // Make the entire card clickable
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => ApplicationListScreen(
+                jobId: job.id,
+                jobTitle: job.jobCategory,
               ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: jobTypeColor,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  job.jobType,
-                  style: GoogleFonts.roboto(
-                    fontSize: 12,
-                    color: Colors.white,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 2),
-
-          // Job title
-          Padding(
-           padding: const EdgeInsets.only(left: 3),
-            child: Text(
-              job.jobCategory,
-              style: GoogleFonts.roboto(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: Colors.black,
-              ),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
             ),
-          ),
-
-          const SizedBox(height: 8),
-
-          // Scheduled job date
-          Row(
+          );
+        },
+        borderRadius: BorderRadius.circular(16.r), // Match container border radius
+        child: Padding(
+          padding: EdgeInsets.all(12.w),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(
-                Icons.calendar_today,
-                size: 16,
-                color: AppColors.darkGrey,
-              ),
-              const SizedBox(width: 4),
-              Text(
-                'Scheduled for ${_formatScheduledDate(job.date)}',
-                style: GoogleFonts.roboto(
-                  fontSize: 14,
-                  color: AppColors.darkGrey,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 6),
-
-          // Location
-          Row(
-            children: [
-              Icon(
-                Icons.location_on_outlined,
-                size: 16,
-                color: AppColors.darkGrey,
-              ),
-              const SizedBox(width: 4),
-              Expanded(
-                child: Text(
-                  job.location,
-                  style: GoogleFonts.roboto(
-                    fontSize: 14,
-                    color: AppColors.darkGrey,
+              // Posted date and job type
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Flexible(
+                    child: Text(
+                      'Posted ${_formatDate(job.createdAt)}',
+                      style: GoogleFonts.roboto(
+                        fontSize: 11.sp,
+                        color: AppColors.darkGrey,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 6),
-
-          // Budget information
-          Row(
-            children: [
-              Icon(
-                Icons.currency_rupee,
-                size: 16,
-                color: AppColors.darkGrey,
-              ),
-              const SizedBox(width: 4),
-              Text(
-                isFullTime
-                    ? 'Rs. ${job.budget} per month'
-                    : 'Rs. ${job.budget} per day',
-                style: GoogleFonts.roboto(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                  color: AppColors.darkGrey,
-                ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 12),
-
-          //! A C T I O N - B U T T O N S
-          Padding(
-            padding: const EdgeInsets.only(left: 3),
-            child: Container(
-              width: double.infinity,
-              decoration: BoxDecoration(
-                color: Color(0xFF0000CC),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: InkWell(
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => ApplicationListScreen(
-                        jobId: job.id,
-                        jobTitle: job.jobCategory,
+                  Container(
+                    padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+                    decoration: BoxDecoration(
+                      color: jobTypeColor,
+                      borderRadius: BorderRadius.circular(12.r),
+                    ),
+                    child: Text(
+                      job.jobType,
+                      style: GoogleFonts.roboto(
+                        fontSize: 10.sp,
+                        color: Colors.white,
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
-                  );
-                },
+                  ),
+                ],
+              ),
+
+              SizedBox(height: 8.h),
+
+              // Job title
+              Text(
+                job.jobCategory,
+                style: GoogleFonts.roboto(
+                  fontSize: 18.sp,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black,
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+
+              SizedBox(height: 8.h),
+
+              // Scheduled job date
+              Row(
+                children: [
+                  Icon(
+                    Icons.calendar_today,
+                    size: 14.sp,
+                    color: AppColors.darkGrey,
+                  ),
+                  SizedBox(width: 4.w),
+                  Flexible(
+                    child: Text(
+                      'Scheduled for ${_formatScheduledDate(job.date)}',
+                      style: GoogleFonts.roboto(
+                        fontSize: 12.sp,
+                        color: AppColors.darkGrey,
+                        fontWeight: FontWeight.w500,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+
+              SizedBox(height: 6.h),
+
+              // Location
+              Row(
+                children: [
+                  Icon(
+                    Icons.location_on_outlined,
+                    size: 14.sp,
+                    color: AppColors.darkGrey,
+                  ),
+                  SizedBox(width: 4.w),
+                  Expanded(
+                    child: Text(
+                      job.location,
+                      style: GoogleFonts.roboto(
+                        fontSize: 12.sp,
+                        color: AppColors.darkGrey,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+
+              SizedBox(height: 6.h),
+
+              // Budget information
+              Row(
+                children: [
+                  Icon(
+                    Icons.currency_rupee,
+                    size: 14.sp,
+                    color: AppColors.darkGrey,
+                  ),
+                  SizedBox(width: 4.w),
+                  Flexible(
+                    child: Text(
+                      isFullTime
+                          ? 'Rs. ${job.budget} per month'
+                          : 'Rs. ${job.budget} per day',
+                      style: GoogleFonts.roboto(
+                        fontSize: 12.sp,
+                        fontWeight: FontWeight.w500,
+                        color: AppColors.darkGrey,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+
+              SizedBox(height: 12.h),
+
+              //! A C T I O N - B U T T O N S with Dynamic Application Count
+              Container(
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  color: Color(0xFF0000CC),
+                  borderRadius: BorderRadius.circular(12.r),
+                ),
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  padding: EdgeInsets.symmetric(vertical: 12.h),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Icon(
                         Icons.people,
-                        size: 18,
+                        size: 16.sp,
                         color: Colors.white,
                       ),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Applications',
-                        style: GoogleFonts.roboto(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                          color: Colors.white,
-                        ),
+                      SizedBox(width: 8.w),
+                      // Dynamic application count using StreamBuilder
+                      StreamBuilder<int>(
+                        stream: _getApplicationCount(job.id),
+                        builder: (context, snapshot) {
+                          final count = snapshot.data ?? 0;
+                          
+                          // Handle singular/plural text
+                          String buttonText;
+                          if (count == 0) {
+                            buttonText = 'No Applications';
+                          } else if (count == 1) {
+                            buttonText = '1 Application';
+                          } else {
+                            buttonText = '$count Applications';
+                          }
+                          
+                          return Text(
+                            buttonText,
+                            style: GoogleFonts.roboto(
+                              fontSize: 14.sp,
+                              fontWeight: FontWeight.w500,
+                              color: Colors.white,
+                            ),
+                          );
+                        },
                       ),
                     ],
                   ),
                 ),
               ),
-            ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
 
-  //! D A T E - F O R M A T T I N G - Same as in JobManagementScreen
   String _formatDate(DateTime date) {
     final now = DateTime.now();
     final difference = now.difference(date);
@@ -1091,26 +1115,21 @@ class _MyJobsSectionState extends State<MyJobsSection> {
     }
   }
   
-  //! S C H E D U L E D - D A T E - F O R M A T T I N G - Same as in JobManagementScreen
   String _formatScheduledDate(DateTime date) {
-    // Get day with ordinal suffix (1st, 2nd, 3rd, etc.)
     String dayWithSuffix = _getDayWithSuffix(date.day);
     
-    // Get month name
     List<String> months = [
       'January', 'February', 'March', 'April', 'May', 'June',
       'July', 'August', 'September', 'October', 'November', 'December'
     ];
     String monthName = months[date.month - 1];
     
-    // Format the date as "1st May 2024"
     return '$dayWithSuffix $monthName ${date.year}';
   }
   
-  //! O R D I N A L - S U F F I X - Same as in JobManagementScreen
   String _getDayWithSuffix(int day) {
     if (day >= 11 && day <= 13) {
-      return '${day}th'; // 11th, 12th, 13th
+      return '${day}th';
     }
     
     switch (day % 10) {

@@ -2,10 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:hey_work/core/services/database/jobs_service.dart';
 import 'package:hey_work/core/theme/app_colors.dart';
+import 'package:lottie/lottie.dart';
 import 'search_bar_widget.dart';
 import 'widgets/catogory_list.dart';
 import 'widgets/job_card_widget.dart';
 import 'package:provider/provider.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class MoreJobsPage extends StatefulWidget {
   final String category;
@@ -27,6 +30,10 @@ class _MoreJobsPageState extends State<MoreJobsPage> {
   String _searchQuery = '';
   final TextEditingController _searchController = TextEditingController();
 
+  // ADD: Track applied jobs
+  Set<String> _appliedJobIds = {};
+  bool _isLoadingAppliedJobs = true;
+
   @override
   void initState() {
     super.initState();
@@ -42,6 +49,9 @@ class _MoreJobsPageState extends State<MoreJobsPage> {
 
     // Add listener to search controller
     _searchController.addListener(_onSearchChanged);
+
+    // ADD: Load applied jobs
+    _loadAppliedJobs();
   }
 
   @override
@@ -49,6 +59,50 @@ class _MoreJobsPageState extends State<MoreJobsPage> {
     _searchController.removeListener(_onSearchChanged);
     _searchController.dispose();
     super.dispose();
+  }
+
+  //! L O A D  A P P L I E D  J O B S
+  Future<void> _loadAppliedJobs() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      setState(() {
+        _isLoadingAppliedJobs = false;
+      });
+      return;
+    }
+
+    try {
+      // Query all applications for this user
+      final snapshot = await FirebaseFirestore.instance
+          .collection('jobApplications')
+          .where('workerId', isEqualTo: user.uid)
+          .get();
+
+      Set<String> tempAppliedJobs = {};
+      for (var doc in snapshot.docs) {
+        final data = doc.data();
+        if (data['jobId'] != null) {
+          tempAppliedJobs.add(data['jobId']);
+        }
+      }
+
+      if (mounted) {
+        setState(() {
+          _appliedJobIds = tempAppliedJobs;
+          _isLoadingAppliedJobs = false;
+        });
+      }
+
+      // DEBUG: Print applied job IDs
+      print('Applied Jobs Loaded in MoreJobsPage: $_appliedJobIds');
+    } catch (e) {
+      print('Error loading applied jobs: $e');
+      if (mounted) {
+        setState(() {
+          _isLoadingAppliedJobs = false;
+        });
+      }
+    }
   }
 
   void _onSearchChanged() {
@@ -189,14 +243,8 @@ class _MoreJobsPageState extends State<MoreJobsPage> {
                                   )
                                 : null,
                             border: InputBorder.none,
-                            contentPadding: EdgeInsets.symmetric(
-                                vertical: 12, horizontal: 8),
-                            fillColor: Colors.white,
-                            filled: true,
-                            enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(25),
-                              borderSide: BorderSide(color: Colors.transparent),
-                            ),
+                         
+                        
                             focusedBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(25),
                               borderSide: BorderSide(color: Colors.grey[300]!),
@@ -232,8 +280,12 @@ class _MoreJobsPageState extends State<MoreJobsPage> {
             child: StreamBuilder<List<JobModel>>(
               stream: _jobsStream,
               builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return Center(child: CircularProgressIndicator());
+                if (snapshot.connectionState == ConnectionState.waiting || _isLoadingAppliedJobs) {
+                  return Center(child: SizedBox(
+                      width: 140,
+                      height: 140,
+                      child:Lottie.asset('asset/Animation - 1748495844642 (1).json', ),
+                    ));
                 }
 
                 if (snapshot.hasError) {
@@ -296,9 +348,20 @@ class _MoreJobsPageState extends State<MoreJobsPage> {
                   itemCount: filteredJobs.length + 1,
                   itemBuilder: (context, index) {
                     if (index < filteredJobs.length) {
+                      final job = filteredJobs[index];
+                      final isApplied = _appliedJobIds.contains(job.id);
+                      
+                      // DEBUG: Print each job's status
+                      if (index < 3) { // Only print first few to avoid spam
+                        print('Job ${job.id}: ${job.jobCategory} - Applied: $isApplied');
+                      }
+
                       return Padding(
                         padding: const EdgeInsets.only(bottom: 12.0),
-                        child: JobCardWidget(job: filteredJobs[index]),
+                        child: JobCardWidget(
+                          job: job,
+                          isApplied: isApplied, // ✅ PASS APPLICATION STATUS
+                        ),
                       );
                     } else {
                       return Padding(

@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -5,7 +6,9 @@ import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:hey_work/core/services/database/jobs_service.dart';
 import 'package:hey_work/core/theme/app_colors.dart';
-import 'package:share_plus/share_plus.dart'; // Add this import for sharing functionality
+import 'package:lottie/lottie.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:path_provider/path_provider.dart';
 
 class JobDetailScreen extends StatefulWidget {
   final JobModel job;
@@ -34,6 +37,121 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     setState(() {
       _isApplied = isApplied;
     });
+  }
+
+  // Enhanced share job function with better formatting
+  Future<void> _shareJob(BuildContext context) async {
+    try {
+      // Show loading indicator
+     
+      
+      // Create custom URL scheme link
+      final String customSchemeLink = 'heywork://jobs/${widget.job.id}';
+      
+      // Calculate application closing date (5 days from now)
+      final closeDate = DateTime.now().add(Duration(days: 5));
+      final closeDay = closeDate.day;
+      final closeMonth = _getMonthName(closeDate.month);
+      
+      // Format payment text based on job type
+      final String paymentText = widget.job.jobType.toLowerCase() == 'full-time' && widget.job.salaryRange != null 
+          ? '₹${widget.job.salaryRange!['min']} - ₹${widget.job.salaryRange!['max']} per month' 
+          : '₹${widget.job.budget}/day';
+      
+      // Improved share text with better marketing tactics
+      final String shareText = '''
+🚨 URGENT ${widget.job.jobCategory.toUpperCase()} JOB IN ${widget.job.location.toUpperCase()} 🚨
+This won't last long – APPLY NOW!
+
+📍 Location: ${widget.job.location}, Kerala
+💰 Pay: $paymentText
+⏰ Type: ${widget.job.jobType}
+📅 Applications close: $closeDay $closeMonth, ${DateTime.now().year}
+
+No long waits. No hassle. Just real jobs, fast.
+Employers ready to hire – today!
+
+Don't have the app? Download HeyWork now:
+https://play.google.com/store/apps/details?id=com.example.hey_work
+
+✅ Local Jobs
+✅ 1-Click Apply  
+✅ Direct Contact with Employers
+
+⚠️ Spots filling fast – don't miss out!
+Join hundreds of satisfied job seekers in India.
+''';
+
+      // Share with image if possible
+      try {
+        final ByteData imageData = await rootBundle.load('asset/team1.png');
+        final Uint8List bytes = imageData.buffer.asUint8List();
+        
+        final tempDir = await getTemporaryDirectory();
+        final file = File('${tempDir.path}/heywork_job.png');
+        await file.writeAsBytes(bytes);
+
+        await Share.shareXFiles(
+          [XFile(file.path)],
+          text: shareText,
+          subject: 'Urgent Job Opportunity: ${widget.job.jobCategory} in ${widget.job.location}',
+        );
+      } catch (imageError) {
+        print('Error sharing with image: $imageError. Falling back to text-only share.');
+        await Share.share(
+          shareText,
+          subject: 'Urgent Job Opportunity: ${widget.job.jobCategory} in ${widget.job.location}',
+        );
+      }
+      
+      // Success message
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              Icon(
+                Icons.check_circle,
+                color: Colors.white,
+                size: 24,
+              ),
+              SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'Thanks for sharing!',
+                  style: GoogleFonts.poppins(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          backgroundColor: Color(0xFF0000CC),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          margin: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+          duration: Duration(seconds: 2),
+          elevation: 6,
+        ),
+      );
+    } catch (e) {
+      print('Error sharing: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not share: $e')),
+      );
+    }
+  }
+
+  // Helper method to get month name
+  String _getMonthName(int month) {
+    const months = [
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+    ];
+    return months[month - 1];
   }
 
   //! N A V I G A T I O N  B U T T O N S
@@ -70,14 +188,9 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
             ),
           ),
 
-          // Share button (replacing bookmark)
+          // Share button with enhanced functionality
           GestureDetector(
-            onTap: () {
-              // Share job details functionality
-              Share.share(
-                'Check out this ${widget.job.jobType} ${widget.job.jobCategory} job at ${widget.job.company} in ${widget.job.location}',
-              );
-            },
+            onTap: () => _shareJob(context),
             child: Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
@@ -103,7 +216,9 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     );
   }
 
-  //! H E A D E R  S E C T I O N
+  //! H E A D E R  S E C T I O N  - FIXED
+ //! H E A D E R  S E C T I O N  - FIXED BUDGET DISPLAY
+  //! H E A D E R  S E C T I O N  - FIXED BUDGET DISPLAY
   Widget _buildHeader() {
     final isFullTime = widget.job.jobType.toLowerCase() == 'full-time';
     final jobTypeColor = isFullTime ? AppColors.green : Color(0xFF0000CC);
@@ -168,33 +283,35 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
             maxLines: 2,
           ),
 
-          const SizedBox(height: 8),
+          const SizedBox(height: 2),
 
-          // Company name and industry
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
+          // Company name and industry - TWO LINES
+          Column(
             children: [
-              Flexible(
-                child: Text(
-                  widget.job.company,
+              // Company name
+              Text(
+                widget.job.company,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.darkGrey,
+                ),
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                maxLines: 1,
+              ),
+              // Industry (if available)
+              if (widget.job.hirerIndustry.isNotEmpty) ...[
+                // const SizedBox(height: 4),
+                Text(
+                  widget.job.hirerIndustry,
                   style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
+                    fontSize: 14,
                     color: AppColors.darkGrey,
                   ),
                   overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              if (widget.job.hirerIndustry.isNotEmpty) ...[
-                Flexible(
-                  child: Text(
-                    ' • ${widget.job.hirerIndustry}',
-                    style: const TextStyle(
-                      fontSize: 14,
-                      color: AppColors.darkGrey,
-                    ),
-                    overflow: TextOverflow.ellipsis,
-                  ),
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
                 ),
               ],
             ],
@@ -202,15 +319,13 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
 
           const SizedBox(height: 16),
 
-                  // Location, job type, and salary information
-          Wrap(
-            alignment: WrapAlignment.center,
-            spacing: 8, // horizontal space between items
-            runSpacing: 8, // vertical space between lines
+          // FIXED: Job type and salary information with better layout
+          Row(
+               mainAxisAlignment: MainAxisAlignment.center,
             children: [
+              // Job Type Container
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 decoration: BoxDecoration(
                   color: jobTypeColor,
                   borderRadius: BorderRadius.circular(20),
@@ -224,72 +339,38 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                   ),
                 ),
               ),
+              
               const SizedBox(width: 8),
-              Flexible(
-                child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade200,
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(
-                        Icons.location_on,
-                        size: 14,
-                        color: AppColors.darkGrey,
-                      ),
-                      const SizedBox(width: 4),
-                      Flexible(
-                        child: Text(
-                          widget.job.location, // Show full location
-                          style: const TextStyle(
-                            fontSize: 14,
-                            color: AppColors.darkGrey,
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                          maxLines: 1,
-                        ),
-                      ),
-                    ],
-                  ),
+              
+              // Salary Container with flexible layout
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Color(0xFF0000CC),
+                  borderRadius: BorderRadius.circular(20),
                 ),
-              ),
-              const SizedBox(width: 8),
-              Flexible(
-                child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade200,
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(
-                        Icons.currency_rupee,
-                        size: 14,
-                        color: AppColors.darkGrey,
-                      ),
-                      const SizedBox(width: 4),
-                      Flexible(
-                        child: Text(
-                          isFullTime && widget.job.salaryRange != null
-                              ? '${_formatCurrency(widget.job.salaryRange!['min'])}-${_formatCurrency(widget.job.salaryRange!['max'])}/mo'
-                              : '${_formatCurrency(widget.job.budget)}/day',
-                          style: const TextStyle(
-                            fontSize: 14,
-                            color: AppColors.darkGrey,
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                          maxLines: 1,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.currency_rupee,
+                      size: 16,
+                      color: AppColors.white,
+                    ),
+                    const SizedBox(width: 4),
+                    Flexible(
+                      child: Text(
+                        _formatSalaryDisplay(isFullTime),
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.white,
                         ),
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 1,
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
             ],
@@ -299,6 +380,37 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     );
   }
 
+  // NEW: Better salary formatting method
+  String _formatSalaryDisplay(bool isFullTime) {
+    if (isFullTime && widget.job.salaryRange != null) {
+      final min = _formatCurrencyCompact(widget.job.salaryRange!['min']);
+      final max = _formatCurrencyCompact(widget.job.salaryRange!['max']);
+      return '$min-$max/mo';
+    } else {
+      final budget = _formatCurrencyCompact(widget.job.budget);
+      return '$budget/day';
+    }
+  }
+
+  // NEW: More compact currency formatting for UI display
+  String _formatCurrencyCompact(dynamic value) {
+    if (value == null) return '0';
+    
+    String numStr = value.toString();
+    double? numValue = double.tryParse(numStr);
+    if (numValue == null) return numStr;
+    
+    // More compact formatting for UI
+    if (numValue >= 10000000) {
+      return '${(numValue / 10000000).toStringAsFixed(1)}Cr';
+    } else if (numValue >= 100000) {
+      return '${(numValue / 100000).toStringAsFixed(1)}L';
+    } else if (numValue >= 1000) {
+      return '${(numValue / 1000).toStringAsFixed(0)}K';
+    }
+    
+    return numValue.toStringAsFixed(0);
+  }
   //! I N F O R M A T I O N  S E C T I O N
   Widget _buildInformationSection(BuildContext context) {
     return Container(
@@ -357,7 +469,11 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
             title: 'Arrival Time',
             value: widget.job.timeFormatted ?? 'Not specified',
           ),
+            const Divider(height: 24),
+
+    
         ],
+        
       ),
     );
   }
@@ -575,7 +691,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Application submitted successfully'),
-          backgroundColor: Colors.green,
+          backgroundColor: Color(0xFF0000CC),
         ),
       );
     } catch (e) {
@@ -591,12 +707,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
 
   // Updated to use state variable for applied status
   Widget _buildApplyButton(BuildContext context) {
-    if (_isLoading) {
-      return const Padding(
-        padding: EdgeInsets.all(38.0),
-        child: Center(child: CircularProgressIndicator()),
-      );
-    }
+   
 
     return Padding(
       padding: const EdgeInsets.all(38.0),
@@ -621,7 +732,8 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
       ),
     );
   }
-   Future<void> _showApplyConfirmationSheet(BuildContext context) async {
+
+  Future<void> _showApplyConfirmationSheet(BuildContext context) async {
     final result = await showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
@@ -642,7 +754,6 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
       });
     }
   }
-
 
   String _formatDate(DateTime date) {
     // Format: "Monday, May 5, 2025"
@@ -854,10 +965,12 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
           if (_isLoading)
             Container(
               color: Colors.black.withOpacity(0.5),
-              child: const Center(
-                child: CircularProgressIndicator(
-                  valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF0000CC)),
-                ),
+              child:  Center(
+                child: SizedBox(
+                      width: 140,
+                      height: 140,
+                      child:Lottie.asset('asset/Animation - 1748495844642 (1).json', ),
+                    )
               ),
             ),
         ],

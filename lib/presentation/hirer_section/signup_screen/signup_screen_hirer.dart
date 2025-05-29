@@ -3,7 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:hey_work/presentation/authentication/role_validation_service.dart';
 import 'package:hey_work/presentation/hirer_section/industry_selecction.dart';
+import 'package:hey_work/presentation/hirer_section/login_page/hirer_login_page.dart';
+import 'package:image_cropper/image_cropper.dart';
+import 'package:lottie/lottie.dart';
 import '../common/bottom_nav_bar.dart';
 import '../home_page/hirer_home_page.dart';
 
@@ -14,6 +18,9 @@ import 'package:uuid/uuid.dart';
 import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
+import 'package:url_launcher/url_launcher.dart'; // Add this import
+
+import 'package:path/path.dart' as path;
 
 // Import utility classes
 
@@ -228,7 +235,7 @@ class _PhoneInputFieldState extends State<PhoneInputField> {
                   "Resend OTP",
                   style: GoogleFonts.roboto(
                     fontSize: widget.responsive.getFontSize(14),
-                    color: Colors.blue.shade700,
+                    color: Color(0xFF0033FF),
                     fontWeight: FontWeight.w500,
                   ),
                 ),
@@ -304,6 +311,23 @@ class _HirerSignupPageState extends State<HirerSignupPage> {
     super.dispose();
   }
 
+  // URL launcher function
+  Future<void> _launchUrl(String url) async {
+    try {
+      final Uri uri = Uri.parse(url);
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(
+          uri,
+          mode: LaunchMode.externalApplication, // Forces external browser
+        );
+      } else {
+        _showSnackBar('Could not open the URL: $url', isError: true);
+      }
+    } catch (e) {
+      _showSnackBar('Error opening URL: $e', isError: true);
+    }
+  }
+
   // Show custom snackbar
   void _showSnackBar(String message, {bool isError = false}) {
     ScaffoldMessenger.of(context).hideCurrentSnackBar();
@@ -336,11 +360,12 @@ class _HirerSignupPageState extends State<HirerSignupPage> {
     return Scaffold(
       body: SafeArea(
         child: _isLoading
-            ? const Center(
-                child: CircularProgressIndicator(
-                  color: Colors.blue,
-                  strokeWidth: 3,
-                ),
+            ?  Center(
+                child: SizedBox(
+                      width: 140,
+                      height: 140,
+                      child:Lottie.asset('asset/Animation - 1748495844642 (1).json', ),
+                    )
               )
             : SignupForm(
                 formKey: _formKey,
@@ -396,6 +421,9 @@ class _HirerSignupPageState extends State<HirerSignupPage> {
                     }
                   }
                 },
+                // Pass the URL launcher function
+                onTermsTap: () => _launchUrl('https://heywork.in/terms'),
+                onPrivacyTap: () => _launchUrl('https://heywork.in/privacy'),
               ),
       ),
     );
@@ -810,58 +838,102 @@ class _HirerSignupPageState extends State<HirerSignupPage> {
   }
 
   // Phone verification methods
-  Future<void> _verifyPhoneNumber() async {
-    if (_phoneController.text.isEmpty) {
-      _showSnackBar('Please enter your phone number', isError: true);
-      return;
-    }
+ // Replace the _verifyPhoneNumber method in HirerSignupPage with this:
 
-    // Format phone number to ensure it starts with +91
-    String phoneNumber = _phoneController.text.trim();
-    if (!phoneNumber.startsWith('+')) {
-      phoneNumber = '+91$phoneNumber';
-    }
+Future<void> _verifyPhoneNumber() async {
+  if (_phoneController.text.isEmpty) {
+    _showSnackBar('Please enter your phone number', isError: true);
+    return;
+  }
 
-    setState(() {
-      _isLoading = true;
-    });
+  // Format phone number to ensure it starts with +91
+  String phoneNumber = _phoneController.text.trim();
+  if (!phoneNumber.startsWith('+')) {
+    phoneNumber = '+91$phoneNumber';
+  }
 
-    try {
-      await FirebaseAuth.instance.verifyPhoneNumber(
-        phoneNumber: phoneNumber,
-        verificationCompleted: (PhoneAuthCredential credential) async {
-          await FirebaseAuth.instance.signInWithCredential(credential);
-          _submitForm();
-        },
-        verificationFailed: (FirebaseAuthException e) {
-          setState(() {
-            _isLoading = false;
-          });
-          _showSnackBar('Verification failed: ${e.message}', isError: true);
-        },
-        codeSent: (String verificationId, int? resendToken) {
-          setState(() {
-            _isLoading = false;
-            _otpSent = true;
-            _verificationId = verificationId;
-          });
-          _showSnackBar('OTP sent to your phone');
-        },
-        codeAutoRetrievalTimeout: (String verificationId) {
-          _verificationId = verificationId;
-        },
-        timeout: Duration(seconds: 60),
-      );
-    } catch (e) {
+  setState(() {
+    _isLoading = true;
+  });
+
+  try {
+    // Check if phone number already exists
+    Map<String, dynamic> phoneCheck = await RoleValidationService.checkPhoneNumberExists(phoneNumber);
+    
+    if (phoneCheck['exists']) {
       setState(() {
         _isLoading = false;
       });
-      _showSnackBar('Error: $e', isError: true);
+      
+      if (phoneCheck['userType'] == 'hirer') {
+        // Same role account already exists
+        RoleValidationService.showAccountExistsDialog(context, 'hirer');
+        return;
+      } else {
+        // Different role account exists
+        RoleValidationService.showRoleConflictDialog(
+          context, 
+          phoneCheck['userType'], 
+          'hirer'
+        );
+        return;
+      }
     }
-  }
 
-  // Replace your _verifyOTP method with this one
-  // 3. Simplify OTP verification to use the above method
+    // Show role restriction confirmation dialog
+    bool shouldContinue = await RoleValidationService.showRoleRestrictionDialog(context, 'hirer');
+    
+    if (!shouldContinue) {
+      setState(() {
+        _isLoading = false;
+      });
+      return;
+    }
+
+    // Proceed with Firebase phone verification
+    await FirebaseAuth.instance.verifyPhoneNumber(
+      phoneNumber: phoneNumber,
+      verificationCompleted: (PhoneAuthCredential credential) async {
+        try {
+          UserCredential userCredential = await FirebaseAuth.instance.signInWithCredential(credential);
+          if (userCredential.user != null) {
+            await _processUserData(userCredential.user!);
+          }
+        } catch (e) {
+          setState(() {
+            _isLoading = false;
+          });
+          _showSnackBar('Auto-verification failed: $e', isError: true);
+        }
+      },
+      verificationFailed: (FirebaseAuthException e) {
+        setState(() {
+          _isLoading = false;
+        });
+        _showSnackBar('Verification failed: ${e.message}', isError: true);
+      },
+      codeSent: (String verificationId, int? resendToken) {
+        setState(() {
+          _isLoading = false;
+          _otpSent = true;
+          _verificationId = verificationId;
+        });
+        _showSnackBar('OTP sent to your phone');
+      },
+      codeAutoRetrievalTimeout: (String verificationId) {
+        _verificationId = verificationId;
+      },
+      timeout: Duration(seconds: 60),
+    );
+  } catch (e) {
+    setState(() {
+      _isLoading = false;
+    });
+    _showSnackBar('Error: $e', isError: true);
+  }
+}
+
+// Also update the _verifyOTP method:
 Future<void> _verifyOTP() async {
   if (_otpController.text.isEmpty) {
     _showSnackBar('Please enter the OTP', isError: true);
@@ -903,20 +975,30 @@ Future<void> _verifyOTP() async {
       _showSnackBar('Account created successfully!');
       
       // Navigate to home page
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => IndustrySelectionScreen())
-      );
+  Navigator.of(context).pushAndRemoveUntil(
+  MaterialPageRoute(builder: (_) => IndustrySelectionScreen()),
+  (route) => false,
+);
     }
   } catch (e) {
     if (mounted) {
       setState(() {
         _isLoading = false;
       });
-      _showSnackBar('Verification failed: ${e.toString()}', isError: true);
+      
+      // Show proper error dialog for incorrect OTP
+      if (e.toString().contains('invalid-verification-code') || 
+          e.toString().contains('session-expired')) {
+        RoleValidationService.showIncorrectOtpDialog(context);
+      } else {
+        _showSnackBar('Verification failed: ${e.toString()}', isError: true);
+      }
     }
   }
-} // Replace your _processUserData with this simplified version for debugging
+}
 
+// Don't forget to import the RoleValidationService at the top:
+// import 'package:hey_work/presentation/services/role_validation_service.dart';
 // Fix 1: Process User Data Method
  // 2. Combine the user data processing into a single method
 Future<void> _processUserData(User user) async {
@@ -1042,8 +1124,11 @@ Future<void> _processUserData(User user) async {
         _showSnackBar('Account created successfully!');
 
         // Navigate to next screen
-        Navigator.of(context)
-            .pushReplacement(MaterialPageRoute(builder: (_) => MainScreen()));
+  // Navigate to next screen and clear all previous routes
+Navigator.of(context).pushAndRemoveUntil(
+  MaterialPageRoute(builder: (_) => MainScreen()),
+  (route) => false,
+);
       }
     } catch (e) {
       if (mounted) {
@@ -1057,32 +1142,47 @@ Future<void> _processUserData(User user) async {
   }
 Future<String?> _uploadImage() async {
   if (_selectedImage == null) {
-    return null; // Don't throw an exception, just return null
+    return null;
   }
 
   try {
+    print('Starting optimized image upload...');
+    
+    // Get file size
+    final int fileSize = await _selectedImage!.length();
+    print('Image file size: ${(fileSize / 1024 / 1024).toStringAsFixed(2)} MB');
+
+    // Generate unique filename
     final uuid = Uuid();
     String fileName = '${uuid.v4()}.jpg';
     final storageRef = FirebaseStorage.instance.ref().child('profile_images/$fileName');
     
-    // Add better upload task monitoring
-    final uploadTask = storageRef.putFile(_selectedImage!);
+    // Upload with metadata
+    final uploadTask = storageRef.putFile(
+      _selectedImage!,
+      SettableMetadata(
+        contentType: 'image/jpeg',
+        customMetadata: {
+          'file_size': '${fileSize}',
+          'optimized': 'true',
+        },
+      ),
+    );
     
-    // Add progress tracking if needed
+    // Monitor progress
     uploadTask.snapshotEvents.listen((TaskSnapshot snapshot) {
       final progress = snapshot.bytesTransferred / snapshot.totalBytes;
-      print('Upload is $progress% complete');
-    }, onError: (e) {
-      print('Upload error: $e');
+      print('Upload: ${(progress * 100).toStringAsFixed(1)}%');
     });
     
     final snapshot = await uploadTask;
     final downloadUrl = await snapshot.ref.getDownloadURL();
-    print('Image uploaded successfully: $downloadUrl');
+    
+    print('✅ Upload successful: $downloadUrl');
     return downloadUrl;
   } catch (e) {
-    print('Error uploading image: $e');
-    return null; // Return null instead of throwing an exception
+    print('❌ Upload error: $e');
+    return null;
   }
 }
 
@@ -1158,6 +1258,8 @@ class SignupForm extends StatelessWidget {
   final Function(bool) onTermsChanged;
   final Function() onSendOtp;
   final Function() onSubmit;
+  final Function() onTermsTap;   // Add this
+  final Function() onPrivacyTap; // Add this
 
   const SignupForm({
     Key? key,
@@ -1179,6 +1281,8 @@ class SignupForm extends StatelessWidget {
     required this.onTermsChanged,
     required this.onSendOtp,
     required this.onSubmit,
+    required this.onTermsTap,   // Add this
+    required this.onPrivacyTap, // Add this
   }) : super(key: key);
 
   @override
@@ -1275,7 +1379,7 @@ class SignupForm extends StatelessWidget {
               ),
               SizedBox(height: responsive.getHeight(24)),
 
-              // Terms and Privacy
+              // Terms and Privacy - Updated section
               Row(
                 children: [
                   SizedBox(
@@ -1291,44 +1395,48 @@ class SignupForm extends StatelessWidget {
                     ),
                   ),
                   SizedBox(width: responsive.getWidth(8)),
-                  Text(
-                    "I agree with ",
-                    style: GoogleFonts.roboto(
-                      fontSize: responsive.getFontSize(14),
-                      color: Colors.grey.shade800,
-                    ),
-                  ),
-                  GestureDetector(
-                    onTap: () {
-                      // Navigate to Terms page
-                    },
-                    child: Text(
-                      "Terms",
-                      style: GoogleFonts.roboto(
-                        fontSize: responsive.getFontSize(14),
-                        color: Color(0xFF0033FF),
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ),
-                  Text(
-                    " and ",
-                    style: GoogleFonts.roboto(
-                      fontSize: responsive.getFontSize(14),
-                      color: Colors.grey.shade800,
-                    ),
-                  ),
-                  GestureDetector(
-                    onTap: () {
-                      // Navigate to Privacy page
-                    },
-                    child: Text(
-                      "Privacy",
-                      style: GoogleFonts.roboto(
-                        fontSize: responsive.getFontSize(14),
-                        color: Colors.blue.shade700,
-                        fontWeight: FontWeight.w500,
-                      ),
+                  Expanded(
+                    child: Wrap(
+                      children: [
+                        Text(
+                          "I agree with ",
+                          style: GoogleFonts.roboto(
+                            fontSize: responsive.getFontSize(14),
+                            color: Colors.grey.shade800,
+                          ),
+                        ),
+                        GestureDetector(
+                          onTap: onTermsTap, // Use the callback
+                          child: Text(
+                            "Terms",
+                            style: GoogleFonts.roboto(
+                              fontSize: responsive.getFontSize(14),
+                              color: Color(0xFF0033FF),
+                              fontWeight: FontWeight.w500,
+                              decoration: TextDecoration.underline,
+                            ),
+                          ),
+                        ),
+                        Text(
+                          " and ",
+                          style: GoogleFonts.roboto(
+                            fontSize: responsive.getFontSize(14),
+                            color: Colors.grey.shade800,
+                          ),
+                        ),
+                        GestureDetector(
+                          onTap: onPrivacyTap, // Use the callback
+                          child: Text(
+                            "Privacy Policy",
+                            style: GoogleFonts.roboto(
+                              fontSize: responsive.getFontSize(14),
+                              color: Color(0xFF0033FF),
+                              fontWeight: FontWeight.w500,
+                              decoration: TextDecoration.underline,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
@@ -1374,13 +1482,14 @@ class SignupForm extends StatelessWidget {
                     ),
                     GestureDetector(
                       onTap: () {
-                        // Navigate to login page
+                    Navigator.of(context)
+            .pushReplacement(MaterialPageRoute(builder: (_) => HirerLoginScreen()));
                       },
                       child: Text(
                         "Log in",
                         style: GoogleFonts.roboto(
                           fontSize: responsive.getFontSize(14),
-                          color: Colors.blue.shade700,
+                          color: Color(0xFF0033FF),
                           fontWeight: FontWeight.w500,
                         ),
                       ),
@@ -1397,7 +1506,11 @@ class SignupForm extends StatelessWidget {
 }
 
 // Profile image selector widget
-class ProfileImageSelector extends StatelessWidget {
+// Replace your ProfileImageSelector class with this working version
+
+
+
+class ProfileImageSelector extends StatefulWidget {
   final ResponsiveUtil responsive;
   final File? selectedImage;
   final Function(File) onImagePicked;
@@ -1410,12 +1523,19 @@ class ProfileImageSelector extends StatelessWidget {
   }) : super(key: key);
 
   @override
+  _ProfileImageSelectorState createState() => _ProfileImageSelectorState();
+}
+
+class _ProfileImageSelectorState extends State<ProfileImageSelector> {
+  bool _isProcessing = false;
+
+  @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () => _pickImage(context),
+      onTap: _isProcessing ? null : () => _showImagePickerDialog(context),
       child: Container(
-        width: responsive.getWidth(120),
-        height: responsive.getWidth(120),
+        width: widget.responsive.getWidth(120),
+        height: widget.responsive.getWidth(120),
         decoration: BoxDecoration(
           color: Colors.grey.shade100,
           shape: BoxShape.circle,
@@ -1430,27 +1550,94 @@ class ProfileImageSelector extends StatelessWidget {
               offset: Offset(0, 5),
             ),
           ],
-          image: selectedImage != null
+          image: widget.selectedImage != null
               ? DecorationImage(
-                  image: FileImage(selectedImage!),
+                  image: FileImage(widget.selectedImage!),
                   fit: BoxFit.cover,
                 )
               : null,
         ),
-        child: selectedImage == null
-            ? Icon(
-                Icons.add_a_photo,
-                size: responsive.getWidth(40),
-                color: Colors.grey.shade500,
+        child: _isProcessing
+            ? Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  SizedBox(
+                    width: widget.responsive.getWidth(30),
+                    height: widget.responsive.getWidth(30),
+                    child: CircularProgressIndicator(
+                      strokeWidth: 3,
+                      color: Color(0xFF0033FF),
+                    ),
+                  ),
+                  SizedBox(height: widget.responsive.getHeight(4)),
+                  Text(
+                    "Processing...",
+                    style: GoogleFonts.roboto(
+                      fontSize: widget.responsive.getFontSize(10),
+                      color: Colors.grey.shade600,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
               )
-            : null,
+            : widget.selectedImage == null
+                ? Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.add_a_photo,
+                        size: widget.responsive.getWidth(32),
+                        color: Colors.grey.shade500,
+                      ),
+                      SizedBox(height: widget.responsive.getHeight(4)),
+                      Text(
+                        "Add Photo",
+                        style: GoogleFonts.roboto(
+                          fontSize: widget.responsive.getFontSize(12),
+                          color: Colors.grey.shade600,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  )
+                : Stack(
+                    children: [
+                      Container(), // Empty container for the image background
+                      Positioned(
+                        bottom: 0,
+                        right: 0,
+                        child: Container(
+                          width: widget.responsive.getWidth(32),
+                          height: widget.responsive.getWidth(32),
+                          decoration: BoxDecoration(
+                            color: Color(0xFF0033FF),
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: Colors.white,
+                              width: 2,
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.1),
+                                blurRadius: 4,
+                                offset: Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: Icon(
+                            Icons.edit,
+                            size: widget.responsive.getWidth(16),
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
       ),
     );
   }
 
-  Future<void> _pickImage(BuildContext context) async {
-    final ImagePicker picker = ImagePicker();
-
+  void _showImagePickerDialog(BuildContext context) {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.white,
@@ -1460,84 +1647,220 @@ class ProfileImageSelector extends StatelessWidget {
       builder: (BuildContext context) {
         return SafeArea(
           child: Padding(
-            padding: EdgeInsets.symmetric(
-              vertical: responsive.getHeight(20),
-            ),
+            padding: EdgeInsets.all(widget.responsive.getWidth(20)),
             child: Column(
               mainAxisSize: MainAxisSize.min,
-              children: <Widget>[
+              children: [
+                // Handle bar
+                Container(
+                  width: widget.responsive.getWidth(40),
+                  height: widget.responsive.getHeight(4),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                SizedBox(height: widget.responsive.getHeight(20)),
+                
                 Text(
                   "Select Profile Picture",
                   style: GoogleFonts.roboto(
-                    fontSize: responsive.getFontSize(18),
+                    fontSize: widget.responsive.getFontSize(18),
                     fontWeight: FontWeight.w600,
+                    color: Colors.grey.shade800,
                   ),
                 ),
-                SizedBox(height: responsive.getHeight(20)),
-                ListTile(
-                  leading: Container(
-                    padding: EdgeInsets.all(responsive.getWidth(8)),
-                    decoration: BoxDecoration(
-                      color: Colors.blue.shade50,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Icon(
-                      Icons.photo_library,
-                      color: Color(0xFF0033FF),
-                    ),
+                SizedBox(height: widget.responsive.getHeight(8)),
+                Text(
+                  "Image will be automatically optimized",
+                  style: GoogleFonts.roboto(
+                    fontSize: widget.responsive.getFontSize(12),
+                    color: Colors.grey.shade600,
                   ),
-                  title: Text(
-                    "Gallery",
-                    style: GoogleFonts.roboto(
-                      fontSize: responsive.getFontSize(16),
-                    ),
-                  ),
-                  onTap: () async {
-                    Navigator.of(context).pop();
-                    final XFile? image = await picker.pickImage(
-                      source: ImageSource.gallery,
-                      imageQuality: 80,
-                    );
-                    if (image != null) {
-                      onImagePicked(File(image.path));
-                    }
+                ),
+                SizedBox(height: widget.responsive.getHeight(24)),
+                
+                // Camera Option
+                _buildOptionTile(
+                  context: context,
+                  icon: Icons.camera_alt,
+                  title: "Camera",
+                  subtitle: "Take a new photo",
+                  onTap: () {
+                    Navigator.pop(context);
+                    _pickAndCropImage(ImageSource.camera);
                   },
                 ),
-                ListTile(
-                  leading: Container(
-                    padding: EdgeInsets.all(responsive.getWidth(8)),
-                    decoration: BoxDecoration(
-                      color: Colors.blue.shade50,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Icon(
-                      Icons.camera_alt,
-                      color: Color(0xFF0033FF),
-                    ),
-                  ),
-                  title: Text(
-                    "Camera",
-                    style: GoogleFonts.roboto(
-                      fontSize: responsive.getFontSize(16),
-                    ),
-                  ),
-                  onTap: () async {
-                    Navigator.of(context).pop();
-                    final XFile? image = await picker.pickImage(
-                      source: ImageSource.camera,
-                      imageQuality: 80,
-                    );
-                    if (image != null) {
-                      onImagePicked(File(image.path));
-                    }
+                
+                SizedBox(height: widget.responsive.getHeight(16)),
+                
+                // Gallery Option
+                _buildOptionTile(
+                  context: context,
+                  icon: Icons.photo_library,
+                  title: "Gallery",
+                  subtitle: "Choose from library",
+                  onTap: () {
+                    Navigator.pop(context);
+                    _pickAndCropImage(ImageSource.gallery);
                   },
                 ),
+                
+                SizedBox(height: widget.responsive.getHeight(20)),
               ],
             ),
           ),
         );
       },
     );
+  }
+
+  Widget _buildOptionTile({
+    required BuildContext context,
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: EdgeInsets.all(widget.responsive.getWidth(16)),
+        decoration: BoxDecoration(
+          border: Border.all(color: Colors.grey.shade200),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: widget.responsive.getWidth(48),
+              height: widget.responsive.getWidth(48),
+              decoration: BoxDecoration(
+                color: Color(0xFF0033FF).withOpacity(0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(
+                icon,
+                color: Color(0xFF0033FF),
+                size: widget.responsive.getWidth(24),
+              ),
+            ),
+            SizedBox(width: widget.responsive.getWidth(16)),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: GoogleFonts.roboto(
+                      fontSize: widget.responsive.getFontSize(16),
+                      fontWeight: FontWeight.w500,
+                      color: Colors.grey.shade800,
+                    ),
+                  ),
+                  SizedBox(height: widget.responsive.getHeight(2)),
+                  Text(
+                    subtitle,
+                    style: GoogleFonts.roboto(
+                      fontSize: widget.responsive.getFontSize(12),
+                      color: Colors.grey.shade600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              Icons.arrow_forward_ios,
+              size: widget.responsive.getWidth(16),
+              color: Colors.grey.shade400,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _pickAndCropImage(ImageSource source) async {
+    setState(() {
+      _isProcessing = true;
+    });
+
+    try {
+      print('📸 Starting image selection and processing...');
+      
+      // Pick image with built-in compression
+      final ImagePicker picker = ImagePicker();
+      final XFile? pickedFile = await picker.pickImage(
+        source: source,
+        maxWidth: 1024,     // Optimal size for profile pics
+        maxHeight: 1024,    // Optimal size for profile pics
+        imageQuality: 75,   // Good compression (75% quality)
+      );
+
+      if (pickedFile == null) {
+        setState(() {
+          _isProcessing = false;
+        });
+        return;
+      }
+
+      print('📏 Image picked, starting crop...');
+
+      // Crop with additional compression
+      final CroppedFile? croppedFile = await ImageCropper().cropImage(
+        sourcePath: pickedFile.path,
+        compressFormat: ImageCompressFormat.jpg,
+        compressQuality: 80, // Additional compression
+        uiSettings: [
+          AndroidUiSettings(
+            toolbarTitle: 'Crop Profile Picture',
+            toolbarColor: Color(0xFF0033FF),
+            toolbarWidgetColor: Colors.white,
+            backgroundColor: Colors.black,
+            activeControlsWidgetColor: Color(0xFF0033FF),
+            initAspectRatio: CropAspectRatioPreset.square,
+            lockAspectRatio: true,
+            aspectRatioPresets: [CropAspectRatioPreset.square],
+            showCropGrid: true,
+          ),
+          IOSUiSettings(
+            title: 'Crop Profile Picture',
+            aspectRatioLockEnabled: true,
+            resetAspectRatioEnabled: false,
+            aspectRatioPickerButtonHidden: true,
+          ),
+        ],
+      );
+
+      if (croppedFile != null) {
+        final File finalImage = File(croppedFile.path);
+        final int finalSize = await finalImage.length();
+        final double finalSizeMB = finalSize / 1024 / 1024;
+        
+        print('✅ Image processed! Final size: ${finalSizeMB.toStringAsFixed(2)} MB');
+        
+        widget.onImagePicked(finalImage);
+        
+    
+      }
+    } catch (e) {
+      print('❌ Error processing image: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('❌ Failed to process image. Please try again.'),
+            backgroundColor: Colors.red.shade600,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isProcessing = false;
+        });
+      }
+    }
   }
 }
 

@@ -1,12 +1,128 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-    <!-- Internet permission needed for WhatsApp and URL launching -->
+    
+    <!-- Essential permissions -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    
+    <!-- Phone call permissions -->
+    <uses-permission android:name="android.permission.CALL_PHONE" />
+    
+    <!-- Camera and storage permissions -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" 
+                     android:maxSdkVersion="28" />
+    
+    <!-- NEW: Additional permissions for better compatibility -->
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
+    <uses-permission android:name="android.permission.VIBRATE" />
+    
+    <!-- NEW: Hardware features (optional) -->
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <uses-feature android:name="android.hardware.camera.autofocus" android:required="false" />
+    <uses-feature android:name="android.hardware.telephony" android:required="false" />
+
+    <!-- Package visibility for Android 11+ -->
+    <queries>
+        <!-- For opening URLs in browser -->
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="https" /> 
+        </intent>
+                 
+        <!-- For opening URLs in browser with http -->
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="http" />
+        </intent>
+        
+        <!-- For email apps -->
+        <intent>
+            <action android:name="android.intent.action.SENDTO" />
+            <data android:scheme="mailto" />
+        </intent>
+        
+        <!-- For email sending -->
+        <intent>
+            <action android:name="android.intent.action.SEND" />
+            <data android:mimeType="text/plain" />
+        </intent>
+        
+        <!-- For Gmail app direct access -->
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="googlegmail" />
+        </intent>
+                 
+        <!-- For processing text (required by Flutter) -->
+        <intent>
+            <action android:name="android.intent.action.PROCESS_TEXT" />
+            <data android:mimeType="text/plain" />
+        </intent>
+                 
+        <!-- For WhatsApp integration -->
+        <package android:name="com.whatsapp" />
+        <package android:name="com.whatsapp.w4b" />
+                 
+        <!-- For WhatsApp URI scheme -->
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="whatsapp" />
+        </intent>
+        
+        <!-- WhatsApp web intent -->
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="https"
+                  android:host="wa.me" />
+        </intent>
+        
+        <!-- WhatsApp API intent -->
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="https"
+                  android:host="api.whatsapp.com" />
+        </intent>
+                 
+        <!-- For phone calls -->
+        <intent>
+            <action android:name="android.intent.action.DIAL" />
+            <data android:scheme="tel" />
+        </intent>
+        
+        <!-- For direct phone calls -->
+        <intent>
+            <action android:name="android.intent.action.CALL" />
+            <data android:scheme="tel" />
+        </intent>
+        
+        <!-- Phone app packages -->
+        <package android:name="com.google.android.dialer" />
+        <package android:name="com.android.phone" />
+        <package android:name="com.samsung.android.dialer" />
+        
+        <!-- Email app packages -->
+        <package android:name="com.google.android.gm" />
+        <package android:name="com.microsoft.office.outlook" />
+        <package android:name="com.yahoo.mobile.client.android.mail" />
+    </queries>
 
     <application
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
-        android:label="hey_work">
+        android:label="hey_work"
+        android:enableOnBackInvokedCallback="true"
+        android:requestLegacyExternalStorage="true"
+        android:usesCleartextTraffic="true"
+        android:hardwareAccelerated="true"
+        android:largeHeap="true"
+        android:supportsRtl="true"
+        android:extractNativeLibs="true">
+        
         <activity
             android:name=".MainActivity"
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
@@ -15,8 +131,9 @@
             android:launchMode="singleTop"
             android:taskAffinity=""
             android:theme="@style/LaunchTheme"
-            android:windowSoftInputMode="adjustResize">
-
+            android:windowSoftInputMode="adjustResize"
+            android:screenOrientation="portrait">
+            
             <!-- Specifies an Android theme to apply to this Activity as soon as
                  the Android process has started. This theme is visible to the user
                  while the Flutter UI initializes. After that, this theme continues
@@ -25,52 +142,50 @@
                 android:name="io.flutter.embedding.android.NormalTheme"
                 android:resource="@style/NormalTheme" />
 
-            <intent-filter>
+            <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- CRITICAL: Add this activity for image cropping -->
+        <activity
+            android:name="com.yalantis.ucrop.UCropActivity"
+            android:screenOrientation="portrait"
+            android:theme="@style/Theme.AppCompat.Light.NoActionBar"/>
+
+        <!-- NEW: File provider for image picker compatibility -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
 
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
+            
+        <!-- NEW: Disable automatic backup for better compatibility -->
+        <meta-data
+            android:name="android.app.backup.BACKUP_DATA_KEY"
+            android:value="false" />
     </application>
-
-    <!-- Package visibility for Android 11+ -->
-    <queries>
-        <!-- For opening URLs in browser -->
-        <intent>
-            <action android:name="android.intent.action.VIEW" />
-            <data android:scheme="https" />
-        </intent>
+    
+    <!-- NEW: Support for different screen sizes and densities -->
+    <supports-screens 
+        android:largeScreens="true"
+        android:normalScreens="true"
+        android:smallScreens="true"
+        android:xlargeScreens="true"
+        android:anyDensity="true"
+        android:resizeable="true" />
         
-        <!-- For opening URLs in browser with http -->
-        <intent>
-            <action android:name="android.intent.action.VIEW" />
-            <data android:scheme="http" />
-        </intent>
-        
-        <!-- For processing text (required by Flutter) -->
-        <intent>
-            <action android:name="android.intent.action.PROCESS_TEXT" />
-            <data android:mimeType="text/plain" />
-        </intent>
-        
-        <!-- For WhatsApp integration -->
-        <package android:name="com.whatsapp" />
-        
-        <!-- For WhatsApp URI scheme -->
-        <intent>
-            <action android:name="android.intent.action.VIEW" />
-            <data android:scheme="whatsapp" />
-        </intent>
-        
-        <!-- For phone calls -->
-        <intent>
-            <action android:name="android.intent.action.DIAL" />
-            <data android:scheme="tel" />
-        </intent>
-    </queries>
+    <!-- NEW: Compatible with different Android versions -->
+    <uses-sdk android:minSdkVersion="21" android:targetSdkVersion="34" />
 </manifest>
