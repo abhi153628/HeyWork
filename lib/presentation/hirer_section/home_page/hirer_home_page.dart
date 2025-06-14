@@ -3,10 +3,11 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:hey_work/core/theme/app_colors.dart';
-import 'package:hey_work/presentation/hirer_section/job_managment_screen/job_managment_screen.dart';
-import 'package:hey_work/core/services/database/jobs_service.dart';
-import 'package:hey_work/presentation/worker_section/job_detail_screen/job_application_service.dart';
+
+import 'package:heywork/presentation/worker_section/worker_application_screen/jobs_service.dart';
+import 'package:heywork/core/theme/app_colors.dart';
+import 'package:heywork/presentation/hirer_section/job_managment_screen/job_managment_screen.dart';
+import 'package:heywork/presentation/worker_section/job_detail_screen/job_application_service.dart';
 import 'package:lottie/lottie.dart';
 import '../common/floating_action_button.dart';
 import '../job_catogory.dart';

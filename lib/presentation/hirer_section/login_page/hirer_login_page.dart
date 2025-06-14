@@ -2,13 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:hey_work/presentation/authentication/role_validation_service.dart';
-import 'package:hey_work/presentation/hirer_section/signup_screen/widgets/snack_bar_utils.dart';
+import 'package:heywork/presentation/authentication/role_validation_service.dart';
+import 'package:heywork/presentation/hirer_section/common/bottom_nav_bar.dart';
+import 'package:heywork/presentation/hirer_section/signup_screen/signup_screen_hirer.dart';
 
-import 'package:hey_work/presentation/services/authentication_services.dart';
-import 'package:hey_work/presentation/hirer_section/common/bottom_nav_bar.dart';
-import 'package:hey_work/presentation/hirer_section/signup_screen/signup_screen_hirer.dart';
-import 'package:hey_work/presentation/hirer_section/signup_screen/widgets/responsive_utils.dart';
+import 'package:heywork/presentation/hirer_section/signup_screen/widgets/responsive_utils.dart';
+import 'package:heywork/presentation/services/authentication_services.dart';
 import 'package:lottie/lottie.dart';
 
 

@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import 'package:hey_work/core/services/database/jobs_service.dart';
-import 'package:hey_work/presentation/hirer_section/settings_screen/settings_page.dart';
+
+import 'package:heywork/presentation/worker_section/worker_application_screen/jobs_service.dart';
+import 'package:heywork/presentation/hirer_section/settings_screen/settings_page.dart';
 import 'package:lottie/lottie.dart';
 import 'package:share_plus/share_plus.dart';
 import 'more_jobs_page.dart';

@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:hey_work/core/services/database/jobs_service.dart';
+
 import 'package:google_fonts/google_fonts.dart';
-import 'package:hey_work/core/theme/app_colors.dart';
+
+import 'package:heywork/presentation/worker_section/worker_application_screen/jobs_service.dart';
+import 'package:heywork/core/theme/app_colors.dart';
 import 'package:lottie/lottie.dart';
 import '../hirer_view_job_applications/hirer_view_job_applications.dart';
 

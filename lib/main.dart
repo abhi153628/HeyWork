@@ -5,29 +5,15 @@ import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:hey_work/presentation/common_screens/hire_or_work.dart';
 
-import 'package:hey_work/presentation/common_screens/log_sign.dart';
-
-import 'package:hey_work/presentation/common_screens/splash_screen.dart';
-import 'package:hey_work/presentation/hirer_section/common/navigating_page.dart';
-import 'package:hey_work/presentation/hirer_section/home_page/hirer_home_page.dart';
-import 'package:hey_work/presentation/hirer_section/signup_screen/signup_screen_hirer.dart';
-import 'package:hey_work/presentation/worker_section/home_page/worker_home_page.dart';
-import 'package:hey_work/presentation/worker_section/worker_login_page/worker_login_page.dart';
-import 'package:hey_work/presentation/worker_section/worker_signup_page/worker_signup_page.dart';
+import 'package:heywork/firebase_options.dart';
+import 'package:heywork/presentation/common_screens/splash_screen.dart';
+import 'package:heywork/presentation/worker_section/worker_application_screen/jobs_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'presentation/hirer_section/common/bottom_nav_bar.dart';
-import 'presentation/worker_section/bottom_navigation/bottom_nav_bar.dart';
-import 'presentation/worker_section/worker_application_screen/worker_applications_screen.dart';
 import 'package:provider/provider.dart';
 
 // Core
-import 'package:hey_work/core/services/database/jobs_service.dart';
-import 'package:hey_work/core/theme/app_theme.dart';
 
-// Firebase
-import 'package:hey_work/firebase_options.dart';
 
 // Presentation
 

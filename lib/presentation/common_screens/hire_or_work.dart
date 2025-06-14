@@ -3,12 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:hey_work/presentation/authentication/auth_options_screen.dart';
-import 'package:hey_work/presentation/common_screens/log_sign.dart';
-import 'package:hey_work/presentation/hirer_section/login_page/hirer_login_page.dart';
-import 'package:hey_work/presentation/hirer_section/signup_screen/signup_screen_hirer.dart';
-import 'package:hey_work/presentation/worker_section/worker_login_page/worker_login_page.dart';
-import 'package:hey_work/presentation/worker_section/worker_signup_page/worker_signup_page.dart';
+
+import 'package:heywork/presentation/authentication/auth_options_screen.dart';
+import 'package:heywork/presentation/hirer_section/login_page/hirer_login_page.dart';
+import 'package:heywork/presentation/hirer_section/signup_screen/signup_screen_hirer.dart';
+import 'package:heywork/presentation/worker_section/worker_login_page/worker_login_page.dart';
+import 'package:heywork/presentation/worker_section/worker_signup_page/worker_signup_page.dart';
 
 
 class HirerOrWorker extends StatelessWidget {

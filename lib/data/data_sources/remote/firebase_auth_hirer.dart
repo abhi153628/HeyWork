@@ -4,7 +4,8 @@ import 'dart:io';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
-import 'package:hey_work/data/modals/hirer/hirer_modal.dart';
+import 'package:heywork/data/modals/hirer/hirer_modal.dart';
+
 import 'package:uuid/uuid.dart';
 
 class FirebaseService {

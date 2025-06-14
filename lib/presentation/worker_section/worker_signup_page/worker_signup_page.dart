@@ -3,10 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:hey_work/presentation/authentication/role_validation_service.dart';
-import 'package:hey_work/presentation/common_screens/privacy.dart';
-import 'package:hey_work/presentation/common_screens/terms.dart';
-import 'package:hey_work/presentation/worker_section/worker_login_page/worker_login_page.dart';
+import 'package:heywork/presentation/authentication/role_validation_service.dart';
+import 'package:heywork/presentation/worker_section/worker_login_page/worker_login_page.dart';
+
 import 'package:lottie/lottie.dart';
 import '../../hirer_section/common/bottom_nav_bar.dart';
 import '../../hirer_section/home_page/hirer_home_page.dart';

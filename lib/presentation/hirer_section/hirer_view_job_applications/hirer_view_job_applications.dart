@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:hey_work/core/theme/app_colors.dart';
-import 'package:hey_work/presentation/hirer_section/worker_detail_screen/worker_detail_screen.dart';
+
+import 'package:heywork/core/theme/app_colors.dart';
+import 'package:heywork/presentation/hirer_section/worker_detail_screen/worker_detail_screen.dart';
 import 'package:lottie/lottie.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:cached_network_image/cached_network_image.dart'; // Import for cached images

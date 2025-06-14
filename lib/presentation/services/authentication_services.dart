@@ -4,8 +4,8 @@ import 'dart:async';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'package:hey_work/presentation/common_screens/hire_or_work.dart';
-import 'package:hey_work/presentation/common_screens/log_sign.dart';
+
+import 'package:heywork/presentation/common_screens/hire_or_work.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class AuthService {

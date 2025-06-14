@@ -1,14 +1,17 @@
 // lib/presentation/worker_section/applications/worker_applications_screen.dart
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:hey_work/core/theme/app_colors.dart';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:hey_work/presentation/worker_section/job_detail_screen/job_application_modal.dart';
-import 'package:hey_work/presentation/worker_section/job_detail_screen/job_application_service.dart';
-import 'package:hey_work/presentation/worker_section/job_detail_screen/worker_job_detail_page.dart'; 
-import 'package:hey_work/core/services/database/jobs_service.dart' as jobs_service;
+
+import 'package:heywork/core/theme/app_colors.dart';
+import 'package:heywork/presentation/worker_section/job_detail_screen/job_application_modal.dart';
+import 'package:heywork/presentation/worker_section/job_detail_screen/job_application_service.dart';
+import 'package:heywork/presentation/worker_section/job_detail_screen/worker_job_detail_page.dart';
+import 'package:heywork/presentation/worker_section/worker_application_screen/jobs_service.dart';
 import 'package:lottie/lottie.dart';
+
 
 class WorkerApplicationsScreen extends StatefulWidget {
   const WorkerApplicationsScreen({Key? key}) : super(key: key);
@@ -205,7 +208,7 @@ class _WorkerApplicationsScreenState extends State<WorkerApplicationsScreen>
           Navigator.pop(context);
           
           if (jobDoc.exists) {
-            final job = jobs_service.JobModel.fromFirestore(jobDoc);
+       final job = JobModel.fromFirestore(jobDoc);
             Navigator.push(
               context,
               MaterialPageRoute(

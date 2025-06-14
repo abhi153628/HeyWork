@@ -2,8 +2,9 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:hey_work/core/services/database/jobs_service.dart';
-import 'package:hey_work/core/theme/app_colors.dart';
+import 'package:heywork/presentation/worker_section/worker_application_screen/jobs_service.dart';
+import 'package:heywork/core/theme/app_colors.dart';
+
 import 'package:share_plus/share_plus.dart';
 import 'package:path_provider/path_provider.dart';
 

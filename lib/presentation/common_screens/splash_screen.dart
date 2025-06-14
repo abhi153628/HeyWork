@@ -6,10 +6,11 @@ import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:hey_work/presentation/common_screens/hire_or_work.dart';
-import 'package:hey_work/presentation/hirer_section/common/bottom_nav_bar.dart';
-import 'package:hey_work/presentation/services/authentication_services.dart';
-import 'package:hey_work/presentation/worker_section/bottom_navigation/bottom_nav_bar.dart';
+import 'package:heywork/presentation/common_screens/hire_or_work.dart';
+import 'package:heywork/presentation/hirer_section/common/bottom_nav_bar.dart';
+import 'package:heywork/presentation/services/authentication_services.dart';
+import 'package:heywork/presentation/worker_section/bottom_navigation/bottom_nav_bar.dart';
+
 import 'package:lottie/lottie.dart';
 
 class SplashScreen extends StatefulWidget {

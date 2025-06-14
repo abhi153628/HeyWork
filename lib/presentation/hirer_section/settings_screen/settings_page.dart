@@ -2,10 +2,9 @@ import 'dart:developer';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:hey_work/presentation/common_screens/log_sign.dart';
-import 'package:hey_work/presentation/hirer_section/profile/hirer_profile.dart';
-import 'package:hey_work/presentation/hirer_section/settings_screen/faqs_screen.dart';
-import 'package:hey_work/presentation/services/authentication_services.dart';
+
+import 'package:heywork/presentation/hirer_section/settings_screen/faqs_screen.dart';
+import 'package:heywork/presentation/services/authentication_services.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class SettingsScreen extends StatelessWidget {

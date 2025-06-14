@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:hey_work/presentation/worker_section/worker_profile_page/worker_profile_screenn.dart';
+import 'package:heywork/presentation/worker_section/worker_profile_page/worker_profile_screenn.dart';
 import '../../hirer_section/home_page/hirer_home_page.dart';
 import '../../hirer_section/jobs/posted_jobs.dart';
 import '../../hirer_section/notification_screen/notification.dart'; // Keep import for future use

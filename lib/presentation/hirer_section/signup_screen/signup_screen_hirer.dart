@@ -3,9 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:hey_work/presentation/authentication/role_validation_service.dart';
-import 'package:hey_work/presentation/hirer_section/industry_selecction.dart';
-import 'package:hey_work/presentation/hirer_section/login_page/hirer_login_page.dart';
+import 'package:heywork/presentation/authentication/role_validation_service.dart';
+import 'package:heywork/presentation/hirer_section/industry_selecction.dart';
+import 'package:heywork/presentation/hirer_section/login_page/hirer_login_page.dart';
+
 import 'package:image_cropper/image_cropper.dart';
 import 'package:lottie/lottie.dart';
 import '../common/bottom_nav_bar.dart';

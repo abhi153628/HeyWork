@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:hey_work/core/services/database/jobs_service.dart';
-import 'package:hey_work/presentation/hirer_section/job_managment_screen/job_managment_screen.dart';
+import 'package:heywork/presentation/worker_section/worker_application_screen/jobs_service.dart';
+
+import 'package:heywork/presentation/hirer_section/job_managment_screen/job_managment_screen.dart';
 import 'package:lottie/lottie.dart';
 import '../jobs/posted_jobs.dart';
 import 'package:intl/intl.dart';

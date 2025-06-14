@@ -1,5 +1,5 @@
-name: hey_work
-description: "A new Flutter project."
+name: heywork  
+description:  Heywork - Your professional work app
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
@@ -61,6 +61,21 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^2.0.3
+  flutter_launcher_icons: ^0.14.3
+  
+
+
+flutter_icons:
+  android: true
+  ios: true
+  image_path: "asset/icon/play_store_512.png"  # Your transparent logo
+  
+  # For Android adaptive icons
+  adaptive_icon_background: "#0000CC"  # Your blue color
+  adaptive_icon_foreground: "asset/icon/play_store_512.png"  # Same transparent logo
+  
+  # For iOS
+  ios_icon_background: "#0000CC"
 
 flutter:
   uses-material-design: true

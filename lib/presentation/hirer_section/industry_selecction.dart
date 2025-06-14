@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:hey_work/presentation/hirer_section/common/bottom_nav_bar.dart';
+
+import 'package:heywork/presentation/hirer_section/common/bottom_nav_bar.dart';
 import 'package:lottie/lottie.dart';
 
 import 'home_page/hirer_home_page.dart';

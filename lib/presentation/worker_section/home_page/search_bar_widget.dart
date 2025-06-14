@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:hey_work/core/theme/app_colors.dart';
+import 'package:heywork/core/theme/app_colors.dart';
 
 class SearchBarWidget extends StatefulWidget {
   const SearchBarWidget({Key? key}) : super(key: key);

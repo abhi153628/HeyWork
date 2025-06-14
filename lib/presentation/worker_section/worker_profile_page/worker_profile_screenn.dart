@@ -6,7 +6,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:hey_work/presentation/hirer_section/settings_screen/settings_page.dart';
+import 'package:heywork/presentation/hirer_section/settings_screen/settings_page.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/services.dart';
@@ -14,8 +14,8 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lottie/lottie.dart';
-import 'package:image_cropper/image_cropper.dart'; // Add this import
-import 'package:uuid/uuid.dart'; // Add this import
+import 'package:image_cropper/image_cropper.dart';
+import 'package:uuid/uuid.dart';
 
 class WorkerProfilePage extends StatefulWidget {
   const WorkerProfilePage({Key? key}) : super(key: key);
@@ -48,6 +48,8 @@ class _WorkerProfilePageState extends State<WorkerProfilePage> {
         return;
       }
       
+      print('👤 Loading user data for: ${user.uid}');
+      
       // Get worker data
       final DocumentSnapshot<Map<String, dynamic>> docSnapshot = 
           await _firestore
@@ -60,162 +62,166 @@ class _WorkerProfilePageState extends State<WorkerProfilePage> {
           userData = docSnapshot.data();
         });
         
+        print('✅ Worker data loaded: ${userData?['name']}');
+        
         // Load completed jobs
         await _loadCompletedJobs(user.uid);
+        
       } else {
-        print('Worker document does not exist');
+        print('❌ Worker document does not exist');
         setState(() {
           _isLoading = false;
         });
       }
     } catch (e) {
-      print('Error loading user data: $e');
+      print('❌ Error loading user data: $e');
       setState(() {
         _isLoading = false;
       });
     }
   }
   
+ // Replace your _loadCompletedJobs method with this simple version:
+
+// Replace your _loadCompletedJobs method with this clean version:
+
 Future<void> _loadCompletedJobs(String workerId) async {
   try {
-    // Query for completed jobs where worker was hired
+    print('🔍 Loading hired jobs for worker: $workerId');
+    
+    // Get job applications where worker was HIRED/ACCEPTED by hirer
     final jobsSnapshot = await _firestore
         .collection('jobApplications')
         .where('workerId', isEqualTo: workerId)
-        .where('status', isEqualTo: 'accepted')
         .get();
+
+    print('📊 Found ${jobsSnapshot.docs.length} total job applications');
 
     List<Map<String, dynamic>> jobs = [];
     Map<String, int> categoryCounts = {};
-    int totalJobs = 0;
 
-    // Process each job application
+    // Process each job application and show only HIRED ones
     for (var doc in jobsSnapshot.docs) {
-      final jobData = doc.data();
-      final jobId = jobData['jobId'];
+      final applicationData = doc.data();
+      final applicationStatus = applicationData['status']?.toString() ?? 'pending';
+      
+      print('📋 Checking application: ${applicationData['jobTitle']} - Status: $applicationStatus');
 
-      // Get the actual job details
-      if (jobId != null) {
-        final jobDoc = await _firestore.collection('jobs').doc(jobId).get();
-        if (jobDoc.exists) {
-          final fullJobData = jobDoc.data() ?? {};
-          
-          // Helper function to safely get job title
-          String getJobTitle(Map<String, dynamic> data) {
-            // In your database, jobCategory IS the job title (Cashier, Security Guard, etc.)
-            final jobTitle = data['jobCategory'] ?? 
-                             data['jobTitle'] ?? 
-                             data['title'] ?? 
-                             data['name'] ?? 
-                             'Unknown Job';
-            
-            print('DEBUG: Job title from jobCategory: $jobTitle');
-            return jobTitle;
-          }
-          
-          // Helper function to safely get company name
-          String getCompanyName(Map<String, dynamic> data) {
-            return data['hirerBusinessName'] ?? 
-                   data['company'] ?? 
-                   data['businessName'] ?? 
-                   data['companyName'] ?? 
-                   'Unknown Company';
-          }
-          
-          // Helper function to safely get location
-          String getJobLocation(Map<String, dynamic> data) {
-            return data['hirerLocation'] ?? 
-                   data['location'] ?? 
-                   data['jobLocation'] ?? 
-                   'Unknown Location';
-          }
-          
-          // Helper function to safely get job type
-          String getJobType(Map<String, dynamic> data) {
-            return data['jobType'] ?? 
-                   data['type'] ?? 
-                   data['workType'] ?? 
-                   'part-time';
-          }
-          
-          // Create job details with proper extraction
-          final jobDetails = {
-            'id': jobDoc.id,
-            'jobTitle': getJobTitle(fullJobData),
-            'hirerBusinessName': getCompanyName(fullJobData),
-            'hirerLocation': getJobLocation(fullJobData),
-            'jobType': getJobType(fullJobData),
-            'description': fullJobData['description'] ?? '',
-            'budget': fullJobData['budget'] ?? 0,
-            'date': fullJobData['date'],
-            'createdAt': fullJobData['createdAt'],
-            'status': fullJobData['status'] ?? 'completed',
-            'jobCategory': fullJobData['jobCategory'] ?? 'General',
-            // Include all original data for compatibility
-            ...fullJobData,
-          };
-          
-          jobs.add(jobDetails);
-
-          // Count job categories
-          final category = fullJobData['jobCategory'] ?? 'Uncategorized';
-          categoryCounts[category] = (categoryCounts[category] ?? 0) + 1;
-          totalJobs++;
+      // ONLY include jobs where worker was HIRED/ACCEPTED
+      if (applicationStatus == 'accepted' || 
+          applicationStatus == 'hired' || 
+          applicationStatus == 'completed' || 
+          applicationStatus == 'approved' ||
+          applicationStatus == 'confirmed' ||
+          applicationStatus == 'selected') {
+        
+        // Extract data safely from application
+        final String jobTitle = applicationData['jobTitle']?.toString() ?? 'Unknown Job';
+        final String company = applicationData['jobCompany']?.toString() ?? 'Unknown Company';
+        
+        // Handle location safely
+        String location = 'Unknown Location';
+        if (applicationData['jobLocation'] != null) {
+          location = applicationData['jobLocation'].toString();
         }
+        
+        final String jobType = applicationData['jobType']?.toString() ?? 'part-time';
+        
+        // Handle budget safely
+        dynamic budget = 0;
+        if (applicationData['jobBudget'] != null) {
+          if (applicationData['jobBudget'] is num) {
+            budget = applicationData['jobBudget'];
+          } else if (applicationData['jobBudget'] is String) {
+            budget = int.tryParse(applicationData['jobBudget']) ?? 0;
+          }
+        }
+
+        // Create job details from application data
+        final jobDetails = {
+          'id': doc.id,
+          'jobTitle': jobTitle,
+          'hirerBusinessName': company,
+          'hirerLocation': location,
+          'jobType': jobType,
+          'description': applicationData['jobDescription']?.toString() ?? '',
+          'budget': budget,
+          'date': applicationData['appliedAt'] ?? Timestamp.now(),
+          'createdAt': applicationData['appliedAt'] ?? Timestamp.now(),
+          'jobCategory': jobTitle,
+          'hirerId': applicationData['hirerId']?.toString() ?? '',
+          'workerId': applicationData['workerId']?.toString() ?? '',
+        };
+        
+        jobs.add(jobDetails);
+        categoryCounts[jobTitle] = (categoryCounts[jobTitle] ?? 0) + 1;
+        
+        print('✅ Added hired job: $jobTitle at $company');
       }
     }
 
     setState(() {
       completedJobs = jobs;
       jobCategoryCounts = categoryCounts;
-      totalJobsDone = totalJobs;
+      totalJobsDone = jobs.length;
       _isLoading = false;
     });
+
+    print('📈 Final results: ${jobs.length} hired jobs loaded');
+
   } catch (e) {
-    print('Error loading completed jobs: $e');
+    print('❌ Error loading hired jobs: $e');
     setState(() {
       _isLoading = false;
     });
   }
 }
 
+// Clean work history section WITHOUT any status indicators:
+
 Widget _buildJobHistorySection() {
   return Container(
-    // Reduced bottom margin from 10.h to match other sections
     margin: EdgeInsets.only(bottom: 0),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Completed Jobs',
+          'Work History',
           style: GoogleFonts.roboto(
             fontSize: 18.sp,
             fontWeight: FontWeight.bold,
             color: Colors.black87,
           ),
         ),
-        // Add a small consistent gap between title and content
         SizedBox(height: 8.h),
         
         if (completedJobs.isEmpty)
           Center(
-            // Reduced vertical padding from 24.h to match other sections
             child: Padding(
               padding: EdgeInsets.symmetric(vertical: 16.h),
               child: Column(
                 children: [
                   Icon(
-                    Icons.history,
+                    Icons.work_history,
                     size: 40.sp,
                     color: Colors.grey.shade400,
                   ),
                   SizedBox(height: 12.h),
                   Text(
-                    'No completed jobs',
+                    'No work history yet',
                     style: GoogleFonts.roboto(
                       fontSize: 16.sp,
                       fontWeight: FontWeight.w500,
                       color: Colors.grey.shade600,
+                    ),
+                  ),
+                  SizedBox(height: 4.h),
+                  Text(
+                    'Complete jobs to build your work history',
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.roboto(
+                      fontSize: 12.sp,
+                      color: Colors.grey.shade500,
                     ),
                   ),
                 ],
@@ -226,30 +232,31 @@ Widget _buildJobHistorySection() {
           ListView.builder(
             shrinkWrap: true,
             physics: NeverScrollableScrollPhysics(),
-            // Remove default padding
             padding: EdgeInsets.zero,
             itemCount: completedJobs.length,
             itemBuilder: (context, index) {
               final job = completedJobs[index];
               
-              // Format date
+              // Format date safely
               String formattedDate = 'Unknown date';
-              if (job.containsKey('date') && job['date'] is Timestamp) {
-                final date = (job['date'] as Timestamp).toDate();
-                formattedDate = '${date.day}/${date.month}/${date.year}';
+              try {
+                if (job['date'] != null && job['date'] is Timestamp) {
+                  final date = (job['date'] as Timestamp).toDate();
+                  formattedDate = '${date.day}/${date.month}/${date.year}';
+                }
+              } catch (e) {
+                print('Error formatting date: $e');
               }
               
-              // Last item should have no bottom margin
               final isLastItem = index == completedJobs.length - 1;
               
-              // FIXED: Use the properly extracted job title
-              final jobTitle = job['jobTitle'] ?? 'Unknown Job';
-              final companyName = job['hirerBusinessName'] ?? 'Unknown Company';
-              final jobLocation = job['hirerLocation'] ?? 'Unknown Location';
-              final jobType = job['jobType'] ?? 'Unknown Type';
+              // Extract data safely
+              final String jobTitle = job['jobTitle']?.toString() ?? 'Unknown Job';
+              final String companyName = job['hirerBusinessName']?.toString() ?? 'Unknown Company';
+              final String jobLocation = job['hirerLocation']?.toString() ?? 'Unknown Location';
+              final String jobType = job['jobType']?.toString() ?? 'part-time';
               
               return Container(
-                // Reduced bottom margin from 12.h to 8.h and remove for last item
                 margin: EdgeInsets.only(bottom: isLastItem ? 0 : 8.h),
                 padding: EdgeInsets.all(16.w),
                 decoration: BoxDecoration(
@@ -293,7 +300,7 @@ Widget _buildJobHistorySection() {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                jobTitle, // Now using the correctly extracted job title
+                                jobTitle,
                                 style: GoogleFonts.roboto(
                                   fontSize: 16.sp,
                                   fontWeight: FontWeight.bold,
@@ -302,7 +309,7 @@ Widget _buildJobHistorySection() {
                               ),
                               SizedBox(height: 4.h),
                               Text(
-                                companyName, // Now using the correctly extracted company name
+                                companyName,
                                 style: GoogleFonts.roboto(
                                   fontSize: 14.sp,
                                   color: Colors.grey.shade700,
@@ -311,29 +318,7 @@ Widget _buildJobHistorySection() {
                             ],
                           ),
                         ),
-                        Container(
-                          padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
-                          decoration: BoxDecoration(
-                            color: jobType == 'full-time'
-                                ? Colors.blue.shade100
-                                : jobType == 'part-time'
-                                    ? Colors.amber.shade100
-                                    : Colors.green.shade100,
-                            borderRadius: BorderRadius.circular(4.r),
-                          ),
-                          child: Text(
-                            jobType,
-                            style: GoogleFonts.roboto(
-                              fontSize: 12.sp,
-                              fontWeight: FontWeight.w500,
-                              color: jobType == 'full-time'
-                                  ? Colors.blue.shade800
-                                  : jobType == 'part-time'
-                                      ? Colors.amber.shade800
-                                      : Colors.green.shade800,
-                            ),
-                          ),
-                        ),
+                        // NO STATUS BADGE - completely removed
                       ],
                     ),
                     SizedBox(height: 12.h),
@@ -347,7 +332,7 @@ Widget _buildJobHistorySection() {
                         SizedBox(width: 4.w),
                         Flexible(
                           child: Text(
-                            jobLocation, // Now using the correctly extracted location
+                            jobLocation,
                             style: GoogleFonts.roboto(
                               fontSize: 13.sp,
                               color: Colors.grey.shade600,
@@ -372,8 +357,8 @@ Widget _buildJobHistorySection() {
                       ],
                     ),
                     
-                    // Add budget information if available
-                    if (job['budget'] != null && job['budget'] > 0) ...[
+                    // Show budget if available
+                    if (job['budget'] != null && job['budget'] != 0) ...[
                       SizedBox(height: 8.h),
                       Row(
                         children: [
@@ -384,7 +369,7 @@ Widget _buildJobHistorySection() {
                           ),
                           SizedBox(width: 4.w),
                           Text(
-                            ' ${job['budget']}',
+                            '₹${job['budget']}',
                             style: GoogleFonts.roboto(
                               fontSize: 13.sp,
                               color: Colors.green.shade600,
@@ -403,13 +388,278 @@ Widget _buildJobHistorySection() {
     ),
   );
 }
+
+  // Method 1: Load from job applications with completed status
+  Future<void> _loadFromJobApplications(String workerId) async {
+    try {
+      final jobsSnapshot = await _firestore
+          .collection('jobApplications')
+          .where('workerId', isEqualTo: workerId)
+          .get();
+
+      print('📊 Found ${jobsSnapshot.docs.length} job applications');
+
+      List<Map<String, dynamic>> jobs = [];
+      Map<String, int> categoryCounts = {};
+
+      for (var doc in jobsSnapshot.docs) {
+        final jobData = doc.data();
+        final jobId = jobData['jobId'];
+        final applicationStatus = jobData['status'];
+        
+        print('📋 Application Status: $applicationStatus, JobID: $jobId');
+
+        // Check for completed/accepted status
+        if (applicationStatus != null && 
+            (applicationStatus == 'accepted' || 
+             applicationStatus == 'completed' || 
+             applicationStatus == 'hired' || 
+             applicationStatus == 'finished' ||
+             applicationStatus == 'done' ||
+             applicationStatus == 'success' ||
+             applicationStatus == 'approved')) {
+          
+          if (jobId != null) {
+            final jobDoc = await _firestore.collection('jobs').doc(jobId).get();
+            if (jobDoc.exists) {
+              final fullJobData = jobDoc.data() ?? {};
+              final jobDetails = _createJobDetails(doc.id, fullJobData, jobData);
+              jobs.add(jobDetails);
+              
+              final category = fullJobData['jobCategory'] ?? 'Uncategorized';
+              categoryCounts[category] = (categoryCounts[category] ?? 0) + 1;
+              
+              print('✅ Added completed job: ${jobDetails['jobTitle']}');
+            }
+          }
+        }
+      }
+
+      if (jobs.isNotEmpty) {
+        completedJobs = jobs;
+        jobCategoryCounts = categoryCounts;
+        totalJobsDone = jobs.length;
+        print('✅ Loaded ${jobs.length} completed jobs from applications');
+      }
+    } catch (e) {
+      print('❌ Error loading from job applications: $e');
+    }
+  }
+
+  // Method 2: Load from jobs collection directly
+  Future<void> _loadFromJobsCollection(String workerId) async {
+    try {
+      // Try different field names for worker assignment
+      List<QuerySnapshot> queries = [];
+      
+      // Query 1: assignedWorkerId field
+      queries.add(await _firestore
+          .collection('jobs')
+          .where('assignedWorkerId', isEqualTo: workerId)
+          .get());
+      
+      // Query 2: workerId field
+      queries.add(await _firestore
+          .collection('jobs')
+          .where('workerId', isEqualTo: workerId)
+          .get());
+      
+      // Query 3: hiredWorkerId field
+      queries.add(await _firestore
+          .collection('jobs')
+          .where('hiredWorkerId', isEqualTo: workerId)
+          .get());
+
+      List<Map<String, dynamic>> jobs = [];
+      Map<String, int> categoryCounts = {};
+
+      for (var querySnapshot in queries) {
+        print('🔍 Found ${querySnapshot.docs.length} direct jobs in query');
+        
+        for (var doc in querySnapshot.docs) {
+          final jobData = doc.data() as Map<String, dynamic>;
+          final status = jobData['status'];
+          
+          // Check if job is completed
+          if (status == 'completed' || 
+              status == 'finished' || 
+              status == 'done' ||
+              status == 'success' ||
+              jobData['isCompleted'] == true) {
+            
+            final jobDetails = _createJobDetails(doc.id, jobData, {});
+            jobs.add(jobDetails);
+            
+            final category = jobData['jobCategory'] ?? 'Uncategorized';
+            categoryCounts[category] = (categoryCounts[category] ?? 0) + 1;
+            
+            print('✅ Added direct job: ${jobDetails['jobTitle']}');
+          }
+        }
+      }
+
+      if (jobs.isNotEmpty) {
+        completedJobs = jobs;
+        jobCategoryCounts = categoryCounts;
+        totalJobsDone = jobs.length;
+        print('✅ Loaded ${jobs.length} completed jobs from jobs collection');
+      }
+    } catch (e) {
+      print('❌ Error loading from jobs collection: $e');
+    }
+  }
+
+  // Method 3: Load from work history collection (if exists)
+  Future<void> _loadFromWorkHistoryCollection(String workerId) async {
+    try {
+      final workHistorySnapshot = await _firestore
+          .collection('workHistory')
+          .where('workerId', isEqualTo: workerId)
+          .get();
+
+      print('🔍 Found ${workHistorySnapshot.docs.length} work history records');
+
+      if (workHistorySnapshot.docs.isNotEmpty) {
+        List<Map<String, dynamic>> jobs = [];
+        Map<String, int> categoryCounts = {};
+
+        for (var doc in workHistorySnapshot.docs) {
+          final historyData = doc.data();
+          final jobDetails = _createJobDetails(doc.id, historyData, {});
+          jobs.add(jobDetails);
+          
+          final category = historyData['jobCategory'] ?? 'Uncategorized';
+          categoryCounts[category] = (categoryCounts[category] ?? 0) + 1;
+          
+          print('✅ Added work history: ${jobDetails['jobTitle']}');
+        }
+
+        completedJobs = jobs;
+        jobCategoryCounts = categoryCounts;
+        totalJobsDone = jobs.length;
+        print('✅ Loaded ${jobs.length} jobs from work history collection');
+      }
+    } catch (e) {
+      print('❌ Error loading from work history: $e');
+    }
+  }
+
+  // Method 4: Load from worker document subcollection
+  Future<void> _loadFromWorkerSubcollection(String workerId) async {
+    try {
+      final completedJobsSnapshot = await _firestore
+          .collection('workers')
+          .doc(workerId)
+          .collection('completedJobs')
+          .get();
+
+      print('🔍 Found ${completedJobsSnapshot.docs.length} completed jobs in subcollection');
+
+      if (completedJobsSnapshot.docs.isNotEmpty) {
+        List<Map<String, dynamic>> jobs = [];
+        Map<String, int> categoryCounts = {};
+
+        for (var doc in completedJobsSnapshot.docs) {
+          final jobData = doc.data();
+          final jobDetails = _createJobDetails(doc.id, jobData, {});
+          jobs.add(jobDetails);
+          
+          final category = jobData['jobCategory'] ?? 'Uncategorized';
+          categoryCounts[category] = (categoryCounts[category] ?? 0) + 1;
+          
+          print('✅ Added subcollection job: ${jobDetails['jobTitle']}');
+        }
+
+        completedJobs = jobs;
+        jobCategoryCounts = categoryCounts;
+        totalJobsDone = jobs.length;
+        print('✅ Loaded ${jobs.length} jobs from worker subcollection');
+      }
+    } catch (e) {
+      print('❌ Error loading from worker subcollection: $e');
+    }
+  }
+
+  // Helper method to create consistent job details
+  Map<String, dynamic> _createJobDetails(String docId, Map<String, dynamic> jobData, Map<String, dynamic> applicationData) {
+    // Helper functions for safe data extraction
+    String getJobTitle(Map<String, dynamic> data) {
+      return data['jobCategory'] ?? 
+             data['jobTitle'] ?? 
+             data['title'] ?? 
+             data['name'] ?? 
+             applicationData['jobTitle'] ??
+             'Unknown Job';
+    }
+    
+    String getCompanyName(Map<String, dynamic> data) {
+      return data['hirerBusinessName'] ?? 
+             data['company'] ?? 
+             data['businessName'] ?? 
+             data['companyName'] ?? 
+             applicationData['jobCompany'] ??
+             'Unknown Company';
+    }
+    
+    String getJobLocation(Map<String, dynamic> data) {
+      if (data['hirerLocation'] != null) {
+        final loc = data['hirerLocation'];
+        if (loc is Map && loc['placeName'] != null) {
+          return loc['placeName'];
+        } else if (loc is String) {
+          return loc;
+        }
+      }
+      return data['location'] ?? 
+             data['jobLocation'] ?? 
+             applicationData['jobLocation'] ??
+             'Unknown Location';
+    }
+    
+    String getJobType(Map<String, dynamic> data) {
+      return data['jobType'] ?? 
+             data['type'] ?? 
+             data['workType'] ?? 
+             applicationData['jobType'] ??
+             'part-time';
+    }
+    
+    dynamic getBudget(Map<String, dynamic> data) {
+      return data['budget'] ?? 
+             data['salary'] ?? 
+             data['payment'] ?? 
+             applicationData['jobBudget'] ??
+             0;
+    }
+
+    return {
+      'id': docId,
+      'jobTitle': getJobTitle(jobData),
+      'hirerBusinessName': getCompanyName(jobData),
+      'hirerLocation': getJobLocation(jobData),
+      'jobType': getJobType(jobData),
+      'description': jobData['description'] ?? '',
+      'budget': getBudget(jobData),
+      'date': jobData['date'] ?? jobData['createdAt'] ?? applicationData['appliedAt'],
+      'createdAt': jobData['createdAt'] ?? applicationData['appliedAt'],
+      'status': 'completed',
+      'jobCategory': jobData['jobCategory'] ?? 'General',
+      // Include original data
+      ...jobData,
+    };
+  }
+
+// Replace your _loadCompletedJobs method with this version that only shows HIRED jobs:
+
+
+// Update the section title and empty state to reflect "Work History" (hired jobs only):
+
   
   void _navigateBack(BuildContext context) {
     Navigator.pop(context);
   }
   
   void _navigateToEditProfile(BuildContext context) {
-    // Show bottom sheet for editing profile
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -417,7 +667,6 @@ Widget _buildJobHistorySection() {
       builder: (context) => EditProfileBottomSheet(
         userData: userData,
         onProfileUpdated: () {
-          // Reload user data after update
           _loadUserData();
         },
       ),
@@ -427,49 +676,40 @@ Widget _buildJobHistorySection() {
   @override
   Widget build(BuildContext context) {
     SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle(
-      statusBarColor: Color(0xFF414ce4),
+      statusBarColor: Colors.transparent,
       statusBarIconBrightness: Brightness.light,
       statusBarBrightness: Brightness.dark,
     ));
     
-    return SafeArea(
-      child: Scaffold(
-        body: _isLoading
-            ? Center(
-                child: SizedBox(
-                        width: 140,
-                        height: 140,
-                        child:Lottie.asset('asset/Animation - 1748495844642 (1).json', ),
-                      ),
-              )
-            : SingleChildScrollView(
-                padding: EdgeInsets.only(bottom: 16.h),
-                child: Column(
-                  children: [
-                    // Top curved background with profile
-                    _buildProfileHeader(),
-      
-                    // Body content with consistent spacing
-                    Padding(
-                      padding: EdgeInsets.all(16.w),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // Edit Profile Button
-                          _buildEditProfileButton(),
-      
-                          // Experience section
-                          _buildExperienceSection(),
-      
-                          // Job history with reduced gap
-                          _buildJobHistorySection(),
-                        ],
-                      ),
+    return Scaffold(
+      body: _isLoading
+          ? Center(
+              child: SizedBox(
+                      width: 140,
+                      height: 140,
+                      child:Lottie.asset('asset/Animation - 1748495844642 (1).json', ),
                     ),
-                  ],
-                ),
+            )
+          : SingleChildScrollView(
+              padding: EdgeInsets.only(bottom: 16.h),
+              child: Column(
+                children: [
+                  _buildProfileHeader(),
+    
+                  Padding(
+                    padding: EdgeInsets.all(16.w),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildEditProfileButton(),
+                        _buildExperienceSection(),
+                        _buildJobHistorySection(),
+                      ],
+                    ),
+                  ),
+                ],
               ),
-      ),
+            ),
     );
   }
 
@@ -490,7 +730,7 @@ Widget _buildJobHistorySection() {
     
     return Container(
       width: double.infinity,
-      height: 330.h,
+      height: MediaQuery.of(context).size.height * 0.45,
       decoration: BoxDecoration(
         color: Color(0xFF414ce4),
         borderRadius: BorderRadius.only(
@@ -500,7 +740,6 @@ Widget _buildJobHistorySection() {
       ),
       child: Stack(
         children: [
-          // Background design elements
           Positioned(
             left: -90.w,
             top: 140.h,
@@ -532,44 +771,45 @@ Widget _buildJobHistorySection() {
             ),
           ),
 
-          // Content
-          Padding(
-            padding: EdgeInsets.only(bottom: 20.h),
-            child: Column(
-              children: [
-                // Back button and title
-                Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 25.w, vertical: 20.h),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      SizedBox(width: 35.w), // For symmetry
-                      Text(
-                        "Worker ",
-                        style: GoogleFonts.roboto(
-                          color: Colors.white,
-                          fontSize: 20.sp,
-                          fontWeight: FontWeight.bold,
+          SafeArea(
+            child: Padding(
+              padding: EdgeInsets.only(bottom: 20.h),
+              child: Column(
+                children: [
+                  Padding(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 25.w, 
+                      vertical: 15.h,
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        SizedBox(width: 35.w),
+                        Text(
+                          "Worker",
+                          style: GoogleFonts.roboto(
+                            color: Colors.white,
+                            fontSize: 20.sp,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
-                      ),
-                      InkWell(
-                        onTap: () => Navigator.of(context).push(
-                          MaterialPageRoute(builder: (context) => SettingsScreen()),
+                        InkWell(
+                          onTap: () => Navigator.of(context).push(
+                            MaterialPageRoute(builder: (context) => SettingsScreen()),
+                          ),
+                          child: Icon(
+                            Icons.menu,
+                            color: Colors.white,
+                            size: 28.sp,
+                          ),
                         ),
-                        child: Icon(
-                          Icons.menu,
-                          color: Colors.white,
-                          size: 28.sp,
-                        ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
 
-                // Profile picture
-                Padding(
-                  padding: const EdgeInsets.all(19.0),
-                  child: Container(
+                  Spacer(flex: 1),
+
+                  Container(
                     width: 110.w,
                     height: 110.w,
                     decoration: BoxDecoration(
@@ -617,42 +857,43 @@ Widget _buildJobHistorySection() {
                             ),
                     ),
                   ),
-                ),
 
-                SizedBox(height: 16.h),
+                  Spacer(flex: 1),
 
-                // Worker name with verification icon
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      name,
-                      style: GoogleFonts.roboto(
-                        color: Colors.white,
-                        fontSize: 27.sp,
-                        fontWeight: FontWeight.bold,
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Flexible(
+                        child: Text(
+                          name,
+                          style: GoogleFonts.roboto(
+                            color: Colors.white,
+                            fontSize: 27.sp,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          textAlign: TextAlign.center,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
-                    ),
-                    SizedBox(width: 4.w),
-                    Container(
-                      padding: EdgeInsets.all(2.w),
-                      decoration: BoxDecoration(
-                        color: Colors.green,
-                        shape: BoxShape.circle,
+                      SizedBox(width: 4.w),
+                      Container(
+                        padding: EdgeInsets.all(2.w),
+                        decoration: BoxDecoration(
+                          color: Colors.green,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          Icons.check,
+                          color: Colors.white,
+                          size: 16.sp,
+                        ),
                       ),
-                      child: Icon(
-                        Icons.check,
-                        color: Colors.white,
-                        size: 16.sp,
-                      ),
-                    ),
-                  ],
-                ),
+                    ],
+                  ),
 
-                // Location
-                Padding(
-                  padding: const EdgeInsets.only(top: 10),
-                  child: Row(
+                  SizedBox(height: 8.h),
+
+                  Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Icon(
@@ -670,12 +911,15 @@ Widget _buildJobHistorySection() {
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.center,
                         ),
                       ),
                     ],
                   ),
-                ),
-              ],
+
+                  Spacer(flex: 2),
+                ],
+              ),
             ),
           ),
         ],
@@ -760,10 +1004,8 @@ Widget _buildJobHistorySection() {
               ),
             ],
           ),
-          // Reduced spacing for consistency
           SizedBox(height: 12.h),
           
-          // Work count with colored badge
           Row(
             children: [
               Container(
@@ -794,10 +1036,8 @@ Widget _buildJobHistorySection() {
             ],
           ),
           
-          // Reduced spacing for consistency
           SizedBox(height: 12.h),
           
-          // Job category statistics
           if (jobCategoryCounts.isNotEmpty) ...[
             Text(
               'Experience by Category:',
@@ -807,7 +1047,7 @@ Widget _buildJobHistorySection() {
                 color: Colors.black87,
               ),
             ),
-            SizedBox(height: 8.h), // Reduced from 12.h
+            SizedBox(height: 8.h),
             Wrap(
               spacing: 10.w,
               runSpacing: 10.h,
@@ -835,8 +1075,7 @@ Widget _buildJobHistorySection() {
           ] else ...[
             Center(
               child: Padding(
-                // Reduced padding for consistency
-                padding: EdgeInsets.all(12.h), // Reduced from 16.h
+                padding: EdgeInsets.all(12.h),
                 child: Column(
                   children: [
                     Icon(
@@ -844,7 +1083,7 @@ Widget _buildJobHistorySection() {
                       size: 40.sp,
                       color: Colors.grey.shade400,
                     ),
-                    SizedBox(height: 8.h), // Reduced from 12.h
+                    SizedBox(height: 8.h),
                     Text(
                       'No work history yet',
                       style: GoogleFonts.roboto(
@@ -853,9 +1092,9 @@ Widget _buildJobHistorySection() {
                         color: Colors.grey.shade600,
                       ),
                     ),
-                    SizedBox(height: 6.h), // Reduced from 8.h
+                    SizedBox(height: 6.h),
                     Text(
-                      'You have no prior work experience in the app',
+                      'Complete your first job to see your experience here',
                       textAlign: TextAlign.center,
                       style: GoogleFonts.roboto(
                         fontSize: 14.sp,
@@ -874,6 +1113,8 @@ Widget _buildJobHistorySection() {
 
  
 }
+
+// [The EditProfileBottomSheet and related classes remain the same as in your original code]
 
 // Enhanced EditProfileBottomSheet with image cropping and compression
 class EditProfileBottomSheet extends StatefulWidget {

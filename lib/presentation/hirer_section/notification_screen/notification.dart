@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:hey_work/main.dart';
+import 'package:heywork/core/theme/app_colors.dart';
+
 
 class NotificationPage extends StatelessWidget {
   const NotificationPage({Key? key}) : super(key: key);
@@ -23,7 +24,7 @@ class NotificationPage extends StatelessWidget {
             Icon(
               Icons.person_outline,
               size: 64.sp,
-              color: AppTheme.primaryBlue,
+              color: Colors.blue,
             ),
             SizedBox(height: 16.h),
             Text(
