@@ -1,10 +1,9 @@
 // lib/core/services/auth/auth_service.dart
 import 'dart:async';
-
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-
 import 'package:heywork/presentation/common_screens/hire_or_work.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -65,6 +64,7 @@ Future<void> signOutAndNavigateToLogin(BuildContext context) async {
     await _auth.signOut();
     
     // Navigate to login screen
+    // ignore: use_build_context_synchronously
     Navigator.of(context).pushAndRemoveUntil(
       MaterialPageRoute(builder: (context) => HirerOrWorker()), // Use your actual login screen
       (route) => false,
@@ -72,6 +72,7 @@ Future<void> signOutAndNavigateToLogin(BuildContext context) async {
   } catch (e) {
     print('Error signing out: $e');
     // Show error to user
+    // ignore: use_build_context_synchronously
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('Logout failed: ${e.toString()}')),
     );
@@ -87,8 +88,10 @@ Future<void> signOutAndNavigateToLogin(BuildContext context) async {
       
       await _auth.signOut();
     } catch (e) {
-      print('Error signing out: $e');
-      throw e;
+      if (kDebugMode) {
+        print('Error signing out: $e');
+      }
+      rethrow;
     }
   }
 
