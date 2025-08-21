@@ -7,9 +7,9 @@
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:141872790596:android:38d1f70446347cca205011",
+        "mobilesdk_app_id": "1:141872790596:android:9bb35d0d8549c0aa205011",
         "android_client_info": {
-          "package_name": "com.example.hey_work"
+          "package_name": "com.heywork.app"
         }
       },
       "oauth_client": [],

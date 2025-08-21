@@ -73,7 +73,7 @@ No long waits. No hassle. Just real jobs, fast.
 Employers ready to hire – today!
 
 Don't have the app? Download HeyWork now:
-https://play.google.com/store/apps/details?id=com.example.hey_work
+https://play.google.com/store/apps/details?id=com.heywork.app
 
 ✅ Local Jobs
 ✅ 1-Click Apply  
