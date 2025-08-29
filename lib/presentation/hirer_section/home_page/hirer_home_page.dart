@@ -25,7 +25,7 @@ class SearchBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final appThemeBackgroundGrey = Colors.grey[200];
+    final appThemeBackgroundGrey = const Color.fromARGB(255, 255, 255, 255);
 
     return GestureDetector(
       onTap: () => _showJobCategoriesSearchSheet(context),
@@ -41,13 +41,14 @@ class SearchBar extends StatelessWidget {
               offset: const Offset(0, 3),
             ),
           ],
+        border: Border.all(width: 0.8,color: const Color.fromARGB(123, 0, 0, 0))
         ),
         padding: EdgeInsets.symmetric(horizontal: 17.w, vertical: 12.h),
         child: Row(
           children: [
             Flexible(
               child: Text(
-                'Start a job search',
+                'Start a Job Post',
                 style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                   fontSize: 14.sp, // More responsive font size
                 ),
@@ -55,10 +56,13 @@ class SearchBar extends StatelessWidget {
               ),
             ),
             const Spacer(),
-            Icon(
-              Icons.search,
-              color: Colors.grey,
-              size: 20.sp, // Responsive icon size
+            Padding(
+              padding: const EdgeInsets.only(left: 60),
+              child: Icon(
+                Icons.search,
+                color: Colors.grey,
+                size: 20.sp, // Responsive icon size
+              ),
             ),
           ],
         ),
@@ -537,11 +541,12 @@ class _HirerHomePageState extends State<HirerHomePage> {
               onNotification: (scrollInfo) => false,
               child: Stack(
                 children: [
+                   
                   //! S C R O L L A B L E  C O N T E N T
                   CustomScrollView(
                     slivers: [
                       SliverToBoxAdapter(
-                        child: SizedBox(height: 60.h), // Space for search bar
+                        child: SizedBox(height: 65.h), // Space for search bar
                       ),
                       SliverPadding(
                         padding:
@@ -594,10 +599,10 @@ class _HirerHomePageState extends State<HirerHomePage> {
 
     return Column(
       children: [
-        for (var row in categoryRows)
+        for (int rowIndex = 0; rowIndex < categoryRows.length; rowIndex++)
           Column(
             children: [
-              _buildJobCategoryRow(row, itemWidth),
+              _buildJobCategoryRow(categoryRows[rowIndex], itemWidth, rowIndex),
               SizedBox(height: 16.h),
             ],
           ),
@@ -605,16 +610,106 @@ class _HirerHomePageState extends State<HirerHomePage> {
     );
   }
 
-  Widget _buildJobCategoryRow(List<JobCategoryInfo> categories, double itemWidth) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: categories.map((category) {
+  Widget _buildJobCategoryRow(List<JobCategoryInfo> categories, double itemWidth, int rowIndex) {
+    // For the 3rd row (index 2), replace the 4th item with "Post a Job" button
+    List<Widget> rowItems = [];
+    
+    if (rowIndex == 2 && categories.length >= 3) {
+      // Add first 3 categories from the 3rd row
+      for (int i = 0; i < 3; i++) {
+        rowItems.add(_buildJobCategoryCard(
+          icon: categories[i].icon,
+          title: categories[i].title,
+          width: itemWidth,
+        ));
+      }
+      // Add "Post a Job" button as the 4th item
+      rowItems.add(_buildPostJobCard(itemWidth));
+    } else {
+      // For other rows, show all categories normally
+      rowItems = categories.map((category) {
         return _buildJobCategoryCard(
           icon: category.icon,
           title: category.title,
           width: itemWidth,
         );
-      }).toList(),
+      }).toList();
+    }
+    
+    // Fill remaining space if needed to maintain grid alignment
+    while (rowItems.length < 4) {
+      rowItems.add(SizedBox(width: itemWidth));
+    }
+    
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: rowItems,
+    );
+  }
+
+  Widget _buildPostJobCard(double width) {
+    final cardSize = width.clamp(30.0, 70.0); // Constrain card size
+
+    return GestureDetector(
+      onTap: () {
+        showModalBottomSheet(
+          context: context,
+          isScrollControlled: true,
+          backgroundColor: Colors.transparent,
+          builder: (context) => WorkerTypeBottomSheet(
+            jobCategory: 'General Job',
+          ),
+        );
+      },
+      child: SizedBox(
+        width: width,
+        child: Column(
+          children: [
+            // Card container with blue background and plus icon
+            Container(
+              width: cardSize,
+              height: cardSize,
+              decoration: BoxDecoration(
+                color: const Color(0xFF0E18FF), // Blue background
+                borderRadius: BorderRadius.circular(12.r),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.grey.withOpacity(0.2),
+                    spreadRadius: 1,
+                    blurRadius: 5,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Center(
+                child: Icon(
+                  Icons.add,
+                  size: (cardSize * 0.5).clamp(20.0, 35.0), // Slightly larger plus icon
+                  color: Colors.white,
+                ),
+              ),
+            ),
+            SizedBox(height: 8.h),
+            // Text label
+            SizedBox(
+              width: width,
+              height: 36.h,
+              child: Text(
+                'Post a Job',
+                textAlign: TextAlign.center,
+                overflow: TextOverflow.ellipsis,
+                maxLines: 2,
+                style: TextStyle(
+                  fontSize: 11.sp,
+                  fontWeight: FontWeight.w500,
+                  height: 1.2,
+                  letterSpacing: -0.2,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -690,7 +785,6 @@ class _HirerHomePageState extends State<HirerHomePage> {
 }
 
 //! M Y  J O B S  S E C T I O N
-//! M Y  J O B S  S E C T I O N
 class MyJobsSection extends StatefulWidget {
   const MyJobsSection({Key? key}) : super(key: key);
 
@@ -700,7 +794,7 @@ class MyJobsSection extends StatefulWidget {
 
 class _MyJobsSectionState extends State<MyJobsSection> {
   final JobService _jobService = JobService();
-  final JobApplicationService _applicationService = JobApplicationService(); // Add this line
+  final JobApplicationService _applicationService = JobApplicationService();
 
   @override
   Widget build(BuildContext context) {

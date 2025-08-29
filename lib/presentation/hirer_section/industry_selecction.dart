@@ -292,7 +292,7 @@ class _IndustrySelectionScreenState extends State<IndustrySelectionScreen> {
 
               //! S U B H E A D E R
               Text(
-                'Choose the type of works you will be ready get hired for.',
+                'Choose the primary industry under which your business belongs.',
                 style: TextStyle(
                   fontSize: 16,
                   color: Colors.grey[700],

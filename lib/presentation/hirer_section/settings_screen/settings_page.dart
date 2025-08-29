@@ -501,10 +501,10 @@ class SettingsScreen extends StatelessWidget {
                 _buildSupportOption(
                   icon: Icons.email_outlined,
                   title: "Email Support",
-                  subtitle: "help.heywork@gmail.com",
+                  subtitle: "heywork.help@gmail.com",
                   onTap: () {
                     Navigator.pop(context);
-                    _launchURL('mailto:help.heywork@gmail.com');
+                    _launchURL('mailto:heywork.help@gmail.com');
                   },
                   screenWidth: screenWidth,
                 ),
@@ -512,10 +512,10 @@ class SettingsScreen extends StatelessWidget {
                 _buildSupportOption(
                   icon: Icons.phone_outlined,
                   title: "Call Support",
-                  subtitle: "+91 9778756394",
+                  subtitle: "+91 9778503805",
                   onTap: () {
                     Navigator.pop(context);
-                    _launchURL('tel:+919778756394');
+                    _launchURL('tel:+919778503805');
                   },
                   screenWidth: screenWidth,
                 ),
@@ -754,7 +754,7 @@ class HelpFeedbackPage extends StatelessWidget {
       print('Error launching URL: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Unable to open. Please contact help.heywork@gmail.com directly.'),
+          content: Text('Unable to open. Please contact heywork.help@gmail.com directly.'),
           backgroundColor: Colors.red.shade600,
           duration: Duration(seconds: 3),
         ),
@@ -765,7 +765,7 @@ class HelpFeedbackPage extends StatelessWidget {
   void _openGmailCompose(BuildContext context, String subject) async {
     try {
       // First try to open Gmail app directly
-      String gmailAppUrl = "googlegmail://co?to=help.heywork@gmail.com&subject=${Uri.encodeComponent(subject)}";
+      String gmailAppUrl = "googlegmail://co?to=heywork.help@gmail.com&subject=${Uri.encodeComponent(subject)}";
       final Uri gmailUri = Uri.parse(gmailAppUrl);
       
       if (await canLaunchUrl(gmailUri)) {
@@ -779,7 +779,7 @@ class HelpFeedbackPage extends StatelessWidget {
     
     try {
       // Second try: Use mailto with Gmail preference
-      String mailtoUrl = "mailto:help.heywork@gmail.com?subject=${Uri.encodeComponent(subject)}";
+      String mailtoUrl = "mailto:heywork.help@gmail.com?subject=${Uri.encodeComponent(subject)}";
       final Uri mailtoUri = Uri.parse(mailtoUrl);
       
       if (await canLaunchUrl(mailtoUri)) {
@@ -793,7 +793,7 @@ class HelpFeedbackPage extends StatelessWidget {
     
     try {
       // Third try: Gmail web interface as fallback
-      String gmailWebUrl = "https://mail.google.com/mail/?view=cm&to=help.heywork@gmail.com&su=${Uri.encodeComponent(subject)}";
+      String gmailWebUrl = "https://mail.google.com/mail/?view=cm&to=heywork.help@gmail.com&su=${Uri.encodeComponent(subject)}";
       final Uri webUri = Uri.parse(gmailWebUrl);
       
       if (await canLaunchUrl(webUri)) {
@@ -837,7 +837,7 @@ class HelpFeedbackPage extends StatelessWidget {
               style: TextStyle(fontWeight: FontWeight.w600),
             ),
             SizedBox(height: 4),
-            Text('Please email us manually at: help.heywork@gmail.com'),
+            Text('Please email us manually at: heywork.help@gmail.com'),
           ],
         ),
         backgroundColor: Colors.orange.shade600,
@@ -846,7 +846,7 @@ class HelpFeedbackPage extends StatelessWidget {
           label: 'Copy Email',
           textColor: Colors.white,
           onPressed: () {
-            Clipboard.setData(ClipboardData(text: 'help.heywork@gmail.com'));
+            Clipboard.setData(ClipboardData(text: 'heywork.help@gmail.com'));
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text('Email copied to clipboard!'),

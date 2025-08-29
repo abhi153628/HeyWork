@@ -370,7 +370,7 @@ class _JobDetailsScreenState extends State<JobDetailsScreen>
         Padding(
           padding: EdgeInsets.only(left: 8.w, bottom: 12.h),
           child: Text(
-            'Select Date and Time',
+            'When do you need the worker ?',
             style: GoogleFonts.poppins(
               fontSize: 16.sp,
               fontWeight: FontWeight.w500,
@@ -500,7 +500,7 @@ class _JobDetailsScreenState extends State<JobDetailsScreen>
         Padding(
           padding: EdgeInsets.only(left: 8.w, bottom: 12.h),
           child: Text(
-            'Budget (₹)',
+            'Daily Wage (₹)',
             style: GoogleFonts.poppins(
               fontSize: 16.sp,
               fontWeight: FontWeight.w500,

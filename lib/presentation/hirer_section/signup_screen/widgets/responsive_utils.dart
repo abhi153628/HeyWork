@@ -90,8 +90,8 @@ class FormValidator {
 
   // Validate location
   static String? validateLocation(String? value) {
-    if (value == null || value.isEmpty) {
-      return 'Please enter your location';
+    if (value == null || value.trim().isEmpty) {
+      return 'Please select your location';
     }
     return null;
   }

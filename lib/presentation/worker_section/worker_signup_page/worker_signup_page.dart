@@ -5,11 +5,9 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:heywork/presentation/authentication/role_validation_service.dart';
 import 'package:heywork/presentation/worker_section/worker_login_page/worker_login_page.dart';
-
 import 'package:lottie/lottie.dart';
 import '../../hirer_section/common/bottom_nav_bar.dart';
 import '../../hirer_section/home_page/hirer_home_page.dart';
-
 import '../../hirer_section/signup_screen/widgets/responsive_utils.dart';
 import '../bottom_navigation/bottom_nav_bar.dart';
 import '../home_page/worker_home_page.dart';
@@ -22,8 +20,297 @@ import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
 import 'package:image_cropper/image_cropper.dart'; // Add this import
 import 'package:path/path.dart' as path; // Add this import
+import 'dart:async';
 
 // Import utility classes
+// Google Places API Service
+class GooglePlacesService {
+  static const String GOOGLE_PLACES_API_KEY = 'AIzaSyDesC50s7p1LcBNRBhT1DzkmwlO1C4M6p8'; // Replace with your actual API key
+  
+  // Cache for storing recent searches
+  static final Map<String, List<PlaceInfo>> _cache = {};
+  static const int CACHE_DURATION_MINUTES = 30;
+  static final Map<String, DateTime> _cacheTimestamps = {};
+
+  // Session token for billing optimization
+  static String? _sessionToken;
+  
+  static String get sessionToken {
+    _sessionToken ??= const Uuid().v4();
+    return _sessionToken!;
+  }
+
+  static void resetSession() {
+    _sessionToken = null;
+  }
+
+  static Future<List<PlaceInfo>> getAutocompleteSuggestions(String input) async {
+    if (input.length < 2) return [];
+
+    // Check cache first
+    final cacheKey = input.toLowerCase().trim();
+    if (_cache.containsKey(cacheKey) && _cacheTimestamps.containsKey(cacheKey)) {
+      final cacheTime = _cacheTimestamps[cacheKey]!;
+      if (DateTime.now().difference(cacheTime).inMinutes < CACHE_DURATION_MINUTES) {
+        return _cache[cacheKey]!;
+      }
+    }
+
+    try {
+      final results = await _fetchFromGooglePlaces(input);
+      
+      // Cache the results
+      _cache[cacheKey] = results;
+      _cacheTimestamps[cacheKey] = DateTime.now();
+      
+      return results;
+    } catch (e) {
+      print('Google Places API Error: $e');
+      // Return fallback data for common Indian cities
+      return _getFallbackSuggestions(input);
+    }
+  }
+
+  static Future<List<PlaceInfo>> _fetchFromGooglePlaces(String input) async {
+    // FIXED: Correct validation logic
+    if (GOOGLE_PLACES_API_KEY == 'YOUR_API_KEY_HERE' || GOOGLE_PLACES_API_KEY.isEmpty) {
+      throw Exception('Please configure your Google Places API key');
+    }
+
+    const String url = 'https://places.googleapis.com/v1/places:autocomplete';
+    
+    final Map<String, String> headers = {
+      'Content-Type': 'application/json',
+      'X-Goog-Api-Key': GOOGLE_PLACES_API_KEY,
+      'X-Goog-FieldMask': 'suggestions.placePrediction.placeId,suggestions.placePrediction.text,suggestions.placePrediction.structuredFormat,suggestions.placePrediction.types',
+    };
+
+    final Map<String, dynamic> requestBody = {
+      'input': input,
+      'sessionToken': sessionToken,
+      'locationBias': {
+        'rectangle': {
+          'low': {'latitude': 6.4626999, 'longitude': 68.1097},
+          'high': {'latitude': 35.513327, 'longitude': 97.39535869999999}
+        }
+      },
+      'includedPrimaryTypes': [
+        'locality',
+        'sublocality',
+        'administrative_area_level_1',
+        'administrative_area_level_2',
+        'postal_code'
+      ],
+      'includedRegionCodes': ['IN'],
+      'languageCode': 'en',
+    };
+
+    print('🔑 Using API Key: ${GOOGLE_PLACES_API_KEY.substring(0, 10)}...');
+    print('🌐 Making request to: $url');
+
+    final response = await http.post(
+      Uri.parse(url),
+      headers: headers,
+      body: json.encode(requestBody),
+    );
+
+    print('📥 Response status: ${response.statusCode}');
+    print('📥 Response body: ${response.body}');
+
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body);
+      final suggestions = data['suggestions'] as List<dynamic>? ?? [];
+      
+      List<PlaceInfo> results = [];
+      
+      for (var suggestion in suggestions) {
+        final placePrediction = suggestion['placePrediction'];
+        if (placePrediction != null) {
+          final placeInfo = PlaceInfo.fromGooglePlaces(placePrediction);
+          if (placeInfo != null) {
+            results.add(placeInfo);
+          }
+        }
+      }
+      
+      print('✅ Successfully parsed ${results.length} suggestions');
+      return results;
+    } else {
+      throw Exception('HTTP ${response.statusCode}: ${response.body}');
+    }
+  }
+
+  static Future<PlaceDetails?> getPlaceDetails(String placeId) async {
+    try {
+      final String url = 'https://places.googleapis.com/v1/places/$placeId';
+      
+      final Map<String, String> headers = {
+        'Content-Type': 'application/json',
+        'X-Goog-Api-Key': GOOGLE_PLACES_API_KEY,
+        'X-Goog-FieldMask': 'location,displayName,formattedAddress',
+      };
+
+      final response = await http.get(Uri.parse(url), headers: headers);
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        return PlaceDetails.fromJson(data);
+      }
+    } catch (e) {
+      print('Error fetching place details: $e');
+    }
+    return null;
+  }
+
+  static List<PlaceInfo> _getFallbackSuggestions(String input) {
+    final fallbackCities = [
+      PlaceInfo(
+        placeId: 'fallback_mumbai',
+        displayName: 'Mumbai, Maharashtra, India',
+        formattedAddress: 'Mumbai, Maharashtra, India',
+      ),
+      PlaceInfo(
+        placeId: 'fallback_delhi',
+        displayName: 'Delhi, NCR, India',
+        formattedAddress: 'Delhi, NCR, India',
+      ),
+      PlaceInfo(
+        placeId: 'fallback_bangalore',
+        displayName: 'Bangalore, Karnataka, India',
+        formattedAddress: 'Bangalore, Karnataka, India',
+      ),
+      PlaceInfo(
+        placeId: 'fallback_hyderabad',
+        displayName: 'Hyderabad, Telangana, India',
+        formattedAddress: 'Hyderabad, Telangana, India',
+      ),
+      PlaceInfo(
+        placeId: 'fallback_chennai',
+        displayName: 'Chennai, Tamil Nadu, India',
+        formattedAddress: 'Chennai, Tamil Nadu, India',
+      ),
+      PlaceInfo(
+        placeId: 'fallback_pune',
+        displayName: 'Pune, Maharashtra, India',
+        formattedAddress: 'Pune, Maharashtra, India',
+      ),
+    ];
+
+    return fallbackCities
+        .where((city) => city.displayName.toLowerCase().contains(input.toLowerCase()))
+        .toList();
+  }
+}
+
+// Data models
+class PlaceInfo {
+  final String placeId;
+  final String displayName;
+  final String formattedAddress;
+  final String? mainText;
+  final String? secondaryText;
+
+  PlaceInfo({
+    required this.placeId,
+    required this.displayName,
+    required this.formattedAddress,
+    this.mainText,
+    this.secondaryText,
+  });
+
+  static PlaceInfo? fromGooglePlaces(Map<String, dynamic> data) {
+    try {
+      final placeId = data['placeId'] as String?;
+      final text = data['text'];
+      final structuredFormat = data['structuredFormat'];
+      
+      if (placeId == null || text == null) return null;
+      
+      String displayName = text['text'] ?? '';
+      String? mainText;
+      String? secondaryText;
+      
+      if (structuredFormat != null) {
+        mainText = structuredFormat['mainText']?['text'];
+        secondaryText = structuredFormat['secondaryText']?['text'];
+        
+        if (mainText != null && secondaryText != null) {
+          displayName = '$mainText, $secondaryText';
+        }
+      }
+      
+      return PlaceInfo(
+        placeId: placeId,
+        displayName: displayName,
+        formattedAddress: displayName,
+        mainText: mainText,
+        secondaryText: secondaryText,
+      );
+    } catch (e) {
+      print('Error parsing place info: $e');
+      return null;
+    }
+  }
+
+  Map<String, String> toMap() {
+    return {
+      'placeId': placeId,
+      'placeName': displayName,
+      'formattedAddress': formattedAddress,
+    };
+  }
+}
+
+class PlaceDetails {
+  final double? latitude;
+  final double? longitude;
+  final String? displayName;
+  final String? formattedAddress;
+
+  PlaceDetails({
+    this.latitude,
+    this.longitude,
+    this.displayName,
+    this.formattedAddress,
+  });
+
+  static PlaceDetails? fromJson(Map<String, dynamic> data) {
+    try {
+      final location = data['location'];
+      final displayName = data['displayName']?['text'];
+      final formattedAddress = data['formattedAddress'];
+      
+      return PlaceDetails(
+        latitude: location?['latitude']?.toDouble(),
+        longitude: location?['longitude']?.toDouble(),
+        displayName: displayName,
+        formattedAddress: formattedAddress,
+      );
+    } catch (e) {
+      print('Error parsing place details: $e');
+      return null;
+    }
+  }
+}
+
+// Debouncer utility
+class Debouncer {
+  final int milliseconds;
+  Timer? _timer;
+
+  Debouncer({required this.milliseconds});
+
+  void run(VoidCallback action) {
+    _timer?.cancel();
+    _timer = Timer(Duration(milliseconds: milliseconds), action);
+  }
+
+  void dispose() {
+    _timer?.cancel();
+  }
+}
+
+// Form validators
 
 // Phone input field widget
 class PhoneInputField extends StatefulWidget {
@@ -272,6 +559,10 @@ class _WorkerSignupPageState extends State<WorkerSignupPage> {
   // Responsive util instance
   final ResponsiveUtil _responsive = ResponsiveUtil();
 
+
+   List<PlaceInfo> _locationSuggestions = [];
+  PlaceInfo? _selectedLocation;
+
   // Debouncer for location search
   final Debouncer _searchDebouncer = Debouncer(milliseconds: 500);
 
@@ -286,9 +577,7 @@ class _WorkerSignupPageState extends State<WorkerSignupPage> {
   final ImagePicker _picker = ImagePicker();
   File? _selectedImage;
 
-  // Location suggestions
-  List<Map<String, String>> _locationSuggestions = [];
-  Map<String, String>? _selectedLocation;
+
 
   // Phone verification
   bool _otpSent = false;
@@ -395,12 +684,14 @@ class _WorkerSignupPageState extends State<WorkerSignupPage> {
                     _locationSuggestions = suggestions;
                   });
                 },
-                onLocationSelected: (location) {
-                  setState(() {
-                    _selectedLocation = location;
-                    _locationController.text = location['placeName'] ?? '';
-                  });
-                },
+          onLocationSelected: (location) {
+  setState(() {
+    _selectedLocation = location;
+    _locationController.text = location.displayName;
+    _locationSuggestions.clear(); // Clear suggestions after selection
+  });
+  GooglePlacesService.resetSession(); // Reset session after selection
+},
                 onSearchLocation: (query) {
                   _searchDebouncer.run(() {
                     _fetchLocationSuggestions(query);
@@ -435,23 +726,25 @@ class _WorkerSignupPageState extends State<WorkerSignupPage> {
     );
   }
 
-  Future<void> _fetchLocationSuggestions(String query) async {
-    if (query.length < 3) {
-      setState(() {
-        _locationSuggestions = [];
-      });
-      return;
-    }
+Future<void> _fetchLocationSuggestions(String query) async {
+  if (query.length < 3) {
+    setState(() {
+      _locationSuggestions = [];
+    });
+    return;
+  }
 
-    try {
-      final suggestions = await fetchLocationSuggestions(query);
+  try {
+    final suggestions = await GooglePlacesService.getAutocompleteSuggestions(query);
+    if (mounted) {
       setState(() {
         _locationSuggestions = suggestions;
       });
-    } catch (e) {
-      _showSnackBar('Error fetching locations: $e', isError: true);
     }
+  } catch (e) {
+    _showSnackBar('Error fetching locations: $e', isError: true);
   }
+}
 
   // Location API methods
   // Cached location data for faster results
@@ -1035,23 +1328,20 @@ class _WorkerSignupPageState extends State<WorkerSignupPage> {
       }
 
       // Create a comprehensive user data map with null checks
-      Map<String, dynamic> userData = {
-        'id': user.uid,
-        'name': _nameController.text.isNotEmpty
-            ? _nameController.text.trim()
-            : "User",
-        'location': _selectedLocation != null
-            ? _selectedLocation!['placeName']
-            : _locationController.text.isNotEmpty
-                ? _locationController.text.trim()
-                : "",
-        'loginPhoneNumber': _phoneController.text.isNotEmpty
-            ? "+91${_phoneController.text.trim()}"
-            : "",
-        'userType': 'worker',
-        'profileImage': imageUrl,
-        'createdAt': FieldValue.serverTimestamp(),
-      };
+Map<String, dynamic> userData = {
+  'id': user.uid,
+  'name': _nameController.text.isNotEmpty
+      ? _nameController.text.trim()
+      : "User",
+  'location': _selectedLocation?.displayName ?? _locationController.text.trim(),
+  'placeId': _selectedLocation?.placeId ?? '',
+  'loginPhoneNumber': _phoneController.text.isNotEmpty
+      ? "+91${_phoneController.text.trim()}"
+      : "",
+  'userType': 'worker',
+  'profileImage': imageUrl,
+  'createdAt': FieldValue.serverTimestamp(),
+};
 
       print('Saving worker data: $userData');
 
@@ -1269,18 +1559,18 @@ class SignupForm extends StatelessWidget {
   final TextEditingController phoneController;
   final TextEditingController otpController;
   final File? selectedImage;
-  final List<Map<String, String>> locationSuggestions;
+  final List<PlaceInfo> locationSuggestions; // Updated type
   final bool otpSent;
   final bool acceptedTerms;
   final Function(File) onImagePicked;
-  final Function(List<Map<String, String>>) onSuggestionsFetched;
-  final Function(Map<String, String>) onLocationSelected;
+  final Function(List<PlaceInfo>) onSuggestionsFetched; // Updated type
+  final Function(PlaceInfo) onLocationSelected; // Updated type
   final Function(String) onSearchLocation;
   final Function(bool) onTermsChanged;
   final Function() onSendOtp;
   final Function() onSubmit;
-  final Function() onTermsTap; // Add this
-  final Function() onPrivacyTap; // Add this
+  final Function() onTermsTap;
+  final Function() onPrivacyTap;
 
   const SignupForm({
     Key? key,
@@ -1302,8 +1592,8 @@ class SignupForm extends StatelessWidget {
     required this.onTermsChanged,
     required this.onSendOtp,
     required this.onSubmit,
-    required this.onTermsTap, // Add this
-    required this.onPrivacyTap, // Add this
+    required this.onTermsTap,
+    required this.onPrivacyTap,
   }) : super(key: key);
 
   @override
@@ -1975,9 +2265,9 @@ class LabelText extends StatelessWidget {
 class LocationSelector extends StatefulWidget {
   final ResponsiveUtil responsive;
   final TextEditingController controller;
-  final List<Map<String, String>> suggestions;
+  final List<PlaceInfo> suggestions;
   final Function(String) onSearchChanged;
-  final Function(Map<String, String>) onLocationSelected;
+  final Function(PlaceInfo) onLocationSelected;
 
   const LocationSelector({
     Key? key,
@@ -2025,8 +2315,14 @@ class _LocationSelectorState extends State<LocationSelector> {
     });
 
     widget.onSearchChanged(query);
-    setState(() {
-      _isSearching = false;
+    
+    // Reset searching state after a delay
+    Future.delayed(Duration(milliseconds: 1000), () {
+      if (mounted) {
+        setState(() {
+          _isSearching = false;
+        });
+      }
     });
   }
 
@@ -2041,7 +2337,7 @@ class _LocationSelectorState extends State<LocationSelector> {
             color: Colors.black87,
           ),
           decoration: InputDecoration(
-            hintText: "Select location of business",
+            hintText: "Search for your location",
             hintStyle: GoogleFonts.roboto(
               fontSize: widget.responsive.getFontSize(16),
               color: Colors.grey.shade500,
@@ -2057,11 +2353,9 @@ class _LocationSelectorState extends State<LocationSelector> {
                     child: SizedBox(
                       height: widget.responsive.getWidth(16),
                       width: widget.responsive.getWidth(16),
-                      child: SizedBox(
-                        width: 80,
-                        height: 80,
-                        child: Lottie.asset(
-                            'asset/Animation - 1748495844642 (1).json'),
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Color(0xFF0033FF),
                       ),
                     ),
                   )
@@ -2085,8 +2379,7 @@ class _LocationSelectorState extends State<LocationSelector> {
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
-              borderSide:
-                  BorderSide(color: const Color(0xFF0033FF), width: 1.5),
+              borderSide: BorderSide(color: Color(0xFF0033FF), width: 1.5),
             ),
             errorBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
@@ -2104,7 +2397,7 @@ class _LocationSelectorState extends State<LocationSelector> {
           validator: FormValidator.validateLocation,
           textInputAction: TextInputAction.next,
           onTap: () {
-            if (widget.controller.text.length >= 3) {
+            if (widget.controller.text.length >= 3 && widget.suggestions.isNotEmpty) {
               setState(() {
                 _showSuggestions = true;
               });
@@ -2129,11 +2422,8 @@ class _LocationSelectorState extends State<LocationSelector> {
             child: ListView.builder(
               shrinkWrap: true,
               physics: NeverScrollableScrollPhysics(),
-              padding:
-                  EdgeInsets.symmetric(vertical: widget.responsive.getHeight(8)),
-              itemCount: widget.suggestions.length > 5
-                  ? 5
-                  : widget.suggestions.length,
+              padding: EdgeInsets.symmetric(vertical: widget.responsive.getHeight(8)),
+              itemCount: widget.suggestions.length > 5 ? 5 : widget.suggestions.length,
               itemBuilder: (context, index) {
                 final suggestion = widget.suggestions[index];
                 return InkWell(
@@ -2151,20 +2441,53 @@ class _LocationSelectorState extends State<LocationSelector> {
                     ),
                     child: Row(
                       children: [
-                        Icon(
-                          Icons.location_on,
-                          size: widget.responsive.getWidth(20),
-                          color: const Color(0xFF0033FF),
+                        Container(
+                          width: widget.responsive.getWidth(36),
+                          height: widget.responsive.getWidth(36),
+                          decoration: BoxDecoration(
+                            color: Color(0xFF0033FF).withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Icon(
+                            Icons.location_on,
+                            size: widget.responsive.getWidth(20),
+                            color: Color(0xFF0033FF),
+                          ),
                         ),
                         SizedBox(width: widget.responsive.getWidth(12)),
                         Expanded(
-                          child: Text(
-                            suggestion['placeName'] ?? '',
-                            style: GoogleFonts.roboto(
-                              fontSize: widget.responsive.getFontSize(14),
-                              color: Colors.grey.shade800,
-                            ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                suggestion.mainText ?? suggestion.displayName,
+                                style: GoogleFonts.roboto(
+                                  fontSize: widget.responsive.getFontSize(14),
+                                  fontWeight: FontWeight.w500,
+                                  color: Colors.grey.shade800,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              if (suggestion.secondaryText != null) ...[
+                                SizedBox(height: widget.responsive.getHeight(2)),
+                                Text(
+                                  suggestion.secondaryText!,
+                                  style: GoogleFonts.roboto(
+                                    fontSize: widget.responsive.getFontSize(12),
+                                    color: Colors.grey.shade600,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
+                            ],
                           ),
+                        ),
+                        Icon(
+                          Icons.north_west,
+                          size: widget.responsive.getWidth(16),
+                          color: Colors.grey.shade400,
                         ),
                       ],
                     ),

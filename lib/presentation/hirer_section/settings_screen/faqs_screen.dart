@@ -36,7 +36,7 @@ class _FAQsPageState extends State<FAQsPage> {
     ),
     FAQItem(
       question: "Who can I contact for support?",
-      answer: "You can reach our support team at help.heywork@gmail.com or call +91 9778756394. We're here to help with any questions or issues you may have while using HeyWork.",
+      answer: "You can reach our support team at heywork.help@gmail.com or call +91 9778503805. We're here to help with any questions or issues you may have while using HeyWork.",
     ),
   ];
 

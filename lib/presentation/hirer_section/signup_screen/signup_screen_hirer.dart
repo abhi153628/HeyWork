@@ -6,12 +6,10 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:heywork/presentation/authentication/role_validation_service.dart';
 import 'package:heywork/presentation/hirer_section/industry_selecction.dart';
 import 'package:heywork/presentation/hirer_section/login_page/hirer_login_page.dart';
-
 import 'package:image_cropper/image_cropper.dart';
 import 'package:lottie/lottie.dart';
 import '../common/bottom_nav_bar.dart';
 import '../home_page/hirer_home_page.dart';
-
 import 'widgets/responsive_utils.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -19,11 +17,339 @@ import 'package:uuid/uuid.dart';
 import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
-import 'package:url_launcher/url_launcher.dart'; // Add this import
+import 'package:url_launcher/url_launcher.dart';
+import 'dart:async';
 
-import 'package:path/path.dart' as path;
+// Google Places API Service
+class GooglePlacesService {
+  static const String GOOGLE_PLACES_API_KEY = 'AIzaSyDesC50s7p1LcBNRBhT1DzkmwlO1C4M6p8'; // Replace with your actual API key
+  
+  // Cache for storing recent searches
+  static final Map<String, List<PlaceInfo>> _cache = {};
+  static const int CACHE_DURATION_MINUTES = 30;
+  static final Map<String, DateTime> _cacheTimestamps = {};
 
-// Import utility classes
+  // Session token for billing optimization
+  static String? _sessionToken;
+  
+  static String get sessionToken {
+    _sessionToken ??= const Uuid().v4();
+    return _sessionToken!;
+  }
+
+  static void resetSession() {
+    _sessionToken = null;
+  }
+
+  static Future<List<PlaceInfo>> getAutocompleteSuggestions(String input) async {
+    if (input.length < 2) return [];
+
+    // Check cache first
+    final cacheKey = input.toLowerCase().trim();
+    if (_cache.containsKey(cacheKey) && _cacheTimestamps.containsKey(cacheKey)) {
+      final cacheTime = _cacheTimestamps[cacheKey]!;
+      if (DateTime.now().difference(cacheTime).inMinutes < CACHE_DURATION_MINUTES) {
+        return _cache[cacheKey]!;
+      }
+    }
+
+    try {
+      final results = await _fetchFromGooglePlaces(input);
+      
+      // Cache the results
+      _cache[cacheKey] = results;
+      _cacheTimestamps[cacheKey] = DateTime.now();
+      
+      return results;
+    } catch (e) {
+      print('Google Places API Error: $e');
+      // Return fallback data for common Indian cities
+      return _getFallbackSuggestions(input);
+    }
+  }
+
+static Future<List<PlaceInfo>> _fetchFromGooglePlaces(String input) async {
+    // ✅ FIXED: Correct validation logic
+    if (GOOGLE_PLACES_API_KEY == 'YOUR_API_KEY_HERE' || GOOGLE_PLACES_API_KEY.isEmpty) {
+      throw Exception('Please configure your Google Places API key');
+    }
+
+    const String url = 'https://places.googleapis.com/v1/places:autocomplete';
+    
+    final Map<String, String> headers = {
+      'Content-Type': 'application/json',
+      'X-Goog-Api-Key': GOOGLE_PLACES_API_KEY,
+      'X-Goog-FieldMask': 'suggestions.placePrediction.placeId,suggestions.placePrediction.text,suggestions.placePrediction.structuredFormat,suggestions.placePrediction.types',
+    };
+
+    final Map<String, dynamic> requestBody = {
+      'input': input,
+      'sessionToken': sessionToken,
+      'locationBias': {
+        'rectangle': {
+          'low': {'latitude': 6.4626999, 'longitude': 68.1097},
+          'high': {'latitude': 35.513327, 'longitude': 97.39535869999999}
+        }
+      },
+      'includedPrimaryTypes': [
+        'locality',
+        'sublocality',
+        'administrative_area_level_1',
+        'administrative_area_level_2',
+        'postal_code'
+      ],
+      'includedRegionCodes': ['IN'],
+      'languageCode': 'en',
+      // 'maxResultCount': 8,
+    };
+
+    print('🔑 Using API Kery: ${GOOGLE_PLACES_API_KEY.substring(0, 10)}...');
+    print('🌐 Making request to: $url');
+
+    final response = await http.post(
+      Uri.parse(url),
+      headers: headers,
+      body: json.encode(requestBody),
+    );
+
+    print('📥 Response status: ${response.statusCode}');
+    print('📥 Response body: ${response.body}');
+
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body);
+      final suggestions = data['suggestions'] as List<dynamic>? ?? [];
+      
+      List<PlaceInfo> results = [];
+      
+      for (var suggestion in suggestions) {
+        final placePrediction = suggestion['placePrediction'];
+        if (placePrediction != null) {
+          final placeInfo = PlaceInfo.fromGooglePlaces(placePrediction);
+          if (placeInfo != null) {
+            results.add(placeInfo);
+          }
+        }
+      }
+      
+      print('✅ Successfully parsed ${results.length} suggestions');
+      return results;
+    } else {
+      throw Exception('HTTP ${response.statusCode}: ${response.body}');
+    }
+  }
+
+  static Future<PlaceDetails?> getPlaceDetails(String placeId) async {
+    try {
+      final String url = 'https://places.googleapis.com/v1/places/$placeId';
+      
+      final Map<String, String> headers = {
+        'Content-Type': 'application/json',
+        'X-Goog-Api-Key': GOOGLE_PLACES_API_KEY,
+        'X-Goog-FieldMask': 'location,displayName,formattedAddress',
+      };
+
+      final response = await http.get(Uri.parse(url), headers: headers);
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        return PlaceDetails.fromJson(data);
+      }
+    } catch (e) {
+      print('Error fetching place details: $e');
+    }
+    return null;
+  }
+
+  static List<PlaceInfo> _getFallbackSuggestions(String input) {
+    final fallbackCities = [
+      PlaceInfo(
+        placeId: 'fallback_mumbai',
+        displayName: 'Mumbai, Maharashtra, India',
+        formattedAddress: 'Mumbai, Maharashtra, India',
+      ),
+      PlaceInfo(
+        placeId: 'fallback_delhi',
+        displayName: 'Delhi, NCR, India',
+        formattedAddress: 'Delhi, NCR, India',
+      ),
+      PlaceInfo(
+        placeId: 'fallback_bangalore',
+        displayName: 'Bangalore, Karnataka, India',
+        formattedAddress: 'Bangalore, Karnataka, India',
+      ),
+      PlaceInfo(
+        placeId: 'fallback_hyderabad',
+        displayName: 'Hyderabad, Telangana, India',
+        formattedAddress: 'Hyderabad, Telangana, India',
+      ),
+      PlaceInfo(
+        placeId: 'fallback_chennai',
+        displayName: 'Chennai, Tamil Nadu, India',
+        formattedAddress: 'Chennai, Tamil Nadu, India',
+      ),
+      PlaceInfo(
+        placeId: 'fallback_pune',
+        displayName: 'Pune, Maharashtra, India',
+        formattedAddress: 'Pune, Maharashtra, India',
+      ),
+    ];
+
+    return fallbackCities
+        .where((city) => city.displayName.toLowerCase().contains(input.toLowerCase()))
+        .toList();
+  }
+}
+
+// Data models
+class PlaceInfo {
+  final String placeId;
+  final String displayName;
+  final String formattedAddress;
+  final String? mainText;
+  final String? secondaryText;
+
+  PlaceInfo({
+    required this.placeId,
+    required this.displayName,
+    required this.formattedAddress,
+    this.mainText,
+    this.secondaryText,
+  });
+
+  static PlaceInfo? fromGooglePlaces(Map<String, dynamic> data) {
+    try {
+      final placeId = data['placeId'] as String?;
+      final text = data['text'];
+      final structuredFormat = data['structuredFormat'];
+      
+      if (placeId == null || text == null) return null;
+      
+      String displayName = text['text'] ?? '';
+      String? mainText;
+      String? secondaryText;
+      
+      if (structuredFormat != null) {
+        mainText = structuredFormat['mainText']?['text'];
+        secondaryText = structuredFormat['secondaryText']?['text'];
+        
+        if (mainText != null && secondaryText != null) {
+          displayName = '$mainText, $secondaryText';
+        }
+      }
+      
+      return PlaceInfo(
+        placeId: placeId,
+        displayName: displayName,
+        formattedAddress: displayName,
+        mainText: mainText,
+        secondaryText: secondaryText,
+      );
+    } catch (e) {
+      print('Error parsing place info: $e');
+      return null;
+    }
+  }
+
+  Map<String, String> toMap() {
+    return {
+      'placeId': placeId,
+      'placeName': displayName,
+      'formattedAddress': formattedAddress,
+    };
+  }
+}
+
+class PlaceDetails {
+  final double? latitude;
+  final double? longitude;
+  final String? displayName;
+  final String? formattedAddress;
+
+  PlaceDetails({
+    this.latitude,
+    this.longitude,
+    this.displayName,
+    this.formattedAddress,
+  });
+
+  static PlaceDetails? fromJson(Map<String, dynamic> data) {
+    try {
+      final location = data['location'];
+      final displayName = data['displayName']?['text'];
+      final formattedAddress = data['formattedAddress'];
+      
+      return PlaceDetails(
+        latitude: location?['latitude']?.toDouble(),
+        longitude: location?['longitude']?.toDouble(),
+        displayName: displayName,
+        formattedAddress: formattedAddress,
+      );
+    } catch (e) {
+      print('Error parsing place details: $e');
+      return null;
+    }
+  }
+}
+
+// Debouncer utility
+class Debouncer {
+  final int milliseconds;
+  Timer? _timer;
+
+  Debouncer({required this.milliseconds});
+
+  void run(VoidCallback action) {
+    _timer?.cancel();
+    _timer = Timer(Duration(milliseconds: milliseconds), action);
+  }
+
+  void dispose() {
+    _timer?.cancel();
+  }
+}
+
+// Form validators
+class FormValidator {
+  static String? validateName(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return 'Please enter your name';
+    }
+    if (value.trim().length < 2) {
+      return 'Name must be at least 2 characters';
+    }
+    return null;
+  }
+
+  static String? validateBusinessName(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return 'Please enter your business name';
+    }
+    if (value.trim().length < 2) {
+      return 'Business name must be at least 2 characters';
+    }
+    return null;
+  }
+
+  static String? validateLocation(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return 'Please select your location';
+    }
+    return null;
+  }
+
+  static String? validatePhoneNumber(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return 'Please enter your phone number';
+    }
+    if (value.trim().length != 10) {
+      return 'Phone number must be 10 digits';
+    }
+    if (!RegExp(r'^[0-9]+$').hasMatch(value.trim())) {
+      return 'Phone number must contain only digits';
+    }
+    return null;
+  }
+}
 
 // Phone input field widget
 class PhoneInputField extends StatefulWidget {
@@ -60,8 +386,7 @@ class _PhoneInputFieldState extends State<PhoneInputField> {
             color: Colors.grey.shade50,
             borderRadius: BorderRadius.circular(10),
             border: Border.all(
-              color:
-                  widget.otpSent ? Colors.grey.shade300 : Colors.grey.shade200,
+              color: widget.otpSent ? Colors.grey.shade300 : Colors.grey.shade200,
               width: 1,
             ),
           ),
@@ -89,14 +414,12 @@ class _PhoneInputFieldState extends State<PhoneInputField> {
                   ),
                 ),
               ),
-
               // Divider
               Container(
                 height: widget.responsive.getHeight(30),
                 width: 1,
                 color: Colors.grey.shade300,
               ),
-
               // Phone input
               Expanded(
                 child: TextFormField(
@@ -222,7 +545,6 @@ class _PhoneInputFieldState extends State<PhoneInputField> {
                 return null;
               },
               textAlign: TextAlign.left,
-              // Enable auto-fill for OTP codes
               autofillHints: const [AutofillHints.oneTimeCode],
             ),
           ),
@@ -286,9 +608,9 @@ class _HirerSignupPageState extends State<HirerSignupPage> {
   final ImagePicker _picker = ImagePicker();
   File? _selectedImage;
 
-  // Location suggestions
-  List<Map<String, String>> _locationSuggestions = [];
-  Map<String, String>? _selectedLocation;
+  // Location suggestions - Updated for Google Places
+  List<PlaceInfo> _locationSuggestions = [];
+  PlaceInfo? _selectedLocation;
 
   // Phone verification
   bool _otpSent = false;
@@ -297,7 +619,6 @@ class _HirerSignupPageState extends State<HirerSignupPage> {
   @override
   void initState() {
     super.initState();
-    // Add +91 as default country code for India
     _phoneController.text = '';
   }
 
@@ -319,7 +640,7 @@ class _HirerSignupPageState extends State<HirerSignupPage> {
       if (await canLaunchUrl(uri)) {
         await launchUrl(
           uri,
-          mode: LaunchMode.externalApplication, // Forces external browser
+          mode: LaunchMode.externalApplication,
         );
       } else {
         _showSnackBar('Could not open the URL: $url', isError: true);
@@ -335,7 +656,7 @@ class _HirerSignupPageState extends State<HirerSignupPage> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor: isError ? Colors.red.shade800 : Colors.blue.shade700,
+        backgroundColor: isError ? Colors.red.shade800 : const Color(0xFF0033FF),
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(10),
@@ -355,18 +676,17 @@ class _HirerSignupPageState extends State<HirerSignupPage> {
 
   @override
   Widget build(BuildContext context) {
-    // Initialize responsive util
     _responsive.init(context);
 
     return Scaffold(
       body: SafeArea(
         child: _isLoading
-            ?  Center(
+            ? Center(
                 child: SizedBox(
-                      width: 140,
-                      height: 140,
-                      child:Lottie.asset('asset/Animation - 1748495844642 (1).json', ),
-                    )
+                  width: 140,
+                  height: 140,
+                  child: Lottie.asset('asset/Animation - 1748495844642 (1).json'),
+                )
               )
             : SignupForm(
                 formKey: _formKey,
@@ -393,8 +713,10 @@ class _HirerSignupPageState extends State<HirerSignupPage> {
                 onLocationSelected: (location) {
                   setState(() {
                     _selectedLocation = location;
-                    _locationController.text = location['placeName'] ?? '';
+                    _locationController.text = location.displayName;
+                    _locationSuggestions.clear(); // Clear suggestions after selection
                   });
+                  GooglePlacesService.resetSession(); // Reset session after selection
                 },
                 onSearchLocation: (query) {
                   _searchDebouncer.run(() {
@@ -410,8 +732,7 @@ class _HirerSignupPageState extends State<HirerSignupPage> {
                 onSubmit: () {
                   if (_formKey.currentState!.validate()) {
                     if (!_acceptedTerms) {
-                      _showSnackBar('Please accept terms and privacy policy',
-                          isError: true);
+                      _showSnackBar('Please accept terms and privacy policy', isError: true);
                       return;
                     }
 
@@ -422,7 +743,6 @@ class _HirerSignupPageState extends State<HirerSignupPage> {
                     }
                   }
                 },
-                // Pass the URL launcher function
                 onTermsTap: () => _launchUrl('https://heywork.in/terms'),
                 onPrivacyTap: () => _launchUrl('https://heywork.in/privacy'),
               ),
@@ -439,622 +759,108 @@ class _HirerSignupPageState extends State<HirerSignupPage> {
     }
 
     try {
-      final suggestions = await fetchLocationSuggestions(query);
-      setState(() {
-        _locationSuggestions = suggestions;
-      });
+      final suggestions = await GooglePlacesService.getAutocompleteSuggestions(query);
+      if (mounted) {
+        setState(() {
+          _locationSuggestions = suggestions;
+        });
+      }
     } catch (e) {
       _showSnackBar('Error fetching locations: $e', isError: true);
     }
   }
 
-  // Location API methods
-  // Cached location data for faster results
-  static Map<String, List<Map<String, String>>> _cachedLocations = {};
-
-  // Indian cities data for quick results
-  final List<Map<String, String>> _indianCities = [
-    {
-      'placeName': 'Mumbai, Maharashtra',
-      'placeId': 'city_mumbai',
-      'latitude': '19.0760',
-      'longitude': '72.8777'
-    },
-    {
-      'placeName': 'Delhi, NCR',
-      'placeId': 'city_delhi',
-      'latitude': '28.7041',
-      'longitude': '77.1025'
-    },
-    {
-      'placeName': 'Bangalore, Karnataka',
-      'placeId': 'city_bangalore',
-      'latitude': '12.9716',
-      'longitude': '77.5946'
-    },
-    {
-      'placeName': 'Hyderabad, Telangana',
-      'placeId': 'city_hyderabad',
-      'latitude': '17.3850',
-      'longitude': '78.4867'
-    },
-    {
-      'placeName': 'Chennai, Tamil Nadu',
-      'placeId': 'city_chennai',
-      'latitude': '13.0827',
-      'longitude': '80.2707'
-    },
-    {
-      'placeName': 'Kolkata, West Bengal',
-      'placeId': 'city_kolkata',
-      'latitude': '22.5726',
-      'longitude': '88.3639'
-    },
-    {
-      'placeName': 'Pune, Maharashtra',
-      'placeId': 'city_pune',
-      'latitude': '18.5204',
-      'longitude': '73.8567'
-    },
-    {
-      'placeName': 'Ahmedabad, Gujarat',
-      'placeId': 'city_ahmedabad',
-      'latitude': '23.0225',
-      'longitude': '72.5714'
-    },
-    {
-      'placeName': 'Jaipur, Rajasthan',
-      'placeId': 'city_jaipur',
-      'latitude': '26.9124',
-      'longitude': '75.7873'
-    },
-    {
-      'placeName': 'Lucknow, Uttar Pradesh',
-      'placeId': 'city_lucknow',
-      'latitude': '26.8467',
-      'longitude': '80.9462'
-    },
-    {
-      'placeName': 'Kanpur, Uttar Pradesh',
-      'placeId': 'city_kanpur',
-      'latitude': '26.4499',
-      'longitude': '80.3319'
-    },
-    {
-      'placeName': 'Nagpur, Maharashtra',
-      'placeId': 'city_nagpur',
-      'latitude': '21.1458',
-      'longitude': '79.0882'
-    },
-    {
-      'placeName': 'Visakhapatnam, Andhra Pradesh',
-      'placeId': 'city_visakhapatnam',
-      'latitude': '17.6868',
-      'longitude': '83.2185'
-    },
-    {
-      'placeName': 'Bhopal, Madhya Pradesh',
-      'placeId': 'city_bhopal',
-      'latitude': '23.2599',
-      'longitude': '77.4126'
-    },
-    {
-      'placeName': 'Patna, Bihar',
-      'placeId': 'city_patna',
-      'latitude': '25.5941',
-      'longitude': '85.1376'
-    },
-    {
-      'placeName': 'Vadodara, Gujarat',
-      'placeId': 'city_vadodara',
-      'latitude': '22.3072',
-      'longitude': '73.1812'
-    },
-    {
-      'placeName': 'Ghaziabad, Uttar Pradesh',
-      'placeId': 'city_ghaziabad',
-      'latitude': '28.6692',
-      'longitude': '77.4538'
-    },
-    {
-      'placeName': 'Ludhiana, Punjab',
-      'placeId': 'city_ludhiana',
-      'latitude': '30.9010',
-      'longitude': '75.8573'
-    },
-    {
-      'placeName': 'Agra, Uttar Pradesh',
-      'placeId': 'city_agra',
-      'latitude': '27.1767',
-      'longitude': '78.0081'
-    },
-    {
-      'placeName': 'Nashik, Maharashtra',
-      'placeId': 'city_nashik',
-      'latitude': '19.9975',
-      'longitude': '73.7898'
-    },
-    {
-      'placeName': 'Ranchi, Jharkhand',
-      'placeId': 'city_ranchi',
-      'latitude': '23.3441',
-      'longitude': '85.3096'
-    },
-    {
-      'placeName': 'Faridabad, Haryana',
-      'placeId': 'city_faridabad',
-      'latitude': '28.4089',
-      'longitude': '77.3178'
-    },
-    {
-      'placeName': 'Indore, Madhya Pradesh',
-      'placeId': 'city_indore',
-      'latitude': '22.7196',
-      'longitude': '75.8577'
-    },
-    {
-      'placeName': 'Rajkot, Gujarat',
-      'placeId': 'city_rajkot',
-      'latitude': '22.3039',
-      'longitude': '70.8022'
-    },
-    {
-      'placeName': 'Guwahati, Assam',
-      'placeId': 'city_guwahati',
-      'latitude': '26.1445',
-      'longitude': '91.7362'
-    },
-    {
-      'placeName': 'Chandigarh, Punjab & Haryana',
-      'placeId': 'city_chandigarh',
-      'latitude': '30.7333',
-      'longitude': '76.7794'
-    },
-    {
-      'placeName': 'Hubli-Dharwad, Karnataka',
-      'placeId': 'city_hubli',
-      'latitude': '15.3647',
-      'longitude': '75.1240'
-    },
-    {
-      'placeName': 'Jodhpur, Rajasthan',
-      'placeId': 'city_jodhpur',
-      'latitude': '26.2389',
-      'longitude': '73.0243'
-    },
-    {
-      'placeName': 'Srinagar, Jammu & Kashmir',
-      'placeId': 'city_srinagar',
-      'latitude': '34.0837',
-      'longitude': '74.7973'
-    },
-    {
-      'placeName': 'Coimbatore, Tamil Nadu',
-      'placeId': 'city_coimbatore',
-      'latitude': '11.0168',
-      'longitude': '76.9558'
-    },
-    {
-      'placeName': 'Goa',
-      'placeId': 'city_goa',
-      'latitude': '15.2993',
-      'longitude': '74.1240'
-    },
-    {
-      'placeName': 'Kochi, Kerala',
-      'placeId': 'city_kochi',
-      'latitude': '9.9312',
-      'longitude': '76.2673'
-    },
-    {
-      'placeName': 'Thiruvananthapuram, Kerala',
-      'placeId': 'city_trivandrum',
-      'latitude': '8.5241',
-      'longitude': '76.9366'
-    },
-    {
-      'placeName': 'Haridwar, Uttarakhand',
-      'placeId': 'city_haridwar',
-      'latitude': '29.9457',
-      'longitude': '78.1642'
-    },
-    {
-      'placeName': 'Hampi, Karnataka',
-      'placeId': 'city_hampi',
-      'latitude': '15.3350',
-      'longitude': '76.4600'
-    },
-    {
-      'placeName': 'Haldwani, Uttarakhand',
-      'placeId': 'city_haldwani',
-      'latitude': '29.2183',
-      'longitude': '79.5130'
-    },
-    {
-      'placeName': 'Hapur, Uttar Pradesh',
-      'placeId': 'city_hapur',
-      'latitude': '28.7304',
-      'longitude': '77.7806'
-    },
-    {
-      'placeName': 'Hardoi, Uttar Pradesh',
-      'placeId': 'city_hardoi',
-      'latitude': '27.3989',
-      'longitude': '80.1313'
-    },
-  ];
-
-  Future<List<Map<String, String>>> fetchLocationSuggestions(
-      String query) async {
-    if (query.length < 2) {
-      return [];
-    }
-
-    query = query.toLowerCase();
-
-    // First check cache for faster response
-    if (_cachedLocations.containsKey(query)) {
-      return _cachedLocations[query]!;
-    }
-
-    // Next, check local Indian cities data for quick results
-    List<Map<String, String>> filteredCities = _indianCities
-        .where((city) => city['placeName']!.toLowerCase().contains(query))
-        .toList();
-
-    // If we have local results, return them immediately
-    if (filteredCities.isNotEmpty) {
-      // Cache the results
-      _cachedLocations[query] = filteredCities;
-      return filteredCities;
-    }
-
-    // If no local matches or we want more results, try API
-    try {
-      final apiResults = await fetchFromOpenStreetMap(query);
-
-      // Cache these results too
-      _cachedLocations[query] = apiResults;
-
-      return apiResults;
-    } catch (e) {
-      print("OpenStreetMap API error: $e");
-      // Return basic results if API fails
-      return _getMockData(query);
-    }
-  }
-
-  Future<List<Map<String, String>>> fetchFromOpenStreetMap(String query) async {
-    // Optimize query for Indian locations
-    final String url =
-        'https://nominatim.openstreetmap.org/search?q=$query+india&format=json&addressdetails=1&limit=10&countrycodes=in&bounded=1';
-
-    Map<String, String> headers = {
-      'User-Agent': 'HeyWork/1.0',
-      'Accept-Language': 'en-US,en;q=0.9',
-    };
-
-    final response = await http.get(Uri.parse(url), headers: headers);
-
-    if (response.statusCode == 200) {
-      final List<dynamic> results = json.decode(response.body);
-
-      return results.map<Map<String, String>>((result) {
-        String displayName = result['display_name'] ?? '';
-
-        // Optimize display name for better readability
-        Map<String, dynamic> address = result['address'] ?? {};
-        String formattedName = '';
-
-        if (address.isNotEmpty) {
-          // Build a clean formatted address
-          List<String> addressParts = [];
-
-          // Get the most relevant part first (city, town, village, etc.)
-          if (address['city'] != null) {
-            addressParts.add(address['city']);
-          } else if (address['town'] != null) {
-            addressParts.add(address['town']);
-          } else if (address['village'] != null) {
-            addressParts.add(address['village']);
-          } else if (address['suburb'] != null) {
-            addressParts.add(address['suburb']);
-          } else if (address['neighbourhood'] != null) {
-            addressParts.add(address['neighbourhood']);
-          }
-
-          // Add district/county if available
-          if (address['state_district'] != null) {
-            addressParts.add(address['state_district']);
-          } else if (address['county'] != null) {
-            addressParts.add(address['county']);
-          } else if (address['district'] != null) {
-            addressParts.add(address['district']);
-          }
-
-          // Always add state
-          if (address['state'] != null) {
-            addressParts.add(address['state']);
-          }
-
-          formattedName = addressParts.join(', ');
-        }
-
-        // If we couldn't create a nice formatted name, fall back to the original with some cleaning
-        if (formattedName.isEmpty) {
-          List<String> nameParts = displayName.split(', ');
-          // Take first part, add the state if available (usually second to last), and add "India"
-          formattedName = nameParts.length > 3
-              ? '${nameParts[0]}, ${nameParts[nameParts.length - 3]}, India'
-              : displayName.replaceAll(', India', '') + ', India';
-        }
-
-        return {
-          'placeName': formattedName,
-          'placeId': result['place_id']?.toString() ?? '',
-          'latitude': result['lat']?.toString() ?? '',
-          'longitude': result['lon']?.toString() ?? '',
-        };
-      }).toList();
-    } else {
-      throw Exception(
-          'Failed to load from OpenStreetMap: ${response.statusCode}');
-    }
-  }
-
-  // Mock data for testing
-  List<Map<String, String>> _getMockData(String query) {
-    return [
-      {
-        'placeName': 'Delhi, NCR, India',
-        'placeId': 'mock_delhi',
-        'latitude': '28.7041',
-        'longitude': '77.1025',
-      },
-      {
-        'placeName': 'Mumbai, Maharashtra, India',
-        'placeId': 'mock_mumbai',
-        'latitude': '19.0760',
-        'longitude': '72.8777',
-      },
-      {
-        'placeName': 'Kolkata, West Bengal, India',
-        'placeId': 'mock_kolkata',
-        'latitude': '22.5726',
-        'longitude': '88.3639',
-      },
-      {
-        'placeName': 'Chennai, Tamil Nadu, India',
-        'placeId': 'mock_chennai',
-        'latitude': '13.0827',
-        'longitude': '80.2707',
-      },
-      {
-        'placeName': '$query Area, India',
-        'placeId': 'mock_custom',
-        'latitude': '20.5937',
-        'longitude': '78.9629',
-      },
-    ];
-  }
-
   // Phone verification methods
- // Replace the _verifyPhoneNumber method in HirerSignupPage with this:
-
-Future<void> _verifyPhoneNumber() async {
-  if (_phoneController.text.isEmpty) {
-    _showSnackBar('Please enter your phone number', isError: true);
-    return;
-  }
-
-  // Format phone number to ensure it starts with +91
-  String phoneNumber = _phoneController.text.trim();
-  if (!phoneNumber.startsWith('+')) {
-    phoneNumber = '+91$phoneNumber';
-  }
-
-  setState(() {
-    _isLoading = true;
-  });
-
-  try {
-    // Check if phone number already exists
-    Map<String, dynamic> phoneCheck = await RoleValidationService.checkPhoneNumberExists(phoneNumber);
-    
-    if (phoneCheck['exists']) {
-      setState(() {
-        _isLoading = false;
-      });
-      
-      if (phoneCheck['userType'] == 'hirer') {
-        // Same role account already exists
-        RoleValidationService.showAccountExistsDialog(context, 'hirer');
-        return;
-      } else {
-        // Different role account exists
-        RoleValidationService.showRoleConflictDialog(
-          context, 
-          phoneCheck['userType'], 
-          'hirer'
-        );
-        return;
-      }
-    }
-
-    // Show role restriction confirmation dialog
-    bool shouldContinue = await RoleValidationService.showRoleRestrictionDialog(context, 'hirer');
-    
-    if (!shouldContinue) {
-      setState(() {
-        _isLoading = false;
-      });
+  Future<void> _verifyPhoneNumber() async {
+    if (_phoneController.text.isEmpty) {
+      _showSnackBar('Please enter your phone number', isError: true);
       return;
     }
 
-    // Proceed with Firebase phone verification
-    await FirebaseAuth.instance.verifyPhoneNumber(
-      phoneNumber: phoneNumber,
-      verificationCompleted: (PhoneAuthCredential credential) async {
-        try {
-          UserCredential userCredential = await FirebaseAuth.instance.signInWithCredential(credential);
-          if (userCredential.user != null) {
-            await _processUserData(userCredential.user!);
+    String phoneNumber = _phoneController.text.trim();
+    if (!phoneNumber.startsWith('+')) {
+      phoneNumber = '+91$phoneNumber';
+    }
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      Map<String, dynamic> phoneCheck = await RoleValidationService.checkPhoneNumberExists(phoneNumber);
+      
+      if (phoneCheck['exists']) {
+        setState(() {
+          _isLoading = false;
+        });
+        
+        if (phoneCheck['userType'] == 'hirer') {
+          RoleValidationService.showAccountExistsDialog(context, 'hirer');
+          return;
+        } else {
+          RoleValidationService.showRoleConflictDialog(
+            context, 
+            phoneCheck['userType'], 
+            'hirer'
+          );
+          return;
+        }
+      }
+
+      bool shouldContinue = await RoleValidationService.showRoleRestrictionDialog(context, 'hirer');
+      
+      if (!shouldContinue) {
+        setState(() {
+          _isLoading = false;
+        });
+        return;
+      }
+
+      await FirebaseAuth.instance.verifyPhoneNumber(
+        phoneNumber: phoneNumber,
+        verificationCompleted: (PhoneAuthCredential credential) async {
+          try {
+            UserCredential userCredential = await FirebaseAuth.instance.signInWithCredential(credential);
+            if (userCredential.user != null) {
+              await _processUserData(userCredential.user!);
+            }
+          } catch (e) {
+            setState(() {
+              _isLoading = false;
+            });
+            _showSnackBar('Auto-verification failed: $e', isError: true);
           }
-        } catch (e) {
+        },
+        verificationFailed: (FirebaseAuthException e) {
           setState(() {
             _isLoading = false;
           });
-          _showSnackBar('Auto-verification failed: $e', isError: true);
-        }
-      },
-      verificationFailed: (FirebaseAuthException e) {
-        setState(() {
-          _isLoading = false;
-        });
-        _showSnackBar('Verification failed: ${e.message}', isError: true);
-      },
-      codeSent: (String verificationId, int? resendToken) {
-        setState(() {
-          _isLoading = false;
-          _otpSent = true;
+          _showSnackBar('Verification failed: ${e.message}', isError: true);
+        },
+        codeSent: (String verificationId, int? resendToken) {
+          setState(() {
+            _isLoading = false;
+            _otpSent = true;
+            _verificationId = verificationId;
+          });
+          _showSnackBar('OTP sent to your phone');
+        },
+        codeAutoRetrievalTimeout: (String verificationId) {
           _verificationId = verificationId;
-        });
-        _showSnackBar('OTP sent to your phone');
-      },
-      codeAutoRetrievalTimeout: (String verificationId) {
-        _verificationId = verificationId;
-      },
-      timeout: Duration(seconds: 60),
-    );
-  } catch (e) {
-    setState(() {
-      _isLoading = false;
-    });
-    _showSnackBar('Error: $e', isError: true);
-  }
-}
-
-// Also update the _verifyOTP method:
-Future<void> _verifyOTP() async {
-  if (_otpController.text.isEmpty) {
-    _showSnackBar('Please enter the OTP', isError: true);
-    return;
-  }
-
-  setState(() {
-    _isLoading = true;
-  });
-
-  try {
-    // Better validation
-    if (_verificationId.isEmpty) {
-      throw Exception('Invalid verification session. Please request OTP again.');
-    }
-
-    // Create the credential
-    PhoneAuthCredential credential = PhoneAuthProvider.credential(
-      verificationId: _verificationId,
-      smsCode: _otpController.text.trim(),
-    );
-
-    // Sign in with the credential
-    UserCredential userCredential = await FirebaseAuth.instance.signInWithCredential(credential);
-    User? user = userCredential.user;
-
-    if (user == null) {
-      throw Exception('Failed to authenticate user');
-    }
-
-    // Process the user data
-    await _processUserData(user);
-    
-    if (mounted) {
+        },
+        timeout: Duration(seconds: 60),
+      );
+    } catch (e) {
       setState(() {
         _isLoading = false;
       });
-      
-      _showSnackBar('Account created successfully!');
-      
-      // Navigate to home page
-  Navigator.of(context).pushAndRemoveUntil(
-  MaterialPageRoute(builder: (_) => IndustrySelectionScreen()),
-  (route) => false,
-);
-    }
-  } catch (e) {
-    if (mounted) {
-      setState(() {
-        _isLoading = false;
-      });
-      
-      // Show proper error dialog for incorrect OTP
-      if (e.toString().contains('invalid-verification-code') || 
-          e.toString().contains('session-expired')) {
-        RoleValidationService.showIncorrectOtpDialog(context);
-      } else {
-        _showSnackBar('Verification failed: ${e.toString()}', isError: true);
-      }
+      _showSnackBar('Error: $e', isError: true);
     }
   }
-}
 
-// Don't forget to import the RoleValidationService at the top:
-// import 'package:hey_work/presentation/services/role_validation_service.dart';
-// Fix 1: Process User Data Method
- // 2. Combine the user data processing into a single method
-Future<void> _processUserData(User user) async {
-  try {
-    // Upload image if available
-    String? imageUrl = _selectedImage != null ? await _uploadImage() : null;
-    
-    // Format phone number with proper validation
-    String phoneNumber = _phoneController.text.trim();
-    if (phoneNumber.isNotEmpty && !phoneNumber.startsWith('+')) {
-      phoneNumber = '+91$phoneNumber';
-    }
-    
-    // Create a comprehensive user data map with null checks
-    Map<String, dynamic> userData = {
-      'id': user.uid,
-      'name': _nameController.text.isEmpty ? "User" : _nameController.text.trim(),
-      'businessName': _businessNameController.text.isEmpty ? "" : _businessNameController.text.trim(),
-      'location': _selectedLocation != null ? 
-        _selectedLocation!['placeName'] : 
-        (_locationController.text.isEmpty ? "" : _locationController.text.trim()),
-      'loggedPhoneNumber': phoneNumber,
-      'profileImage': imageUrl, // This will be null or a URL
-      'createdAt': FieldValue.serverTimestamp(),
-      'userType': 'hirer',
-    };
-    
-    print('Saving user data: $userData');
-    
-    // Save to Firestore with better error handling
-    try {
-      await FirebaseFirestore.instance
-          .collection('hirers')
-          .doc(user.uid)
-          .set(userData, SetOptions(merge: true));
-      
-      print('User data saved successfully');
-      return; // Success
-    } catch (firestoreError) {
-      print('Firebase database error: $firestoreError');
-      throw Exception('Failed to save user data. Please try again.');
-    }
-  } catch (e) {
-    print('Error in _processUserData: $e');
-    throw e;
-  }
-}
-
-  Future<void> _submitForm() async {
-    if (!_formKey.currentState!.validate() || !_acceptedTerms) {
-      setState(() {
-        _isLoading = false;
-      });
-      _showSnackBar('Please fill all required fields and accept terms',
-          isError: true);
+  Future<void> _verifyOTP() async {
+    if (_otpController.text.isEmpty) {
+      _showSnackBar('Please enter the OTP', isError: true);
       return;
     }
 
@@ -1063,178 +869,132 @@ Future<void> _processUserData(User user) async {
     });
 
     try {
-      // Get the current user - this is the critical part that's failing
-      User? currentUser = FirebaseAuth.instance.currentUser;
-
-      // Better error handling for null user
-      if (currentUser == null) {
-        print('ERROR: Current user is null after OTP verification');
-
-        // Try to sign in again with phone credential if user is null
-        try {
-          // Try to sign in again with phone credential if user is null
-          PhoneAuthCredential credential = PhoneAuthProvider.credential(
-            verificationId: _verificationId,
-            smsCode: _otpController.text.trim(),
-          );
-
-          UserCredential userCredential =
-              await FirebaseAuth.instance.signInWithCredential(credential);
-          currentUser = userCredential.user;
-
-          if (currentUser == null) {
-            throw Exception(
-                'Failed to authenticate user after multiple attempts');
-          }
-
-          print('Successfully authenticated user on retry: ${currentUser.uid}');
-        } catch (authError) {
-          print('Authentication retry error: $authError');
-          throw Exception(
-              'Authentication failed. Please try again with a new OTP.');
-        }
+      if (_verificationId.isEmpty) {
+        throw Exception('Invalid verification session. Please request OTP again.');
       }
 
-      print('Processing signup for user: ${currentUser.uid}');
+      PhoneAuthCredential credential = PhoneAuthProvider.credential(
+        verificationId: _verificationId,
+        smsCode: _otpController.text.trim(),
+      );
 
-      String? imageUrl;
+      UserCredential userCredential = await FirebaseAuth.instance.signInWithCredential(credential);
+      User? user = userCredential.user;
 
-      // Upload image if selected
-      if (_selectedImage != null) {
-        try {
-          imageUrl = await _uploadImage();
-          print('Image uploaded successfully: $imageUrl');
-        } catch (e) {
-          print('Error uploading image: $e');
-          // Continue without image if upload fails
-          _showSnackBar(
-              'Failed to upload image, continuing without profile picture',
-              isError: true);
-        }
+      if (user == null) {
+        throw Exception('Failed to authenticate user');
       }
 
-      // Save user data to Firestore
-      await _saveUserData(currentUser, imageUrl);
-
+      await _processUserData(user);
+      
       if (mounted) {
         setState(() {
           _isLoading = false;
         });
-
-        // Show success message
+        
         _showSnackBar('Account created successfully!');
-
-        // Navigate to next screen
-  // Navigate to next screen and clear all previous routes
-Navigator.of(context).pushAndRemoveUntil(
-  MaterialPageRoute(builder: (_) => MainScreen()),
-  (route) => false,
-);
+        
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (_) => IndustrySelectionScreen()),
+          (route) => false,
+        );
       }
     } catch (e) {
       if (mounted) {
         setState(() {
           _isLoading = false;
         });
-        print('Error in form submission: $e');
-        _showSnackBar('Error: $e', isError: true);
+        
+        if (e.toString().contains('invalid-verification-code') || 
+            e.toString().contains('session-expired')) {
+          RoleValidationService.showIncorrectOtpDialog(context);
+        } else {
+          _showSnackBar('Verification failed: ${e.toString()}', isError: true);
+        }
       }
     }
   }
-Future<String?> _uploadImage() async {
-  if (_selectedImage == null) {
-    return null;
-  }
 
-  try {
-    print('Starting optimized image upload...');
-    
-    // Get file size
-    final int fileSize = await _selectedImage!.length();
-    print('Image file size: ${(fileSize / 1024 / 1024).toStringAsFixed(2)} MB');
-
-    // Generate unique filename
-    final uuid = Uuid();
-    String fileName = '${uuid.v4()}.jpg';
-    final storageRef = FirebaseStorage.instance.ref().child('profile_images/$fileName');
-    
-    // Upload with metadata
-    final uploadTask = storageRef.putFile(
-      _selectedImage!,
-      SettableMetadata(
-        contentType: 'image/jpeg',
-        customMetadata: {
-          'file_size': '${fileSize}',
-          'optimized': 'true',
-        },
-      ),
-    );
-    
-    // Monitor progress
-    uploadTask.snapshotEvents.listen((TaskSnapshot snapshot) {
-      final progress = snapshot.bytesTransferred / snapshot.totalBytes;
-      print('Upload: ${(progress * 100).toStringAsFixed(1)}%');
-    });
-    
-    final snapshot = await uploadTask;
-    final downloadUrl = await snapshot.ref.getDownloadURL();
-    
-    print('✅ Upload successful: $downloadUrl');
-    return downloadUrl;
-  } catch (e) {
-    print('❌ Upload error: $e');
-    return null;
-  }
-}
-
-
-  Future<void> _saveUserData(User user, String? imageUrl) async {
+  Future<void> _processUserData(User user) async {
     try {
-      // Format phone number
+      String? imageUrl = _selectedImage != null ? await _uploadImage() : null;
+      
       String phoneNumber = _phoneController.text.trim();
-      if (!phoneNumber.startsWith('+')) {
+      if (phoneNumber.isNotEmpty && !phoneNumber.startsWith('+')) {
         phoneNumber = '+91$phoneNumber';
       }
-
-      // Create user data map with null checks for all fields
+      
       Map<String, dynamic> userData = {
         'id': user.uid,
-        'name': _nameController.text.isNotEmpty
-            ? _nameController.text.trim()
-            : "User",
-        'businessName': _businessNameController.text.isNotEmpty
-            ? _businessNameController.text.trim()
-            : "",
-        'location': _selectedLocation != null
-            ? _selectedLocation!['placeName']
-            : _locationController.text.isNotEmpty
-                ? _locationController.text.trim()
-                : "",
+        'name': _nameController.text.isEmpty ? "User" : _nameController.text.trim(),
+        'businessName': _businessNameController.text.isEmpty ? "" : _businessNameController.text.trim(),
+        'location': _selectedLocation?.displayName ?? _locationController.text.trim(),
+        'placeId': _selectedLocation?.placeId ?? '',
         'loggedPhoneNumber': phoneNumber,
         'profileImage': imageUrl,
         'createdAt': FieldValue.serverTimestamp(),
         'userType': 'hirer',
       };
-
-      print('Saving user data for UID ${user.uid}: $userData');
-
-      // First check database connectivity with proper error handling
+      
+      print('Saving user data: $userData');
+      
       try {
-        // Try writing to Firestore
         await FirebaseFirestore.instance
             .collection('hirers')
             .doc(user.uid)
             .set(userData, SetOptions(merge: true));
-
+        
         print('User data saved successfully');
+        return;
       } catch (firestoreError) {
         print('Firebase database error: $firestoreError');
-        throw Exception(
-            'Failed to save user data. Please check your internet connection and try again.');
+        throw Exception('Failed to save user data. Please try again.');
       }
     } catch (e) {
-      print('Error saving user data: $e');
-      throw e; // Re-throw to handle in the calling method
+      print('Error in _processUserData: $e');
+      throw e;
+    }
+  }
+
+  Future<String?> _uploadImage() async {
+    if (_selectedImage == null) {
+      return null;
+    }
+
+    try {
+      print('Starting optimized image upload...');
+      
+      final int fileSize = await _selectedImage!.length();
+      print('Image file size: ${(fileSize / 1024 / 1024).toStringAsFixed(2)} MB');
+
+      final uuid = Uuid();
+      String fileName = '${uuid.v4()}.jpg';
+      final storageRef = FirebaseStorage.instance.ref().child('profile_images/$fileName');
+      
+      final uploadTask = storageRef.putFile(
+        _selectedImage!,
+        SettableMetadata(
+          contentType: 'image/jpeg',
+          customMetadata: {
+            'file_size': '$fileSize',
+            'optimized': 'true',
+          },
+        ),
+      );
+      
+      uploadTask.snapshotEvents.listen((TaskSnapshot snapshot) {
+        final progress = snapshot.bytesTransferred / snapshot.totalBytes;
+        print('Upload: ${(progress * 100).toStringAsFixed(1)}%');
+      });
+      
+      final snapshot = await uploadTask;
+      final downloadUrl = await snapshot.ref.getDownloadURL();
+      
+      print('✅ Upload successful: $downloadUrl');
+      return downloadUrl;
+    } catch (e) {
+      print('❌ Upload error: $e');
+      return null;
     }
   }
 }
@@ -1249,18 +1009,18 @@ class SignupForm extends StatelessWidget {
   final TextEditingController phoneController;
   final TextEditingController otpController;
   final File? selectedImage;
-  final List<Map<String, String>> locationSuggestions;
+  final List<PlaceInfo> locationSuggestions; // Updated type
   final bool otpSent;
   final bool acceptedTerms;
   final Function(File) onImagePicked;
-  final Function(List<Map<String, String>>) onSuggestionsFetched;
-  final Function(Map<String, String>) onLocationSelected;
+  final Function(List<PlaceInfo>) onSuggestionsFetched; // Updated type
+  final Function(PlaceInfo) onLocationSelected; // Updated type
   final Function(String) onSearchLocation;
   final Function(bool) onTermsChanged;
   final Function() onSendOtp;
   final Function() onSubmit;
-  final Function() onTermsTap;   // Add this
-  final Function() onPrivacyTap; // Add this
+  final Function() onTermsTap;
+  final Function() onPrivacyTap;
 
   const SignupForm({
     Key? key,
@@ -1282,8 +1042,8 @@ class SignupForm extends StatelessWidget {
     required this.onTermsChanged,
     required this.onSendOtp,
     required this.onSubmit,
-    required this.onTermsTap,   // Add this
-    required this.onPrivacyTap, // Add this
+    required this.onTermsTap,
+    required this.onPrivacyTap,
   }) : super(key: key);
 
   @override
@@ -1380,7 +1140,7 @@ class SignupForm extends StatelessWidget {
               ),
               SizedBox(height: responsive.getHeight(24)),
 
-              // Terms and Privacy - Updated section
+              // Terms and Privacy
               Row(
                 children: [
                   SizedBox(
@@ -1407,7 +1167,7 @@ class SignupForm extends StatelessWidget {
                           ),
                         ),
                         GestureDetector(
-                          onTap: onTermsTap, // Use the callback
+                          onTap: onTermsTap,
                           child: Text(
                             "Terms",
                             style: GoogleFonts.roboto(
@@ -1426,7 +1186,7 @@ class SignupForm extends StatelessWidget {
                           ),
                         ),
                         GestureDetector(
-                          onTap: onPrivacyTap, // Use the callback
+                          onTap: onPrivacyTap,
                           child: Text(
                             "Privacy Policy",
                             style: GoogleFonts.roboto(
@@ -1451,7 +1211,7 @@ class SignupForm extends StatelessWidget {
                 child: ElevatedButton(
                   onPressed: onSubmit,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor:Color(0xFF0033FF),
+                    backgroundColor: Color(0xFF0033FF),
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10),
@@ -1483,8 +1243,8 @@ class SignupForm extends StatelessWidget {
                     ),
                     GestureDetector(
                       onTap: () {
-                    Navigator.of(context)
-            .pushReplacement(MaterialPageRoute(builder: (_) => HirerLoginScreen()));
+                        Navigator.of(context)
+                            .pushReplacement(MaterialPageRoute(builder: (_) => HirerLoginScreen()));
                       },
                       child: Text(
                         "Log in",
@@ -1507,10 +1267,6 @@ class SignupForm extends StatelessWidget {
 }
 
 // Profile image selector widget
-// Replace your ProfileImageSelector class with this working version
-
-
-
 class ProfileImageSelector extends StatefulWidget {
   final ResponsiveUtil responsive;
   final File? selectedImage;
@@ -1603,7 +1359,7 @@ class _ProfileImageSelectorState extends State<ProfileImageSelector> {
                   )
                 : Stack(
                     children: [
-                      Container(), // Empty container for the image background
+                      Container(),
                       Positioned(
                         bottom: 0,
                         right: 0,
@@ -1652,7 +1408,6 @@ class _ProfileImageSelectorState extends State<ProfileImageSelector> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Handle bar
                 Container(
                   width: widget.responsive.getWidth(40),
                   height: widget.responsive.getHeight(4),
@@ -1681,7 +1436,6 @@ class _ProfileImageSelectorState extends State<ProfileImageSelector> {
                 ),
                 SizedBox(height: widget.responsive.getHeight(24)),
                 
-                // Camera Option
                 _buildOptionTile(
                   context: context,
                   icon: Icons.camera_alt,
@@ -1695,7 +1449,6 @@ class _ProfileImageSelectorState extends State<ProfileImageSelector> {
                 
                 SizedBox(height: widget.responsive.getHeight(16)),
                 
-                // Gallery Option
                 _buildOptionTile(
                   context: context,
                   icon: Icons.photo_library,
@@ -1790,13 +1543,12 @@ class _ProfileImageSelectorState extends State<ProfileImageSelector> {
     try {
       print('📸 Starting image selection and processing...');
       
-      // Pick image with built-in compression
       final ImagePicker picker = ImagePicker();
       final XFile? pickedFile = await picker.pickImage(
         source: source,
-        maxWidth: 1024,     // Optimal size for profile pics
-        maxHeight: 1024,    // Optimal size for profile pics
-        imageQuality: 75,   // Good compression (75% quality)
+        maxWidth: 1024,
+        maxHeight: 1024,
+        imageQuality: 75,
       );
 
       if (pickedFile == null) {
@@ -1808,11 +1560,10 @@ class _ProfileImageSelectorState extends State<ProfileImageSelector> {
 
       print('📏 Image picked, starting crop...');
 
-      // Crop with additional compression
       final CroppedFile? croppedFile = await ImageCropper().cropImage(
         sourcePath: pickedFile.path,
         compressFormat: ImageCompressFormat.jpg,
-        compressQuality: 80, // Additional compression
+        compressQuality: 80,
         uiSettings: [
           AndroidUiSettings(
             toolbarTitle: 'Crop Profile Picture',
@@ -1842,8 +1593,6 @@ class _ProfileImageSelectorState extends State<ProfileImageSelector> {
         print('✅ Image processed! Final size: ${finalSizeMB.toStringAsFixed(2)} MB');
         
         widget.onImagePicked(finalImage);
-        
-    
       }
     } catch (e) {
       print('❌ Error processing image: $e');
@@ -1968,12 +1717,13 @@ class LabelText extends StatelessWidget {
   }
 }
 
+// Updated Location Selector with Google Places integration
 class LocationSelector extends StatefulWidget {
   final ResponsiveUtil responsive;
   final TextEditingController controller;
-  final List<Map<String, String>> suggestions;
+  final List<PlaceInfo> suggestions;
   final Function(String) onSearchChanged;
-  final Function(Map<String, String>) onLocationSelected;
+  final Function(PlaceInfo) onLocationSelected;
 
   const LocationSelector({
     Key? key,
@@ -2021,8 +1771,14 @@ class _LocationSelectorState extends State<LocationSelector> {
     });
 
     widget.onSearchChanged(query);
-    setState(() {
-      _isSearching = false;
+    
+    // Reset searching state after a delay
+    Future.delayed(Duration(milliseconds: 1000), () {
+      if (mounted) {
+        setState(() {
+          _isSearching = false;
+        });
+      }
     });
   }
 
@@ -2037,7 +1793,7 @@ class _LocationSelectorState extends State<LocationSelector> {
             color: Colors.black87,
           ),
           decoration: InputDecoration(
-            hintText: "Select location of business",
+            hintText: "Search for your business location",
             hintStyle: GoogleFonts.roboto(
               fontSize: widget.responsive.getFontSize(16),
               color: Colors.grey.shade500,
@@ -2097,7 +1853,7 @@ class _LocationSelectorState extends State<LocationSelector> {
           validator: FormValidator.validateLocation,
           textInputAction: TextInputAction.next,
           onTap: () {
-            if (widget.controller.text.length >= 3) {
+            if (widget.controller.text.length >= 3 && widget.suggestions.isNotEmpty) {
               setState(() {
                 _showSuggestions = true;
               });
@@ -2122,10 +1878,8 @@ class _LocationSelectorState extends State<LocationSelector> {
             child: ListView.builder(
               shrinkWrap: true,
               physics: NeverScrollableScrollPhysics(),
-              padding: EdgeInsets.symmetric(
-                  vertical: widget.responsive.getHeight(8)),
-              itemCount:
-                  widget.suggestions.length > 5 ? 5 : widget.suggestions.length,
+              padding: EdgeInsets.symmetric(vertical: widget.responsive.getHeight(8)),
+              itemCount: widget.suggestions.length > 5 ? 5 : widget.suggestions.length,
               itemBuilder: (context, index) {
                 final suggestion = widget.suggestions[index];
                 return InkWell(
@@ -2143,20 +1897,53 @@ class _LocationSelectorState extends State<LocationSelector> {
                     ),
                     child: Row(
                       children: [
-                        Icon(
-                          Icons.location_on,
-                          size: widget.responsive.getWidth(20),
-                          color: Color(0xFF0033FF),
+                        Container(
+                          width: widget.responsive.getWidth(36),
+                          height: widget.responsive.getWidth(36),
+                          decoration: BoxDecoration(
+                            color: Color(0xFF0033FF).withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Icon(
+                            Icons.location_on,
+                            size: widget.responsive.getWidth(20),
+                            color: Color(0xFF0033FF),
+                          ),
                         ),
                         SizedBox(width: widget.responsive.getWidth(12)),
                         Expanded(
-                          child: Text(
-                            suggestion['placeName'] ?? '',
-                            style: GoogleFonts.roboto(
-                              fontSize: widget.responsive.getFontSize(14),
-                              color: Colors.grey.shade800,
-                            ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                suggestion.mainText ?? suggestion.displayName,
+                                style: GoogleFonts.roboto(
+                                  fontSize: widget.responsive.getFontSize(14),
+                                  fontWeight: FontWeight.w500,
+                                  color: Colors.grey.shade800,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              if (suggestion.secondaryText != null) ...[
+                                SizedBox(height: widget.responsive.getHeight(2)),
+                                Text(
+                                  suggestion.secondaryText!,
+                                  style: GoogleFonts.roboto(
+                                    fontSize: widget.responsive.getFontSize(12),
+                                    color: Colors.grey.shade600,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
+                            ],
                           ),
+                        ),
+                        Icon(
+                          Icons.north_west,
+                          size: widget.responsive.getWidth(16),
+                          color: Colors.grey.shade400,
                         ),
                       ],
                     ),

@@ -43,3 +43,25 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# 🔐 SECURITY: Android signing keys (NEVER commit these!)
+android/key.properties
+android/app/upload-keystore.jks
+android/app/*.keystore
+android/app/*.jks
+*.keystore
+*.jks
+
+# 🔐 SECURITY: iOS signing (if you add iOS later)
+ios/Runner/GoogleService-Info.plist
+ios/firebase_app_id_file.json
+
+# 🔐 SECURITY: Firebase config files (if contains sensitive data)
+# Uncomment if your google-services.json contains sensitive info
+# android/app/google-services.json
+
+# 🔐 SECURITY: Environment files
+.env
+.env.local
+.env.production
+.env.staging

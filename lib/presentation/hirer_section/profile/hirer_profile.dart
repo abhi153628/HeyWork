@@ -16,6 +16,272 @@ import 'package:uuid/uuid.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_cropper/image_cropper.dart'; // Add this import
+// Add these imports at the top of your file
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import 'package:uuid/uuid.dart';
+
+// Google Places API Service - ADD THIS NEW CLASS
+class GooglePlacesService {
+  static const String GOOGLE_PLACES_API_KEY = 'AIzaSyDesC50s7p1LcBNRBhT1DzkmwlO1C4M6p8'; // Replace with your actual API key
+  
+  // Cache for storing recent searches
+  static final Map<String, List<PlaceInfo>> _cache = {};
+  static const int CACHE_DURATION_MINUTES = 30;
+  static final Map<String, DateTime> _cacheTimestamps = {};
+
+  // Session token for billing optimization
+  static String? _sessionToken;
+  
+  static String get sessionToken {
+    _sessionToken ??= const Uuid().v4();
+    return _sessionToken!;
+  }
+
+  static void resetSession() {
+    _sessionToken = null;
+  }
+
+  static Future<List<PlaceInfo>> getAutocompleteSuggestions(String input) async {
+    if (input.length < 2) return [];
+
+    // Check cache first
+    final cacheKey = input.toLowerCase().trim();
+    if (_cache.containsKey(cacheKey) && _cacheTimestamps.containsKey(cacheKey)) {
+      final cacheTime = _cacheTimestamps[cacheKey]!;
+      if (DateTime.now().difference(cacheTime).inMinutes < CACHE_DURATION_MINUTES) {
+        return _cache[cacheKey]!;
+      }
+    }
+
+    try {
+      final results = await _fetchFromGooglePlaces(input);
+      
+      // Cache the results
+      _cache[cacheKey] = results;
+      _cacheTimestamps[cacheKey] = DateTime.now();
+      
+      return results;
+    } catch (e) {
+      print('Google Places API Error: $e');
+      // Return fallback data for common Indian cities
+      return _getFallbackSuggestions(input);
+    }
+  }
+
+  static Future<List<PlaceInfo>> _fetchFromGooglePlaces(String input) async {
+    if (GOOGLE_PLACES_API_KEY == 'YOUR_API_KEY_HERE' || GOOGLE_PLACES_API_KEY.isEmpty) {
+      throw Exception('Please configure your Google Places API key');
+    }
+
+    const String url = 'https://places.googleapis.com/v1/places:autocomplete';
+    
+    final Map<String, String> headers = {
+      'Content-Type': 'application/json',
+      'X-Goog-Api-Key': GOOGLE_PLACES_API_KEY,
+      'X-Goog-FieldMask': 'suggestions.placePrediction.placeId,suggestions.placePrediction.text,suggestions.placePrediction.structuredFormat,suggestions.placePrediction.types',
+    };
+
+    final Map<String, dynamic> requestBody = {
+      'input': input,
+      'sessionToken': sessionToken,
+      'locationBias': {
+        'rectangle': {
+          'low': {'latitude': 6.4626999, 'longitude': 68.1097},
+          'high': {'latitude': 35.513327, 'longitude': 97.39535869999999}
+        }
+      },
+      'includedPrimaryTypes': [
+        'locality',
+        'sublocality',
+        'administrative_area_level_1',
+        'administrative_area_level_2',
+        'postal_code'
+      ],
+      'includedRegionCodes': ['IN'],
+      'languageCode': 'en',
+    };
+
+    final response = await http.post(
+      Uri.parse(url),
+      headers: headers,
+      body: json.encode(requestBody),
+    );
+
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body);
+      final suggestions = data['suggestions'] as List<dynamic>? ?? [];
+      
+      List<PlaceInfo> results = [];
+      
+      for (var suggestion in suggestions) {
+        final placePrediction = suggestion['placePrediction'];
+        if (placePrediction != null) {
+          final placeInfo = PlaceInfo.fromGooglePlaces(placePrediction);
+          if (placeInfo != null) {
+            results.add(placeInfo);
+          }
+        }
+      }
+      
+      return results;
+    } else {
+      throw Exception('HTTP ${response.statusCode}: ${response.body}');
+    }
+  }
+
+  static Future<PlaceDetails?> getPlaceDetails(String placeId) async {
+    try {
+      final String url = 'https://places.googleapis.com/v1/places/$placeId';
+      
+      final Map<String, String> headers = {
+        'Content-Type': 'application/json',
+        'X-Goog-Api-Key': GOOGLE_PLACES_API_KEY,
+        'X-Goog-FieldMask': 'location,displayName,formattedAddress',
+      };
+
+      final response = await http.get(Uri.parse(url), headers: headers);
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        return PlaceDetails.fromJson(data);
+      }
+    } catch (e) {
+      print('Error fetching place details: $e');
+    }
+    return null;
+  }
+
+  static List<PlaceInfo> _getFallbackSuggestions(String input) {
+    final fallbackCities = [
+      PlaceInfo(
+        placeId: 'fallback_mumbai',
+        displayName: 'Mumbai, Maharashtra, India',
+        formattedAddress: 'Mumbai, Maharashtra, India',
+      ),
+      PlaceInfo(
+        placeId: 'fallback_delhi',
+        displayName: 'Delhi, NCR, India',
+        formattedAddress: 'Delhi, NCR, India',
+      ),
+      PlaceInfo(
+        placeId: 'fallback_bangalore',
+        displayName: 'Bangalore, Karnataka, India',
+        formattedAddress: 'Bangalore, Karnataka, India',
+      ),
+      PlaceInfo(
+        placeId: 'fallback_hyderabad',
+        displayName: 'Hyderabad, Telangana, India',
+        formattedAddress: 'Hyderabad, Telangana, India',
+      ),
+      PlaceInfo(
+        placeId: 'fallback_chennai',
+        displayName: 'Chennai, Tamil Nadu, India',
+        formattedAddress: 'Chennai, Tamil Nadu, India',
+      ),
+      PlaceInfo(
+        placeId: 'fallback_pune',
+        displayName: 'Pune, Maharashtra, India',
+        formattedAddress: 'Pune, Maharashtra, India',
+      ),
+    ];
+
+    return fallbackCities
+        .where((city) => city.displayName.toLowerCase().contains(input.toLowerCase()))
+        .toList();
+  }
+}
+
+// Data models - ADD THESE NEW CLASSES
+class PlaceInfo {
+  final String placeId;
+  final String displayName;
+  final String formattedAddress;
+  final String? mainText;
+  final String? secondaryText;
+
+  PlaceInfo({
+    required this.placeId,
+    required this.displayName,
+    required this.formattedAddress,
+    this.mainText,
+    this.secondaryText,
+  });
+
+  static PlaceInfo? fromGooglePlaces(Map<String, dynamic> data) {
+    try {
+      final placeId = data['placeId'] as String?;
+      final text = data['text'];
+      final structuredFormat = data['structuredFormat'];
+      
+      if (placeId == null || text == null) return null;
+      
+      String displayName = text['text'] ?? '';
+      String? mainText;
+      String? secondaryText;
+      
+      if (structuredFormat != null) {
+        mainText = structuredFormat['mainText']?['text'];
+        secondaryText = structuredFormat['secondaryText']?['text'];
+        
+        if (mainText != null && secondaryText != null) {
+          displayName = '$mainText, $secondaryText';
+        }
+      }
+      
+      return PlaceInfo(
+        placeId: placeId,
+        displayName: displayName,
+        formattedAddress: displayName,
+        mainText: mainText,
+        secondaryText: secondaryText,
+      );
+    } catch (e) {
+      print('Error parsing place info: $e');
+      return null;
+    }
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'placeId': placeId,
+      'placeName': displayName,
+      'formattedAddress': formattedAddress,
+    };
+  }
+}
+
+class PlaceDetails {
+  final double? latitude;
+  final double? longitude;
+  final String? displayName;
+  final String? formattedAddress;
+
+  PlaceDetails({
+    this.latitude,
+    this.longitude,
+    this.displayName,
+    this.formattedAddress,
+  });
+
+  static PlaceDetails? fromJson(Map<String, dynamic> data) {
+    try {
+      final location = data['location'];
+      final displayName = data['displayName']?['text'];
+      final formattedAddress = data['formattedAddress'];
+      
+      return PlaceDetails(
+        latitude: location?['latitude']?.toDouble(),
+        longitude: location?['longitude']?.toDouble(),
+        displayName: displayName,
+        formattedAddress: formattedAddress,
+      );
+    } catch (e) {
+      print('Error parsing place details: $e');
+      return null;
+    }
+  }
+}
 
 class HirerProfilePage extends StatefulWidget {
   const HirerProfilePage({Key? key}) : super(key: key);
@@ -473,7 +739,7 @@ class EditProfileBottomSheet extends StatefulWidget {
 class _EditProfileBottomSheetState extends State<EditProfileBottomSheet> {
   final _formKey = GlobalKey<FormState>();
   bool _isLoading = false;
-  bool _isImageProcessing = false; // Add this for image processing state
+  bool _isImageProcessing = false;
   
   // Controllers for text fields
   final TextEditingController _nameController = TextEditingController();
@@ -489,15 +755,12 @@ class _EditProfileBottomSheetState extends State<EditProfileBottomSheet> {
   // Firestore document ID
   String? _userId;
   
-  // Location search fields
-  List<Map<String, String>> _locationSuggestions = [];
-  Map<String, String>? _selectedLocation;
+  // Location search fields - Updated for Google Places API
+  List<PlaceInfo> _locationSuggestions = [];
+  PlaceInfo? _selectedLocation;
   bool _showLocationSuggestions = false;
   final Debouncer _searchDebouncer = Debouncer(milliseconds: 500);
   bool _isSearching = false;
-  
-  // Static cache for location results
-  static Map<String, List<Map<String, String>>> _cachedLocations = {};
   
   @override
   void initState() {
@@ -566,7 +829,7 @@ class _EditProfileBottomSheetState extends State<EditProfileBottomSheet> {
     }
   }
   
-  // Location search methods
+  // Location search methods - Updated for Google Places API
   Future<void> _searchLocation(String query) async {
     if (query.length < 3) {
       setState(() {
@@ -582,123 +845,21 @@ class _EditProfileBottomSheetState extends State<EditProfileBottomSheet> {
     });
 
     try {
-      final suggestions = await fetchLocationSuggestions(query);
-      setState(() {
-        _locationSuggestions = suggestions;
-        _isSearching = false;
-      });
+      final suggestions = await GooglePlacesService.getAutocompleteSuggestions(query);
+      if (mounted) {
+        setState(() {
+          _locationSuggestions = suggestions;
+          _isSearching = false;
+        });
+      }
     } catch (e) {
       print('Error fetching locations: $e');
-      setState(() {
-        _isSearching = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isSearching = false;
+        });
+      }
     }
-  }
-  
-  Future<List<Map<String, String>>> fetchLocationSuggestions(String query) async {
-    // First try cached results for faster response
-    if (_cachedLocations.containsKey(query)) {
-      return _cachedLocations[query]!;
-    }
-
-    // Next, check the most popular Indian cities
-    List<Map<String, String>> filteredCities = _indianCities
-        .where((city) => city['placeName']!.toLowerCase().contains(query.toLowerCase()))
-        .toList();
-
-    if (filteredCities.isNotEmpty) {
-      _cachedLocations[query] = filteredCities;
-      return filteredCities;
-    }
-
-    try {
-      // If no local matches, try the API
-      final apiResults = await fetchFromOpenStreetMap(query);
-      _cachedLocations[query] = apiResults;
-      return apiResults;
-    } catch (e) {
-      print("OpenStreetMap API error: $e");
-      return _getMockData(query);
-    }
-  }
-
-  // Method to fetch data from OpenStreetMap
-  Future<List<Map<String, String>>> fetchFromOpenStreetMap(String query) async {
-    final String url =
-        'https://nominatim.openstreetmap.org/search?q=$query+india&format=json&addressdetails=1&limit=10&countrycodes=in&bounded=1';
-
-    Map<String, String> headers = {
-      'User-Agent': 'YourApp/1.0',
-      'Accept-Language': 'en-US,en;q=0.9',
-    };
-
-    final response = await http.get(Uri.parse(url), headers: headers);
-
-    if (response.statusCode == 200) {
-      final List<dynamic> results = json.decode(response.body);
-
-      return results.map<Map<String, String>>((result) {
-        String displayName = result['display_name'] ?? '';
-        Map<String, dynamic> address = result['address'] ?? {};
-        
-        String formattedName = '';
-        List<String> addressParts = [];
-
-        if (address.isNotEmpty) {
-          if (address['city'] != null) addressParts.add(address['city']);
-          else if (address['town'] != null) addressParts.add(address['town']);
-          else if (address['village'] != null) addressParts.add(address['village']);
-          else if (address['suburb'] != null) addressParts.add(address['suburb']);
-
-          if (address['state_district'] != null) addressParts.add(address['state_district']);
-          else if (address['county'] != null) addressParts.add(address['county']);
-          
-          if (address['state'] != null) addressParts.add(address['state']);
-          
-          formattedName = addressParts.join(', ');
-        }
-
-        if (formattedName.isEmpty) {
-          List<String> nameParts = displayName.split(', ');
-          formattedName = nameParts.length > 3
-              ? '${nameParts[0]}, ${nameParts[nameParts.length - 3]}, India'
-              : displayName.replaceAll(', India', '') + ', India';
-        }
-
-        return {
-          'placeName': formattedName,
-          'placeId': result['place_id']?.toString() ?? '',
-          'latitude': result['lat']?.toString() ?? '',
-          'longitude': result['lon']?.toString() ?? '',
-        };
-      }).toList();
-    } else {
-      throw Exception('Failed to load from OpenStreetMap: ${response.statusCode}');
-    }
-  }
-
-  // Popular Indian cities data for quick results
-  final List<Map<String, String>> _indianCities = [
-    {'placeName': 'Mumbai, Maharashtra', 'placeId': 'city_mumbai', 'latitude': '19.0760', 'longitude': '72.8777'},
-    {'placeName': 'Delhi, NCR', 'placeId': 'city_delhi', 'latitude': '28.7041', 'longitude': '77.1025'},
-    {'placeName': 'Bangalore, Karnataka', 'placeId': 'city_bangalore', 'latitude': '12.9716', 'longitude': '77.5946'},
-    {'placeName': 'Hyderabad, Telangana', 'placeId': 'city_hyderabad', 'latitude': '17.3850', 'longitude': '78.4867'},
-    {'placeName': 'Chennai, Tamil Nadu', 'placeId': 'city_chennai', 'latitude': '13.0827', 'longitude': '80.2707'},
-    {'placeName': 'Kolkata, West Bengal', 'placeId': 'city_kolkata', 'latitude': '22.5726', 'longitude': '88.3639'},
-    {'placeName': 'Pune, Maharashtra', 'placeId': 'city_pune', 'latitude': '18.5204', 'longitude': '73.8567'},
-    {'placeName': 'Ahmedabad, Gujarat', 'placeId': 'city_ahmedabad', 'latitude': '23.0225', 'longitude': '72.5714'},
-    {'placeName': 'Jaipur, Rajasthan', 'placeId': 'city_jaipur', 'latitude': '26.9124', 'longitude': '75.7873'},
-    {'placeName': 'Kochi, Kerala', 'placeId': 'city_kochi', 'latitude': '9.9312', 'longitude': '76.2673'},
-    {'placeName': 'Goa', 'placeId': 'city_goa', 'latitude': '15.2993', 'longitude': '74.1240'},
-  ];
-
-  // Mock data for fallback
-  List<Map<String, String>> _getMockData(String query) {
-    return [
-      {'placeName': 'Delhi, NCR, India', 'placeId': 'mock_delhi', 'latitude': '28.7041', 'longitude': '77.1025'},
-      {'placeName': 'Mumbai, Maharashtra, India', 'placeId': 'mock_mumbai', 'latitude': '19.0760', 'longitude': '72.8777'},
-      {'placeName': '$query Area, India', 'placeId': 'mock_custom', 'latitude': '20.5937', 'longitude': '78.9629'},
-    ];
   }
   
   void _showSnackBar(String message, {bool isError = true}) {
@@ -715,7 +876,7 @@ class _EditProfileBottomSheetState extends State<EditProfileBottomSheet> {
     );
   }
   
-  // Enhanced image picker with crop and compression (from signup)
+  // Enhanced image picker with crop and compression
   void _showImagePickerDialog(BuildContext context) {
     showModalBottomSheet(
       context: context,
@@ -860,7 +1021,7 @@ class _EditProfileBottomSheetState extends State<EditProfileBottomSheet> {
     );
   }
 
-  // Enhanced image picker with cropping functionality (from signup)
+  // Enhanced image picker with cropping functionality
   Future<void> _pickAndCropImage(ImageSource source) async {
     setState(() {
       _isImageProcessing = true;
@@ -873,9 +1034,9 @@ class _EditProfileBottomSheetState extends State<EditProfileBottomSheet> {
       final ImagePicker picker = ImagePicker();
       final XFile? pickedFile = await picker.pickImage(
         source: source,
-        maxWidth: 1024, // Optimal size for profile pics
-        maxHeight: 1024, // Optimal size for profile pics
-        imageQuality: 75, // Good compression (75% quality)
+        maxWidth: 1024,
+        maxHeight: 1024,
+        imageQuality: 75,
       );
 
       if (pickedFile == null) {
@@ -891,7 +1052,7 @@ class _EditProfileBottomSheetState extends State<EditProfileBottomSheet> {
       final CroppedFile? croppedFile = await ImageCropper().cropImage(
         sourcePath: pickedFile.path,
         compressFormat: ImageCompressFormat.jpg,
-        compressQuality: 80, // Additional compression
+        compressQuality: 80,
         uiSettings: [
           AndroidUiSettings(
             toolbarTitle: 'Crop Profile Picture',
@@ -944,204 +1105,187 @@ class _EditProfileBottomSheetState extends State<EditProfileBottomSheet> {
     }
   }
 
- void _showIndustriesBottomSheet() {
-  // Create controller inside StatefulBuilder to properly handle disposal
-  // Do NOT dispose this controller in the .then() callback
-  showModalBottomSheet(
-    context: context,
-    isScrollControlled: true,
-    backgroundColor: Colors.transparent,
-    builder: (BuildContext builderContext) {
-      // Create the controller in the builder scope so it's tied to this specific bottom sheet instance
-      final searchController = TextEditingController();
-      
-      // Industry data model - using Map instead of custom class
-      final List<Map<String, dynamic>> industryList = [
-        {'name': 'Restaurants & Food Services', 'isSelected': _industryController.text == 'Restaurants & Food Services'},
-        {'name': 'Hospitality & Hotels', 'isSelected': _industryController.text == 'Hospitality & Hotels'},
-        {'name': 'Warehouse & Logistics', 'isSelected': _industryController.text == 'Warehouse & Logistics'},
-        {'name': 'Cleaning & Facility Services', 'isSelected': _industryController.text == 'Cleaning & Facility Services'},
-        {'name': 'Retail & Stores', 'isSelected': _industryController.text == 'Retail & Stores'},
-        {'name': 'Packing & Moving Services', 'isSelected': _industryController.text == 'Packing & Moving Services'},
-        {'name': 'Event Management & Catering', 'isSelected': _industryController.text == 'Event Management & Catering'},
-        {'name': 'Construction & Civil Work', 'isSelected': _industryController.text == 'Construction & Civil Work'},
-        {'name': 'Transport & Delivery', 'isSelected': _industryController.text == 'Transport & Delivery'},
-        {'name': 'Mechanic & Repair Services', 'isSelected': _industryController.text == 'Mechanic & Repair Services'},
-        {'name': 'Home Services', 'isSelected': _industryController.text == 'Home Services'},
-        // The rest of your industries...
-      ];
+  void _showIndustriesBottomSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (BuildContext builderContext) {
+        final searchController = TextEditingController();
+        
+        final List<Map<String, dynamic>> industryList = [
+          {'name': 'Restaurants & Food Services', 'isSelected': _industryController.text == 'Restaurants & Food Services'},
+          {'name': 'Hospitality & Hotels', 'isSelected': _industryController.text == 'Hospitality & Hotels'},
+          {'name': 'Warehouse & Logistics', 'isSelected': _industryController.text == 'Warehouse & Logistics'},
+          {'name': 'Cleaning & Facility Services', 'isSelected': _industryController.text == 'Cleaning & Facility Services'},
+          {'name': 'Retail & Stores', 'isSelected': _industryController.text == 'Retail & Stores'},
+          {'name': 'Packing & Moving Services', 'isSelected': _industryController.text == 'Packing & Moving Services'},
+          {'name': 'Event Management & Catering', 'isSelected': _industryController.text == 'Event Management & Catering'},
+          {'name': 'Construction & Civil Work', 'isSelected': _industryController.text == 'Construction & Civil Work'},
+          {'name': 'Transport & Delivery', 'isSelected': _industryController.text == 'Transport & Delivery'},
+          {'name': 'Mechanic & Repair Services', 'isSelected': _industryController.text == 'Mechanic & Repair Services'},
+          {'name': 'Home Services', 'isSelected': _industryController.text == 'Home Services'},
+          {'name': 'Beauty & Wellness', 'isSelected': _industryController.text == 'Beauty & Wellness'},
+          {'name': 'Healthcare Support', 'isSelected': _industryController.text == 'Healthcare Support'},
+          {'name': 'Security Services', 'isSelected': _industryController.text == 'Security Services'},
+          {'name': 'Agriculture & Farming', 'isSelected': _industryController.text == 'Agriculture & Farming'},
+          {'name': 'Manufacturing', 'isSelected': _industryController.text == 'Manufacturing'},
+        ];
 
-      List<Map<String, dynamic>> filteredIndustries = List.from(industryList);
-      
-      return StatefulBuilder(
-        builder: (context, setModalState) {
-          // Function to filter industries within the StatefulBuilder scope
-          void filterIndustries(String query) {
-            setModalState(() {
-              if (query.isEmpty) {
-                filteredIndustries = List.from(industryList);
-              } else {
-                filteredIndustries = industryList
-                    .where((industry) => industry['name']
-                        .toString()
-                        .toLowerCase()
-                        .contains(query.toLowerCase()))
-                    .toList();
-              }
-            });
-          }
-          
-          // Calculate bottom padding to account for keyboard
-          final bottomPadding = MediaQuery.of(context).viewInsets.bottom;
-          
-          return Padding(
-            padding: EdgeInsets.only(bottom: bottomPadding),
-            child: Container(
-              // Fixed height percentage with maximum constraint
-              height: MediaQuery.of(context).size.height * 0.7,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.only(
-                  topLeft: Radius.circular(20.r),
-                  topRight: Radius.circular(20.r),
+        List<Map<String, dynamic>> filteredIndustries = List.from(industryList);
+        
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            void filterIndustries(String query) {
+              setModalState(() {
+                if (query.isEmpty) {
+                  filteredIndustries = List.from(industryList);
+                } else {
+                  filteredIndustries = industryList
+                      .where((industry) => industry['name']
+                          .toString()
+                          .toLowerCase()
+                          .contains(query.toLowerCase()))
+                      .toList();
+                }
+              });
+            }
+            
+            final bottomPadding = MediaQuery.of(context).viewInsets.bottom;
+            
+            return Padding(
+              padding: EdgeInsets.only(bottom: bottomPadding),
+              child: Container(
+                height: MediaQuery.of(context).size.height * 0.7,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(20.r),
+                    topRight: Radius.circular(20.r),
+                  ),
                 ),
-              ),
-              child: SafeArea(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min, // Important
-                  children: [
-                    // Handle
-                    Container(
-                      margin: EdgeInsets.symmetric(vertical: 10.h),
-                      height: 5.h,
-                      width: 40.w,
-                      decoration: BoxDecoration(
-                        color: Colors.grey[300],
-                        borderRadius: BorderRadius.circular(10.r),
-                      ),
-                    ),
-                    
-                    // Title for clarity
-                    Padding(
-                      padding: EdgeInsets.only(bottom: 8.h),
-                      child: Text(
-                        "Select Industry",
-                        style: GoogleFonts.poppins(
-                          fontSize: 18.sp,
-                          fontWeight: FontWeight.w600,
-                          color: Color(0xFFBB0000),
+                child: SafeArea(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        margin: EdgeInsets.symmetric(vertical: 10.h),
+                        height: 5.h,
+                        width: 40.w,
+                        decoration: BoxDecoration(
+                          color: Colors.grey[300],
+                          borderRadius: BorderRadius.circular(10.r),
                         ),
                       ),
-                    ),
-
-                    // Search field
-                    Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
-                      child: TextField(
-                        controller: searchController,
-                        decoration: InputDecoration(
-                          hintText: 'Search industry type',
-                          prefixIcon: Icon(Icons.search),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(10.r),
-                            borderSide: BorderSide.none,
-                          ),
-                          filled: true,
-                          fillColor: Colors.grey[200],
-                          contentPadding: EdgeInsets.symmetric(
-                            vertical: 12.h,
-                            horizontal: 16.w,
+                      
+                      Padding(
+                        padding: EdgeInsets.only(bottom: 8.h),
+                        child: Text(
+                          "Select Industry",
+                          style: GoogleFonts.poppins(
+                            fontSize: 18.sp,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFFBB0000),
                           ),
                         ),
-                        onChanged: filterIndustries,
                       ),
-                    ),
 
-                    // List of industries - IMPORTANT: Wrap in Expanded
-                    Expanded(
-                      child: ListView.builder(
-                        // Remove scrollController to avoid potential issues
-                        physics: BouncingScrollPhysics(),
-                        itemCount: filteredIndustries.length,
-                        itemBuilder: (context, index) {
-                          final industry = filteredIndustries[index];
-                          final isSelected = industry['isSelected'] == true;
-                          
-                          return ListTile(
-                            title: Text(
-                              industry['name']?.toString() ?? '',
-                              style: TextStyle(
-                                fontSize: 16.sp,
-                                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-                                color: isSelected ? Color(0xFFBB0000) : Colors.black87,
-                                overflow: TextOverflow.ellipsis,
-                              ),
+                      Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+                        child: TextField(
+                          controller: searchController,
+                          decoration: InputDecoration(
+                            hintText: 'Search industry type',
+                            prefixIcon: Icon(Icons.search),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10.r),
+                              borderSide: BorderSide.none,
                             ),
-                            onTap: () {
-                              // Update selection state
-                              setModalState(() {
-                                for (var item in industryList) {
-                                  item['isSelected'] = false;
-                                }
-                                industry['isSelected'] = true;
-                              });
-                              
-                              // Update parent controller
-                              setState(() {
-                                _industryController.text = industry['name']?.toString() ?? '';
-                              });
-                              
-                              // Close the bottom sheet
-                              Navigator.of(context).pop();
-                            },
-                            trailing: isSelected
-                                ? Icon(
-                                    Icons.check_circle,
-                                    color: Color(0xFFBB0000),
-                                    size: 24.sp,
-                                  )
-                                : null,
-                          );
-                        },
+                            filled: true,
+                            fillColor: Colors.grey[200],
+                            contentPadding: EdgeInsets.symmetric(
+                              vertical: 12.h,
+                              horizontal: 16.w,
+                            ),
+                          ),
+                          onChanged: filterIndustries,
+                        ),
                       ),
-                    ),
-                    
-                    // Bottom padding
-                    SizedBox(height: 8.h),
-                  ],
+
+                      Expanded(
+                        child: ListView.builder(
+                          physics: BouncingScrollPhysics(),
+                          itemCount: filteredIndustries.length,
+                          itemBuilder: (context, index) {
+                            final industry = filteredIndustries[index];
+                            final isSelected = industry['isSelected'] == true;
+                            
+                            return ListTile(
+                              title: Text(
+                                industry['name']?.toString() ?? '',
+                                style: TextStyle(
+                                  fontSize: 16.sp,
+                                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                                  color: isSelected ? Color(0xFFBB0000) : Colors.black87,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              onTap: () {
+                                setModalState(() {
+                                  for (var item in industryList) {
+                                    item['isSelected'] = false;
+                                  }
+                                  industry['isSelected'] = true;
+                                });
+                                
+                                setState(() {
+                                  _industryController.text = industry['name']?.toString() ?? '';
+                                });
+                                
+                                Navigator.of(context).pop();
+                              },
+                              trailing: isSelected
+                                  ? Icon(
+                                      Icons.check_circle,
+                                      color: Color(0xFFBB0000),
+                                      size: 24.sp,
+                                    )
+                                  : null,
+                            );
+                          },
+                        ),
+                      ),
+                      
+                      SizedBox(height: 8.h),
+                    ],
+                  ),
                 ),
               ),
-            ),
-          );
-        },
-      );
-    },
-  );
-  // Do NOT dispose the controller here, as it will cause "used after being disposed" error
-} 
+            );
+          },
+        );
+      },
+    );
+  }
 
-  // Enhanced image upload method with compression (from signup)
+  // Enhanced image upload method with compression
   Future<String?> _uploadImage() async {
     if (_selectedImage == null) {
-      // No new image selected, return the current URL
       return _currentImageUrl;
     }
 
     try {
       print('Starting optimized image upload...');
 
-      // Get file size
       final int fileSize = await _selectedImage!.length();
       print('Image file size: ${(fileSize / 1024 / 1024).toStringAsFixed(2)} MB');
 
-      // Generate unique filename
       final uuid = Uuid();
       String fileName = '${uuid.v4()}.jpg';
       final storageRef = FirebaseStorage.instance
           .ref()
           .child('profile_images/$fileName');
 
-      // Upload with metadata
       final uploadTask = storageRef.putFile(
         _selectedImage!,
         SettableMetadata(
@@ -1153,7 +1297,6 @@ class _EditProfileBottomSheetState extends State<EditProfileBottomSheet> {
         ),
       );
 
-      // Monitor progress
       uploadTask.snapshotEvents.listen((TaskSnapshot snapshot) {
         final progress = snapshot.bytesTransferred / snapshot.totalBytes;
         print('Upload: ${(progress * 100).toStringAsFixed(1)}%');
@@ -1166,7 +1309,7 @@ class _EditProfileBottomSheetState extends State<EditProfileBottomSheet> {
       return downloadUrl;
     } catch (e) {
       print('❌ Upload error: $e');
-      return _currentImageUrl; // Return existing URL on failure
+      return _currentImageUrl;
     }
   }
   
@@ -1180,60 +1323,47 @@ class _EditProfileBottomSheetState extends State<EditProfileBottomSheet> {
     });
     
     try {
-      // Check if user is authenticated
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) {
         throw Exception('User not authenticated');
       }
       
-      // Upload image if selected
       String? imageUrl = await _uploadImage();
       
-      // Format phone number
       String phoneNumber = _phoneController.text.trim();
       if (phoneNumber.isNotEmpty && !phoneNumber.startsWith('+')) {
         phoneNumber = '+91$phoneNumber';
       }
       
-      // Prepare location data
+      // Prepare location data for Google Places API
       Map<String, dynamic> locationData;
       if (_selectedLocation != null) {
-        locationData = {
-          'placeName': _selectedLocation!['placeName'],
-          'placeId': _selectedLocation!['placeId'],
-          'latitude': _selectedLocation!['latitude'],
-          'longitude': _selectedLocation!['longitude'],
-        };
+        locationData = _selectedLocation!.toMap();
       } else {
         locationData = {'placeName': _locationController.text.trim()};
       }
       
-      // Prepare update data
       Map<String, dynamic> updateData = {
         'name': _nameController.text.trim(),
         'businessName': _businessNameController.text.trim(),
-        'location': locationData, // Updated to use the proper location data structure
+        'location': locationData,
         'UpdatingPhoneNumber': phoneNumber,
         'industry': _industryController.text.trim(),
         'updatedAt': FieldValue.serverTimestamp(),
       };
       
-      // Only update image if we have a new one
       if (imageUrl != null) {
         updateData['profileImage'] = imageUrl;
       }
       
-      // Update in Firestore
       await FirebaseFirestore.instance
           .collection('hirers')
           .doc(user.uid)
           .update(updateData);
       
-      // Success
       Navigator.pop(context);
       widget.onProfileUpdated();
       
-      // Show confirmation
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Profile updated successfully'),
@@ -1253,7 +1383,6 @@ class _EditProfileBottomSheetState extends State<EditProfileBottomSheet> {
   
   @override
   Widget build(BuildContext context) {
-    // Calculate bottom padding for keyboard
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
     
     return Container(
@@ -1269,7 +1398,6 @@ class _EditProfileBottomSheetState extends State<EditProfileBottomSheet> {
         ? Center(child: CircularProgressIndicator(color: Color(0xFFBB0000)))
         : Column(
             children: [
-              // Handle bar
               Container(
                 margin: EdgeInsets.only(top: 8.h),
                 width: 40.w,
@@ -1280,13 +1408,12 @@ class _EditProfileBottomSheetState extends State<EditProfileBottomSheet> {
                 ),
               ),
               
-              // Header
               Padding(
                 padding: EdgeInsets.symmetric(vertical: 16.h),
-                child: Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
-                    SizedBox(width: 10,),
-                 
+                    SizedBox(width: 10),
                     Text(
                       "Edit Profile",
                       style: GoogleFonts.poppins(
@@ -1295,13 +1422,15 @@ class _EditProfileBottomSheetState extends State<EditProfileBottomSheet> {
                         color: Color(0xFFBB0000),
                       ),
                     ),
-                    SizedBox(width:190,),
-                  IconButton(onPressed: ()=>Navigator.pop(context), icon:   Icon(Icons.close))
+                    SizedBox(width: 190),
+                    IconButton(
+                      onPressed: () => Navigator.pop(context),
+                      icon: Icon(Icons.close)
+                    )
                   ],
                 ),
               ),
               
-              // Form content in scrollable area
               Expanded(
                 child: SingleChildScrollView(
                   padding: EdgeInsets.fromLTRB(20.w, 10.h, 20.w, bottomInset + 20.h),
@@ -1311,13 +1440,12 @@ class _EditProfileBottomSheetState extends State<EditProfileBottomSheet> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Enhanced Profile image with cropping
+                        // Profile image with cropping
                         Center(
                           child: GestureDetector(
                             onTap: _isImageProcessing ? null : () => _showImagePickerDialog(context),
                             child: Stack(
                               children: [
-                                // Profile image
                                 Container(
                                   width: 100.w,
                                   height: 100.w,
@@ -1402,7 +1530,6 @@ class _EditProfileBottomSheetState extends State<EditProfileBottomSheet> {
                                   ),
                                 ),
                                 
-                                // Edit icon overlay
                                 if (!_isImageProcessing)
                                   Positioned(
                                     right: 0,
@@ -1463,7 +1590,7 @@ class _EditProfileBottomSheetState extends State<EditProfileBottomSheet> {
                         
                         SizedBox(height: 16.h),
                         
-                        // Industry Field - Clickable field that opens bottom sheet
+                        // Industry Field
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -1527,7 +1654,7 @@ class _EditProfileBottomSheetState extends State<EditProfileBottomSheet> {
                         
                         SizedBox(height: 16.h),
                         
-                        // Location Field with Search Functionality
+                        // Location Field with Google Places API
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -1549,7 +1676,7 @@ class _EditProfileBottomSheetState extends State<EditProfileBottomSheet> {
                                     color: Colors.black87,
                                   ),
                                   decoration: InputDecoration(
-                                    hintText: "Enter your business location",
+                                    hintText: "Search for your business location",
                                     hintStyle: GoogleFonts.poppins(
                                       fontSize: 16.sp,
                                       color: Colors.grey.shade500,
@@ -1573,7 +1700,10 @@ class _EditProfileBottomSheetState extends State<EditProfileBottomSheet> {
                                               ),
                                             ),
                                           )
-                                        : null,
+                                        : Icon(
+                                            Icons.search,
+                                            color: Colors.grey.shade600,
+                                          ),
                                     filled: true,
                                     fillColor: Colors.grey.shade50,
                                     contentPadding: EdgeInsets.symmetric(
@@ -1624,6 +1754,7 @@ class _EditProfileBottomSheetState extends State<EditProfileBottomSheet> {
                                     }
                                   },
                                 ),
+                                // Location suggestions with Google Places API
                                 if (_showLocationSuggestions && _locationSuggestions.isNotEmpty)
                                   Container(
                                     margin: EdgeInsets.only(top: 4.h),
@@ -1649,9 +1780,10 @@ class _EditProfileBottomSheetState extends State<EditProfileBottomSheet> {
                                           onTap: () {
                                             setState(() {
                                               _selectedLocation = suggestion;
-                                              _locationController.text = suggestion['placeName'] ?? '';
+                                              _locationController.text = suggestion.displayName;
                                               _showLocationSuggestions = false;
                                             });
+                                            GooglePlacesService.resetSession();
                                             FocusScope.of(context).unfocus();
                                           },
                                           child: Padding(
@@ -1661,20 +1793,53 @@ class _EditProfileBottomSheetState extends State<EditProfileBottomSheet> {
                                             ),
                                             child: Row(
                                               children: [
-                                                Icon(
-                                                  Icons.location_on,
-                                                  size: 20.sp,
-                                                  color: Color(0xFFBB0000),
+                                                Container(
+                                                  width: 36.w,
+                                                  height: 36.w,
+                                                  decoration: BoxDecoration(
+                                                    color: Color(0xFFBB0000).withOpacity(0.1),
+                                                    borderRadius: BorderRadius.circular(8.r),
+                                                  ),
+                                                  child: Icon(
+                                                    Icons.location_on,
+                                                    size: 20.sp,
+                                                    color: Color(0xFFBB0000),
+                                                  ),
                                                 ),
                                                 SizedBox(width: 12.w),
                                                 Expanded(
-                                                  child: Text(
-                                                    suggestion['placeName'] ?? '',
-                                                    style: TextStyle(
-                                                      fontSize: 14.sp,
-                                                      color: Colors.grey.shade800,
-                                                    ),
+                                                  child: Column(
+                                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                                    children: [
+                                                      Text(
+                                                        suggestion.mainText ?? suggestion.displayName,
+                                                        style: GoogleFonts.poppins(
+                                                          fontSize: 14.sp,
+                                                          fontWeight: FontWeight.w500,
+                                                          color: Colors.grey.shade800,
+                                                        ),
+                                                        maxLines: 1,
+                                                        overflow: TextOverflow.ellipsis,
+                                                      ),
+                                                      if (suggestion.secondaryText != null) ...[
+                                                        SizedBox(height: 2.h),
+                                                        Text(
+                                                          suggestion.secondaryText!,
+                                                          style: GoogleFonts.poppins(
+                                                            fontSize: 12.sp,
+                                                            color: Colors.grey.shade600,
+                                                          ),
+                                                          maxLines: 1,
+                                                          overflow: TextOverflow.ellipsis,
+                                                        ),
+                                                      ],
+                                                    ],
                                                   ),
+                                                ),
+                                                Icon(
+                                                  Icons.north_west,
+                                                  size: 16.w,
+                                                  color: Colors.grey.shade400,
                                                 ),
                                               ],
                                             ),
@@ -1688,17 +1853,7 @@ class _EditProfileBottomSheetState extends State<EditProfileBottomSheet> {
                           ],
                         ),
                         
-                        SizedBox(height: 16.h),
-                        
-                        // Phone Number Field (with prefix)
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                           
-                          
-                          ],
-                        ),
-                
+                        SizedBox(height: 24.h),
                         
                         // Update Button
                         SizedBox(
@@ -1725,9 +1880,6 @@ class _EditProfileBottomSheetState extends State<EditProfileBottomSheet> {
                         ),
                         
                         SizedBox(height: 16.h),
-                        
-                        // Cancel Button
-                    
                       ],
                     ),
                   ),
@@ -1738,7 +1890,6 @@ class _EditProfileBottomSheetState extends State<EditProfileBottomSheet> {
     );
   }
 }
-
 // Reusable form field widget
 class EditFormField extends StatelessWidget {
   final String label;
